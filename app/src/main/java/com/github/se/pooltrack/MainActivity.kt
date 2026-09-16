@@ -12,12 +12,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.github.se.pooltrack.ui.history.HistoryScreen
+import com.github.se.pooltrack.ui.home.HomeScreen
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.subscription.SubscriptionScreen
 import com.github.se.pooltrack.ui.theme.PoolTrackTheme
 
-private val startDestination = Screen.Subscription.route
+private val startDestination = Screen.Home.route
 
 /** `MainActivity` is the entry point of the application. */
 class MainActivity : ComponentActivity() {
@@ -39,6 +40,7 @@ fun PoolTrackApp() {
   val navigationActions = NavigationActions(navController)
 
   NavHost(navController = navController, startDestination = startDestination) {
+    composable(Screen.Home.route) { HomeScreen(navigationActions = navigationActions) }
     composable(Screen.Subscription.route) {
       SubscriptionScreen(navigationActions = navigationActions)
     }
