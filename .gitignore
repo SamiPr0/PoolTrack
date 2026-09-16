@@ -1,0 +1,10 @@
+/local.properties
+/.gradle
+/.idea
+/.kotlin
+/build
+/app/build
+*.log
+
+# Firebase config: contains project-specific IDs, keep it out of the repo
+/app/google-services.json
