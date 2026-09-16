@@ -8,23 +8,18 @@ sealed class Screen(
     val isTopLevelDestination: Boolean = false,
 ) {
 
-  object Home :
-      Screen(
-          route = "home",
-          name = "Home",
-          isTopLevelDestination = true,
-      )
-
   object Subscription :
       Screen(
           route = "subscription",
           name = "Subscription",
+          isTopLevelDestination = true,
       )
 
   object History :
       Screen(
           route = "history",
           name = "History",
+          isTopLevelDestination = true,
       )
 }
 

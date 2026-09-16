@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -33,6 +34,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.github.se.pooltrack.ui.navigation.BottomNavigationMenu
+import com.github.se.pooltrack.ui.navigation.NavigationActions
+import com.github.se.pooltrack.ui.navigation.Screen
+import com.github.se.pooltrack.ui.navigation.Tab
+import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -51,7 +57,7 @@ object SubscriptionScreenTestTags {
 @Composable
 fun SubscriptionScreen(
     viewModel: SubscriptionViewModel = viewModel(),
-    onEntryConfirmed: () -> Unit = {},
+    navigationActions: NavigationActions? = null,
 ) {
   val subscriptionUri by viewModel.subscriptionUri.collectAsState()
   val context = LocalContext.current
@@ -63,58 +69,66 @@ fun SubscriptionScreen(
 
   MaxBrightness()
 
-  val currentUri = subscriptionUri
-  if (currentUri == null) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-      Button(
-          onClick = { pickPdfLauncher.launch(arrayOf("application/pdf")) },
-          modifier = Modifier.testTag(SubscriptionScreenTestTags.PICK_BUTTON),
-      ) {
-        Text("Choose subscription PDF")
-      }
-    }
-  } else {
-    var pageBitmap by remember(currentUri) { mutableStateOf<Bitmap?>(null) }
-
-    LaunchedEffect(currentUri) {
-      pageBitmap = withContext(Dispatchers.IO) { renderFirstPage(context, Uri.parse(currentUri)) }
-    }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-      pageBitmap?.let { bitmap ->
-        Image(
-            bitmap = bitmap.asImageBitmap(),
-            contentDescription = "Subscription pass",
-            contentScale = ContentScale.Fit,
-            modifier =
-                Modifier.weight(1f).fillMaxWidth().testTag(SubscriptionScreenTestTags.PDF_IMAGE),
+  Scaffold(
+      topBar = { TopNavigationMenu(Screen.Subscription) },
+      bottomBar = {
+        BottomNavigationMenu(
+            selectedTab = Tab.Subscription,
+            onTabSelected = { tab -> navigationActions?.navigateTo(tab.destination) },
         )
-      }
-
-      Row(
-          modifier = Modifier.fillMaxWidth().padding(16.dp),
-          horizontalArrangement = Arrangement.SpaceEvenly,
+      },
+  ) { paddingValues ->
+    val currentUri = subscriptionUri
+    if (currentUri == null) {
+      Column(
+          modifier = Modifier.fillMaxSize().padding(paddingValues),
+          verticalArrangement = Arrangement.Center,
+          horizontalAlignment = Alignment.CenterHorizontally,
       ) {
         Button(
-            onClick = {
-              viewModel.onScannerAccepted()
-              onEntryConfirmed()
-            },
-            modifier = Modifier.testTag(SubscriptionScreenTestTags.ACCEPT_BUTTON),
+            onClick = { pickPdfLauncher.launch(arrayOf("application/pdf")) },
+            modifier = Modifier.testTag(SubscriptionScreenTestTags.PICK_BUTTON),
         ) {
-          Text("Scanner accepted")
+          Text("Choose subscription PDF")
         }
-        Button(
-            // A declined scan must not count as an entry, so this stays a no-op: the pass
-            // just remains on screen for the user to try scanning again.
-            onClick = {},
-            modifier = Modifier.testTag(SubscriptionScreenTestTags.DECLINE_BUTTON),
+      }
+    } else {
+      var pageBitmap by remember(currentUri) { mutableStateOf<Bitmap?>(null) }
+
+      LaunchedEffect(currentUri) {
+        pageBitmap =
+            withContext(Dispatchers.IO) { renderFirstPage(context, Uri.parse(currentUri)) }
+      }
+
+      Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+        pageBitmap?.let { bitmap ->
+          Image(
+              bitmap = bitmap.asImageBitmap(),
+              contentDescription = "Subscription pass",
+              contentScale = ContentScale.Fit,
+              modifier =
+                  Modifier.weight(1f).fillMaxWidth().testTag(SubscriptionScreenTestTags.PDF_IMAGE),
+          )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-          Text("Scanner declined")
+          Button(
+              onClick = { viewModel.onScannerAccepted() },
+              modifier = Modifier.testTag(SubscriptionScreenTestTags.ACCEPT_BUTTON),
+          ) {
+            Text("Scanner accepted")
+          }
+          Button(
+              // A declined scan must not count as an entry, so this stays a no-op: the pass
+              // just remains on screen for the user to try scanning again.
+              onClick = {},
+              modifier = Modifier.testTag(SubscriptionScreenTestTags.DECLINE_BUTTON),
+          ) {
+            Text("Scanner declined")
+          }
         }
       }
     }

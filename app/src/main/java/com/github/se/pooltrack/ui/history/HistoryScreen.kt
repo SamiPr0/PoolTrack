@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -16,6 +17,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.entry.Entry
+import com.github.se.pooltrack.ui.navigation.BottomNavigationMenu
+import com.github.se.pooltrack.ui.navigation.NavigationActions
+import com.github.se.pooltrack.ui.navigation.Screen
+import com.github.se.pooltrack.ui.navigation.Tab
+import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -31,29 +37,45 @@ private val ENTRY_DATE_FORMATTER =
 
 /** HistoryScreen lists every confirmed pool entry, most recent first. */
 @Composable
-fun HistoryScreen(viewModel: HistoryViewModel = viewModel()) {
+fun HistoryScreen(
+    viewModel: HistoryViewModel = viewModel(),
+    navigationActions: NavigationActions? = null,
+) {
   val entries by viewModel.entries.collectAsState()
 
-  if (entries.isEmpty()) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-      Text(
-          text = "No entries yet",
-          modifier = Modifier.testTag(HistoryScreenTestTags.EMPTY_MESSAGE),
-      )
-    }
-  } else {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().testTag(HistoryScreenTestTags.ENTRY_LIST),
-    ) {
-      items(entries) { entry: Entry ->
-        Text(
-            text = ENTRY_DATE_FORMATTER.format(entry.timestamp),
-            modifier = Modifier.padding(16.dp).testTag(HistoryScreenTestTags.ENTRY_ITEM),
+  Scaffold(
+      topBar = { TopNavigationMenu(Screen.History) },
+      bottomBar = {
+        BottomNavigationMenu(
+            selectedTab = Tab.History,
+            onTabSelected = { tab -> navigationActions?.navigateTo(tab.destination) },
         )
+      },
+  ) { paddingValues ->
+    if (entries.isEmpty()) {
+      Column(
+          modifier = Modifier.fillMaxSize().padding(paddingValues),
+          verticalArrangement = Arrangement.Center,
+          horizontalAlignment = Alignment.CenterHorizontally,
+      ) {
+        Text(
+            text = "No entries yet",
+            modifier = Modifier.testTag(HistoryScreenTestTags.EMPTY_MESSAGE),
+        )
+      }
+    } else {
+      LazyColumn(
+          modifier =
+              Modifier.fillMaxSize()
+                  .padding(paddingValues)
+                  .testTag(HistoryScreenTestTags.ENTRY_LIST),
+      ) {
+        items(entries) { entry: Entry ->
+          Text(
+              text = ENTRY_DATE_FORMATTER.format(entry.timestamp),
+              modifier = Modifier.padding(16.dp).testTag(HistoryScreenTestTags.ENTRY_ITEM),
+          )
+        }
       }
     }
   }
