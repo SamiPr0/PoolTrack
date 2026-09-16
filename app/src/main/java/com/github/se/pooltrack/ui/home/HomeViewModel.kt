@@ -14,10 +14,10 @@ import kotlinx.coroutines.flow.stateIn
 /** ViewModel for the Home screen. Exposes stats derived from the confirmed entries. */
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
-  private val repository: EntryRepository = EntryRepositoryLocal(application)
+  private val entryRepository: EntryRepository = EntryRepositoryLocal(application)
 
   val stats: StateFlow<HomeStats> =
-      repository
+      entryRepository
           .getEntries()
           .map { entries: List<Entry> -> computeHomeStats(entries) }
           .stateIn(viewModelScope, SharingStarted.Eagerly, computeHomeStats(emptyList()))

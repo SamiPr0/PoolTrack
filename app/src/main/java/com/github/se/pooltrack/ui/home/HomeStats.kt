@@ -21,6 +21,10 @@ import java.util.Locale
  *   there is none.
  * @property favoriteDayOfWeek The day of the week with the most entries, or `null` if there is
  *   none.
+ * @property lastEntryTimestamp The exact instant of the most recent entry, or `null` if there is
+ *   none. This is the single source of truth for "when did I last enter the pool" - derived from
+ *   the entries themselves so that deleting the latest one (e.g. to undo a misclick) immediately
+ *   reflects in it, instead of drifting out of sync with a separately stored value.
  */
 data class HomeStats(
     val totalEntries: Int,
@@ -29,6 +33,7 @@ data class HomeStats(
     val daysSinceLastSwim: Long?,
     val averageEntriesPerWeek: Double?,
     val favoriteDayOfWeek: DayOfWeek?,
+    val lastEntryTimestamp: Instant?,
 )
 
 /** Computes [HomeStats] for [entries] as of [now], using [zone] to resolve calendar days/weeks. */
@@ -48,6 +53,7 @@ fun computeHomeStats(
       entries.count { YearMonth.from(LocalDate.ofInstant(it.timestamp, zone)) == thisMonth }
 
   val entryDates = entries.map { LocalDate.ofInstant(it.timestamp, zone) }
+  val lastEntryTimestamp = entries.maxOfOrNull { it.timestamp }
   val daysSinceLastSwim = entryDates.maxOrNull()?.let { ChronoUnit.DAYS.between(it, today) }
   val averageEntriesPerWeek =
       entryDates.minOrNull()?.let { firstEntry ->
@@ -64,5 +70,6 @@ fun computeHomeStats(
       daysSinceLastSwim = daysSinceLastSwim,
       averageEntriesPerWeek = averageEntriesPerWeek,
       favoriteDayOfWeek = favoriteDayOfWeek,
+      lastEntryTimestamp = lastEntryTimestamp,
   )
 }
