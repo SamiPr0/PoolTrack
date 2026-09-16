@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.stickyHeader
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
@@ -20,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -31,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.entry.Entry
@@ -39,6 +42,7 @@ import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
@@ -48,20 +52,26 @@ import java.util.Locale
 object HistoryScreenTestTags {
   const val EMPTY_MESSAGE = "HistoryScreenEmptyMessage"
   const val ENTRY_LIST = "HistoryScreenEntryList"
+  const val DAY_HEADER = "HistoryScreenDayHeader"
   const val ENTRY_ITEM = "HistoryScreenEntryItem"
   const val DELETE_BUTTON = "HistoryScreenDeleteButton"
   const val CONFIRM_DELETE_BUTTON = "HistoryScreenConfirmDeleteButton"
   const val CANCEL_DELETE_BUTTON = "HistoryScreenCancelDeleteButton"
 }
 
-private val ENTRY_DATE_FORMATTER =
+private val ZONE = ZoneId.systemDefault()
+
+private val ENTRY_TIME_FORMATTER =
+    DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withZone(ZONE)
+
+private val ENTRY_DATE_TIME_FORMATTER =
     DateTimeFormatterBuilder()
         .appendPattern("EEEE, ")
         .append(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM))
         .toFormatter(Locale.getDefault())
-        .withZone(ZoneId.systemDefault())
+        .withZone(ZONE)
 
-/** HistoryScreen lists every confirmed pool entry, most recent first. */
+/** HistoryScreen lists every confirmed pool entry, grouped by day, most recent first. */
 @Composable
 fun HistoryScreen(
     viewModel: HistoryViewModel = viewModel(),
@@ -76,7 +86,7 @@ fun HistoryScreen(
         title = { Text("Delete this entry?") },
         text = {
           Text(
-              "The entry from ${ENTRY_DATE_FORMATTER.format(entry.timestamp)} will be " +
+              "The entry from ${ENTRY_DATE_TIME_FORMATTER.format(entry.timestamp)} will be " +
                   "permanently removed."
           )
         },
@@ -137,25 +147,73 @@ fun HistoryScreen(
         )
       }
     } else {
+      val today = LocalDate.now(ZONE)
+      val entriesByDay = entries.groupBy { LocalDate.ofInstant(it.timestamp, ZONE) }
+
       LazyColumn(
           modifier =
               Modifier.fillMaxSize()
                   .padding(paddingValues)
                   .testTag(HistoryScreenTestTags.ENTRY_LIST),
-          contentPadding = PaddingValues(16.dp),
-          verticalArrangement = Arrangement.spacedBy(8.dp),
+          contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
       ) {
-        items(entries) { entry: Entry ->
-          EntryRow(entry, onDelete = { entryPendingDeletion = entry })
+        entriesByDay.forEach { (day, entriesForDay) ->
+          stickyHeader(key = day.toEpochDay()) {
+            DayHeader(label = dayLabel(day, today), entryCount = entriesForDay.size)
+          }
+          items(entriesForDay, key = { it.timestamp.toEpochMilli() }) { entry ->
+            EntryRow(
+                entry = entry,
+                onDelete = { entryPendingDeletion = entry },
+                modifier = Modifier.padding(vertical = 4.dp),
+            )
+          }
         }
       }
     }
   }
 }
 
+/** Sticky section header grouping entries from the same calendar day. */
 @Composable
-private fun EntryRow(entry: Entry, onDelete: () -> Unit) {
-  Card(modifier = Modifier.fillMaxWidth().testTag(HistoryScreenTestTags.ENTRY_ITEM)) {
+private fun DayHeader(label: String, entryCount: Int) {
+  Surface(
+      modifier = Modifier.fillMaxWidth().testTag(HistoryScreenTestTags.DAY_HEADER),
+      color = MaterialTheme.colorScheme.background,
+  ) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Text(
+          text = label,
+          style = MaterialTheme.typography.titleSmall,
+          fontWeight = FontWeight.Bold,
+      )
+      Text(
+          text = if (entryCount == 1) "1 entry" else "$entryCount entries",
+          style = MaterialTheme.typography.labelMedium,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+    }
+  }
+}
+
+/** "Today", "Yesterday", or a weekday/date, omitting the year unless [day] isn't this year. */
+private fun dayLabel(day: LocalDate, today: LocalDate): String =
+    when (day) {
+      today -> "Today"
+      today.minusDays(1) -> "Yesterday"
+      else -> {
+        val pattern = if (day.year == today.year) "EEEE, MMM d" else "EEEE, MMM d, yyyy"
+        day.format(DateTimeFormatter.ofPattern(pattern, Locale.getDefault()))
+      }
+    }
+
+@Composable
+private fun EntryRow(entry: Entry, onDelete: () -> Unit, modifier: Modifier = Modifier) {
+  Card(modifier = modifier.fillMaxWidth().testTag(HistoryScreenTestTags.ENTRY_ITEM)) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -168,9 +226,9 @@ private fun EntryRow(entry: Entry, onDelete: () -> Unit) {
             tint = MaterialTheme.colorScheme.primary,
         )
         Text(
-            text = ENTRY_DATE_FORMATTER.format(entry.timestamp),
+            text = ENTRY_TIME_FORMATTER.format(entry.timestamp),
             style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(vertical = 16.dp, horizontal = 12.dp),
+            modifier = Modifier.padding(vertical = 12.dp, horizontal = 12.dp),
         )
       }
       IconButton(
