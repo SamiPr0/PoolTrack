@@ -34,4 +34,15 @@ class EntryRepositoryLocal(private val context: Context) : EntryRepository {
           else existing + TIMESTAMP_SEPARATOR + newTimestamp
     }
   }
+
+  override suspend fun deleteEntry(entry: Entry) {
+    context.entryDataStore.edit { prefs ->
+      val existing = prefs[ENTRY_TIMESTAMPS_KEY] ?: return@edit
+      prefs[ENTRY_TIMESTAMPS_KEY] =
+          existing
+              .split(TIMESTAMP_SEPARATOR)
+              .filter { it.isNotBlank() && it != entry.timestamp.toString() }
+              .joinToString(TIMESTAMP_SEPARATOR)
+    }
+  }
 }

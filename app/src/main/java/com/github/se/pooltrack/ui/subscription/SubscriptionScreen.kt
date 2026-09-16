@@ -8,14 +8,29 @@ import android.net.Uri
 import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,6 +59,7 @@ import kotlinx.coroutines.withContext
 
 object SubscriptionScreenTestTags {
   const val PICK_BUTTON = "SubscriptionScreenPickButton"
+  const val LOADING_INDICATOR = "SubscriptionScreenLoadingIndicator"
   const val PDF_IMAGE = "SubscriptionScreenPdfImage"
   const val ACCEPT_BUTTON = "SubscriptionScreenAcceptButton"
   const val DECLINE_BUTTON = "SubscriptionScreenDeclineButton"
@@ -81,15 +97,34 @@ fun SubscriptionScreen(
     val currentUri = subscriptionUri
     if (currentUri == null) {
       Column(
-          modifier = Modifier.fillMaxSize().padding(paddingValues),
+          modifier = Modifier.fillMaxSize().padding(paddingValues).padding(32.dp),
           verticalArrangement = Arrangement.Center,
           horizontalAlignment = Alignment.CenterHorizontally,
       ) {
+        Icon(
+            imageVector = Icons.Filled.Add,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = "No subscription yet",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
+        )
+        Text(
+            text = "Add your pool subscription PDF once, then show it at the scanner.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 24.dp),
+        )
         Button(
             onClick = { pickPdfLauncher.launch(arrayOf("application/pdf")) },
             modifier = Modifier.testTag(SubscriptionScreenTestTags.PICK_BUTTON),
         ) {
-          Text("Choose subscription PDF")
+          Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Add subscription PDF")
         }
       }
     } else {
@@ -101,14 +136,23 @@ fun SubscriptionScreen(
       }
 
       Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-        pageBitmap?.let { bitmap ->
-          Image(
-              bitmap = bitmap.asImageBitmap(),
-              contentDescription = "Subscription pass",
-              contentScale = ContentScale.Fit,
-              modifier =
-                  Modifier.weight(1f).fillMaxWidth().testTag(SubscriptionScreenTestTags.PDF_IMAGE),
-          )
+        Box(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            contentAlignment = Alignment.Center,
+        ) {
+          val bitmap = pageBitmap
+          if (bitmap == null) {
+            CircularProgressIndicator(
+                modifier = Modifier.testTag(SubscriptionScreenTestTags.LOADING_INDICATOR),
+            )
+          } else {
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = "Subscription pass",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize().testTag(SubscriptionScreenTestTags.PDF_IMAGE),
+            )
+          }
         }
 
         Row(
@@ -117,17 +161,28 @@ fun SubscriptionScreen(
         ) {
           Button(
               onClick = { viewModel.onScannerAccepted() },
+              contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
               modifier = Modifier.testTag(SubscriptionScreenTestTags.ACCEPT_BUTTON),
           ) {
-            Text("Scanner accepted")
+            Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Accepted")
           }
-          Button(
+          OutlinedButton(
               // A declined scan must not count as an entry, so this stays a no-op: the pass
               // just remains on screen for the user to try scanning again.
               onClick = {},
+              colors =
+                  ButtonDefaults.outlinedButtonColors(
+                      contentColor = MaterialTheme.colorScheme.error,
+                  ),
+              border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+              contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
               modifier = Modifier.testTag(SubscriptionScreenTestTags.DECLINE_BUTTON),
           ) {
-            Text("Scanner declined")
+            Icon(Icons.Filled.Close, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Declined")
           }
         }
       }

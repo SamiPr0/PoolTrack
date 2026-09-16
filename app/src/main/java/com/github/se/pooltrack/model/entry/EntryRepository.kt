@@ -14,4 +14,11 @@ interface EntryRepository {
    * @param entry The entry to record.
    */
   suspend fun addEntry(entry: Entry)
+
+  /**
+   * Removes a recorded entry, e.g. to undo a misclick.
+   *
+   * @param entry The entry to remove.
+   */
+  suspend fun deleteEntry(entry: Entry)
 }
