@@ -14,6 +14,12 @@ sealed class Screen(
           name = "Home",
           isTopLevelDestination = true,
       )
+
+  object Subscription :
+      Screen(
+          route = "subscription",
+          name = "Subscription",
+      )
 }
 
 open class NavigationActions(
