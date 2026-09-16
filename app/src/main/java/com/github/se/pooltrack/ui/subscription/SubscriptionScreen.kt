@@ -23,9 +23,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -56,6 +58,7 @@ object SubscriptionScreenTestTags {
   const val LOADING_INDICATOR = "SubscriptionScreenLoadingIndicator"
   const val PDF_IMAGE = "SubscriptionScreenPdfImage"
   const val ACCEPT_BUTTON = "SubscriptionScreenAcceptButton"
+  const val REPLACE_BUTTON = "SubscriptionScreenReplaceButton"
 }
 
 /**
@@ -80,7 +83,22 @@ fun SubscriptionScreen(
 
   Scaffold(
       topBar = {
-        TopNavigationMenu(Screen.Subscription, onGoBack = { navigationActions?.goBack() })
+        TopNavigationMenu(
+            Screen.Subscription,
+            onGoBack = { navigationActions?.goBack() },
+            actions = {
+              // Once a subscription is used up (e.g. a monthly pass expired), the user needs a
+              // way to swap in a new one without deleting the app data by hand.
+              if (subscriptionUri != null) {
+                IconButton(
+                    onClick = { pickPdfLauncher.launch(arrayOf("application/pdf")) },
+                    modifier = Modifier.testTag(SubscriptionScreenTestTags.REPLACE_BUTTON),
+                ) {
+                  Icon(Icons.Filled.Edit, contentDescription = "Replace subscription")
+                }
+              }
+            },
+        )
       },
   ) { paddingValues ->
     val currentUri = subscriptionUri

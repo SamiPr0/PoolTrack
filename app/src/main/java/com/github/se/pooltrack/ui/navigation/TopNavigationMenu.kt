@@ -1,5 +1,6 @@
 package com.github.se.pooltrack.ui.navigation
 
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -12,12 +13,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 
 /**
- * Top bar shared by every screen, showing the current screen's name and a back button whenever
- * that screen isn't one of the bottom navigation tabs.
+ * Top bar shared by every screen, showing the current screen's name, a back button whenever that
+ * screen isn't one of the bottom navigation tabs, and any screen-specific [actions].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopNavigationMenu(currentScreen: Screen, onGoBack: () -> Unit = {}) {
+fun TopNavigationMenu(
+    currentScreen: Screen,
+    onGoBack: () -> Unit = {},
+    actions: @Composable RowScope.() -> Unit = {},
+) {
   TopAppBar(
       title = {
         Text(
@@ -35,5 +40,6 @@ fun TopNavigationMenu(currentScreen: Screen, onGoBack: () -> Unit = {}) {
           }
         }
       },
+      actions = actions,
   )
 }
