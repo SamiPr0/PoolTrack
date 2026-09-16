@@ -26,7 +26,7 @@ sealed class Tab(
 
   object Subscription :
       Tab(
-          "Subscription",
+          "Subscriptions",
           Icons.Outlined.Person,
           Screen.Subscription,
           NavigationTestTags.SUBSCRIPTION_TAB,
