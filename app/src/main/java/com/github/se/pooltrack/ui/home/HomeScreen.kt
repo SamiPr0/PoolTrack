@@ -46,7 +46,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.daysUntilExpiration
 import com.github.se.pooltrack.model.subscription.isExpired
-import com.github.se.pooltrack.model.subscription.pricePerEntry
 import com.github.se.pooltrack.ui.navigation.BottomNavigationMenu
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
@@ -188,7 +187,7 @@ fun HomeScreen(
         StatTile(
             icon = Icons.Outlined.Info,
             label = "Cost / entry",
-            value = amountLabel(activeSubscription?.pricePerEntry),
+            value = amountLabel(costPerEntry(totalSpent, stats.totalEntries)),
             modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.COST_PER_ENTRY_STAT),
         )
       }
@@ -336,6 +335,14 @@ private fun NoSubscriptionTodoCard(onClick: () -> Unit, modifier: Modifier = Mod
     }
   }
 }
+
+/**
+ * The actual average cost per pool visit so far - [totalSpent] divided by every entry ever
+ * confirmed, not tied to a single subscription's plan. Unlike a fixed price/maxEntries ratio,
+ * this moves every time a new entry is recorded.
+ */
+private fun costPerEntry(totalSpent: Double, totalEntries: Int): Double? =
+    if (totalSpent == 0.0 || totalEntries == 0) null else totalSpent / totalEntries
 
 /** "29.90", or "-" if [amount] is `null` or zero (i.e. nothing meaningful was recorded). */
 private fun amountLabel(amount: Double?): String =
