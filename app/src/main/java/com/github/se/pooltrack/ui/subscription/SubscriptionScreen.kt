@@ -45,10 +45,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.se.pooltrack.ui.navigation.BottomNavigationMenu
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
-import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -81,12 +79,8 @@ fun SubscriptionScreen(
   MaxBrightness()
 
   Scaffold(
-      topBar = { TopNavigationMenu(Screen.Subscription) },
-      bottomBar = {
-        BottomNavigationMenu(
-            selectedTab = Tab.Subscription,
-            onTabSelected = { tab -> navigationActions?.navigateTo(tab.destination) },
-        )
+      topBar = {
+        TopNavigationMenu(Screen.Subscription, onGoBack = { navigationActions?.goBack() })
       },
   ) { paddingValues ->
     val currentUri = subscriptionUri
@@ -158,7 +152,10 @@ fun SubscriptionScreen(
             horizontalArrangement = Arrangement.Center,
         ) {
           Button(
-              onClick = { viewModel.onScannerAccepted() },
+              onClick = {
+                viewModel.onScannerAccepted()
+                navigationActions?.goBack()
+              },
               contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
               modifier = Modifier.testTag(SubscriptionScreenTestTags.ACCEPT_BUTTON),
           ) {

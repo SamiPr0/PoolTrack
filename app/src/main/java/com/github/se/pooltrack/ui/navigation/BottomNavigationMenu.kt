@@ -20,19 +20,14 @@ sealed class Tab(
     val destination: Screen,
     val testTag: String,
 ) {
-  object Subscription :
-      Tab(
-          "Subscription",
-          Icons.Outlined.Home,
-          Screen.Subscription,
-          NavigationTestTags.SUBSCRIPTION_TAB,
-      )
+  object Home :
+      Tab("Home", Icons.Outlined.Home, Screen.Home, NavigationTestTags.HOME_TAB)
 
   object History :
       Tab("History", Icons.Outlined.List, Screen.History, NavigationTestTags.HISTORY_TAB)
 }
 
-private val tabs = listOf(Tab.Subscription, Tab.History)
+private val tabs = listOf(Tab.Home, Tab.History)
 
 /** Bottom bar shared by every top-level screen, letting the user switch between them directly. */
 @Composable
