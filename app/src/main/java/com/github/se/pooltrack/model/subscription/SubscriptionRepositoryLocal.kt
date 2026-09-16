@@ -39,13 +39,20 @@ class SubscriptionRepositoryLocal(private val context: Context) : SubscriptionRe
         subscriptions.find { it.id == activeId }
       }
 
-  override suspend fun addSubscription(uri: String, displayName: String): Subscription {
+  override suspend fun addSubscription(
+      uri: String,
+      displayName: String,
+      expiresAtEpochMilli: Long?,
+      maxEntries: Int?,
+  ): Subscription {
     val subscription =
         Subscription(
             id = UUID.randomUUID().toString(),
             uri = uri,
             displayName = displayName,
             addedAtEpochMilli = System.currentTimeMillis(),
+            expiresAtEpochMilli = expiresAtEpochMilli,
+            maxEntries = maxEntries,
         )
     context.subscriptionDataStore.edit { prefs ->
       val existing =

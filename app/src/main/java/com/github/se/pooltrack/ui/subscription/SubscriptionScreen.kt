@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
@@ -38,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -57,6 +59,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -64,12 +67,16 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.addedAt
+import com.github.se.pooltrack.model.subscription.expiresAt
+import com.github.se.pooltrack.model.subscription.isExpired
 import com.github.se.pooltrack.model.subscription.renderFirstPdfPage
 import com.github.se.pooltrack.ui.navigation.BottomNavigationMenu
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
+import java.time.LocalDate
+import java.time.Period
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -89,12 +96,47 @@ object SubscriptionScreenTestTags {
   const val CANCEL_DELETE_BUTTON = "SubscriptionScreenCancelDeleteButton"
   const val ADD_BUTTON = "SubscriptionScreenAddButton"
   const val DETAIL_DIALOG = "SubscriptionScreenDetailDialog"
+  const val EXPIRATION_DIALOG = "SubscriptionScreenExpirationDialog"
+  const val EXPIRATION_NONE_BUTTON = "SubscriptionScreenExpirationNoneButton"
+  const val EXPIRATION_DATE_BUTTON = "SubscriptionScreenExpirationDateButton"
+  const val EXPIRATION_ENTRIES_BUTTON = "SubscriptionScreenExpirationEntriesButton"
+  const val EXPIRATION_ENTRIES_FIELD = "SubscriptionScreenExpirationEntriesField"
+  const val EXPIRATION_CONFIRM_BUTTON = "SubscriptionScreenExpirationConfirmButton"
 }
 
 // Built fresh on every call rather than cached as a val, so a locale change while the app is
 // running (without a process restart) is picked up instead of baked in at class-init time.
 private fun addedDateFormatter(): DateTimeFormatter =
     DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withZone(ZoneId.systemDefault())
+
+/** A quick preset offered when picking a date-based expiration - covers the common cases. */
+private enum class DatePreset(val label: String, val period: Period) {
+  ONE_MONTH("1 month", Period.ofMonths(1)),
+  SIX_MONTHS("6 months", Period.ofMonths(6)),
+  ONE_YEAR("1 year", Period.ofYears(1)),
+}
+
+private fun DatePreset.expiresAtEpochMilli(zone: ZoneId = ZoneId.systemDefault()): Long =
+    LocalDate.now(zone).plus(period).atStartOfDay(zone).toInstant().toEpochMilli()
+
+/** Which kind of expiration is being configured in [AddSubscriptionExpirationDialog]. */
+private enum class ExpirationMode {
+  NONE,
+  DATE,
+  ENTRIES,
+}
+
+/** A short line describing when/how a subscription expires, or `null` if it never does. */
+private fun expirationLabel(subscription: Subscription): String? {
+  subscription.expiresAt?.let { expiresAt ->
+    val formatted = addedDateFormatter().format(expiresAt)
+    return if (subscription.isExpired) "Expired $formatted" else "Expires $formatted"
+  }
+  subscription.maxEntries?.let { maxEntries ->
+    return "Limited to $maxEntries ${if (maxEntries == 1) "entry" else "entries"}"
+  }
+  return null
+}
 
 /**
  * SubscriptionScreen is the always-reachable bottom-nav tab for managing subscriptions: lists
@@ -115,11 +157,22 @@ fun SubscriptionScreen(
   val activeSubscription by viewModel.activeSubscription.collectAsState()
   var selectedSubscription by remember { mutableStateOf<Subscription?>(null) }
   var subscriptionPendingDeletion by remember { mutableStateOf<Subscription?>(null) }
+  var pickedPdfUri by remember { mutableStateOf<Uri?>(null) }
 
   val pickPdfLauncher =
       rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        if (uri != null) viewModel.onSubscriptionPicked(uri)
+        if (uri != null) pickedPdfUri = uri
       }
+
+  pickedPdfUri?.let { uri ->
+    AddSubscriptionExpirationDialog(
+        onConfirm = { expiresAtEpochMilli, maxEntries ->
+          viewModel.onSubscriptionPicked(uri, expiresAtEpochMilli, maxEntries)
+          pickedPdfUri = null
+        },
+        onDismiss = { pickedPdfUri = null },
+    )
+  }
 
   selectedSubscription?.let { subscription ->
     SubscriptionDetailDialog(
@@ -295,6 +348,16 @@ private fun SubscriptionRow(subscription: Subscription, isActive: Boolean, onCli
                 if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
                 else MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        expirationLabel(subscription)?.let { label ->
+          Text(
+              text = label,
+              style = MaterialTheme.typography.bodySmall,
+              color =
+                  if (subscription.isExpired) MaterialTheme.colorScheme.error
+                  else if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
+                  else MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+        }
       }
     }
   }
@@ -345,6 +408,18 @@ private fun SubscriptionDetailDialog(
             modifier = Modifier.fillMaxWidth(),
         )
 
+        expirationLabel(subscription)?.let { label ->
+          Text(
+              text = label,
+              style = MaterialTheme.typography.bodyMedium,
+              color =
+                  if (subscription.isExpired) MaterialTheme.colorScheme.error
+                  else MaterialTheme.colorScheme.onSurfaceVariant,
+              textAlign = TextAlign.Center,
+              modifier = Modifier.fillMaxWidth(),
+          )
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
 
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -387,6 +462,122 @@ private fun SubscriptionDetailDialog(
         }
       }
     }
+  }
+}
+
+/**
+ * Shown right after picking a subscription PDF, before it's actually added, so its expiration -
+ * a date (via quick presets) or an entry-count limit - is captured from the start rather than
+ * missing entirely.
+ */
+@Composable
+private fun AddSubscriptionExpirationDialog(
+    onConfirm: (expiresAtEpochMilli: Long?, maxEntries: Int?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+  var mode by remember { mutableStateOf(ExpirationMode.NONE) }
+  var selectedPreset by remember { mutableStateOf<DatePreset?>(null) }
+  var entriesText by remember { mutableStateOf("") }
+
+  val canConfirm =
+      when (mode) {
+        ExpirationMode.NONE -> true
+        ExpirationMode.DATE -> selectedPreset != null
+        ExpirationMode.ENTRIES -> (entriesText.toIntOrNull() ?: 0) > 0
+      }
+
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      modifier = Modifier.testTag(SubscriptionScreenTestTags.EXPIRATION_DIALOG),
+      title = { Text("When does this subscription expire?") },
+      text = {
+        Column {
+          Text(
+              text = "Optional, but it helps you keep track.",
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+          Spacer(modifier = Modifier.height(12.dp))
+          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ChoiceButton(
+                label = "No limit",
+                selected = mode == ExpirationMode.NONE,
+                modifier = Modifier.testTag(SubscriptionScreenTestTags.EXPIRATION_NONE_BUTTON),
+                onClick = { mode = ExpirationMode.NONE },
+            )
+            ChoiceButton(
+                label = "By date",
+                selected = mode == ExpirationMode.DATE,
+                modifier = Modifier.testTag(SubscriptionScreenTestTags.EXPIRATION_DATE_BUTTON),
+                onClick = { mode = ExpirationMode.DATE },
+            )
+            ChoiceButton(
+                label = "By entries",
+                selected = mode == ExpirationMode.ENTRIES,
+                modifier = Modifier.testTag(SubscriptionScreenTestTags.EXPIRATION_ENTRIES_BUTTON),
+                onClick = { mode = ExpirationMode.ENTRIES },
+            )
+          }
+
+          Spacer(modifier = Modifier.height(16.dp))
+
+          when (mode) {
+            ExpirationMode.DATE ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                  DatePreset.entries.forEach { preset ->
+                    ChoiceButton(
+                        label = preset.label,
+                        selected = selectedPreset == preset,
+                        onClick = { selectedPreset = preset },
+                    )
+                  }
+                }
+            ExpirationMode.ENTRIES ->
+                OutlinedTextField(
+                    value = entriesText,
+                    onValueChange = { entriesText = it.filter(Char::isDigit) },
+                    label = { Text("Number of entries") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .testTag(SubscriptionScreenTestTags.EXPIRATION_ENTRIES_FIELD),
+                )
+            ExpirationMode.NONE -> {}
+          }
+        }
+      },
+      confirmButton = {
+        TextButton(
+            onClick = {
+              val expiresAtEpochMilli =
+                  if (mode == ExpirationMode.DATE) selectedPreset?.expiresAtEpochMilli() else null
+              val maxEntries =
+                  if (mode == ExpirationMode.ENTRIES) entriesText.toIntOrNull() else null
+              onConfirm(expiresAtEpochMilli, maxEntries)
+            },
+            enabled = canConfirm,
+            modifier = Modifier.testTag(SubscriptionScreenTestTags.EXPIRATION_CONFIRM_BUTTON),
+        ) {
+          Text("Add")
+        }
+      },
+      dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+  )
+}
+
+/** A small toggle-style button: filled when [selected], outlined otherwise. */
+@Composable
+private fun ChoiceButton(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+  if (selected) {
+    Button(onClick = onClick, modifier = modifier) { Text(label) }
+  } else {
+    OutlinedButton(onClick = onClick, modifier = modifier) { Text(label) }
   }
 }
 

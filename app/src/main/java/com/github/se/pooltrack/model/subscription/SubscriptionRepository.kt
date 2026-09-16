@@ -16,9 +16,17 @@ interface SubscriptionRepository {
    *
    * @param uri The content URI of the PDF the user picked, as a string.
    * @param displayName A human-readable label for it.
+   * @param expiresAtEpochMilli When it expires, as epoch milliseconds, or `null` for no date-based
+   *   expiration.
+   * @param maxEntries The number of entries it's good for, or `null` for no entry-count limit.
    * @return The newly created [Subscription].
    */
-  suspend fun addSubscription(uri: String, displayName: String): Subscription
+  suspend fun addSubscription(
+      uri: String,
+      displayName: String,
+      expiresAtEpochMilli: Long? = null,
+      maxEntries: Int? = null,
+  ): Subscription
 
   /**
    * Marks the subscription with [id] as the active one, deactivating any other.
