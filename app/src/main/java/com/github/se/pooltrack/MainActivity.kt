@@ -42,6 +42,8 @@ fun PoolTrackApp() {
     composable(Screen.Home.route) {
       HomeScreen(onViewSubscription = { navigationActions.navigateTo(Screen.Subscription) })
     }
-    composable(Screen.Subscription.route) { SubscriptionScreen() }
+    composable(Screen.Subscription.route) {
+      SubscriptionScreen(onEntryConfirmed = { navigationActions.goBack() })
+    }
   }
 }

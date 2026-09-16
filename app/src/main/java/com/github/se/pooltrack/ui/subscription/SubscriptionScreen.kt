@@ -11,7 +11,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +31,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -35,6 +39,8 @@ import kotlinx.coroutines.withContext
 object SubscriptionScreenTestTags {
   const val PICK_BUTTON = "SubscriptionScreenPickButton"
   const val PDF_IMAGE = "SubscriptionScreenPdfImage"
+  const val ACCEPT_BUTTON = "SubscriptionScreenAcceptButton"
+  const val DECLINE_BUTTON = "SubscriptionScreenDeclineButton"
 }
 
 /**
@@ -43,7 +49,10 @@ object SubscriptionScreenTestTags {
  * one.
  */
 @Composable
-fun SubscriptionScreen(viewModel: SubscriptionViewModel = viewModel()) {
+fun SubscriptionScreen(
+    viewModel: SubscriptionViewModel = viewModel(),
+    onEntryConfirmed: () -> Unit = {},
+) {
   val subscriptionUri by viewModel.subscriptionUri.collectAsState()
   val context = LocalContext.current
 
@@ -54,34 +63,59 @@ fun SubscriptionScreen(viewModel: SubscriptionViewModel = viewModel()) {
 
   MaxBrightness()
 
-  Column(
-      modifier = Modifier.fillMaxSize(),
-      verticalArrangement = Arrangement.Center,
-      horizontalAlignment = Alignment.CenterHorizontally,
-  ) {
-    val currentUri = subscriptionUri
-    if (currentUri == null) {
+  val currentUri = subscriptionUri
+  if (currentUri == null) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
       Button(
           onClick = { pickPdfLauncher.launch(arrayOf("application/pdf")) },
           modifier = Modifier.testTag(SubscriptionScreenTestTags.PICK_BUTTON),
       ) {
         Text("Choose subscription PDF")
       }
-    } else {
-      var pageBitmap by remember(currentUri) { mutableStateOf<Bitmap?>(null) }
+    }
+  } else {
+    var pageBitmap by remember(currentUri) { mutableStateOf<Bitmap?>(null) }
 
-      LaunchedEffect(currentUri) {
-        pageBitmap =
-            withContext(Dispatchers.IO) { renderFirstPage(context, Uri.parse(currentUri)) }
-      }
+    LaunchedEffect(currentUri) {
+      pageBitmap = withContext(Dispatchers.IO) { renderFirstPage(context, Uri.parse(currentUri)) }
+    }
 
+    Column(modifier = Modifier.fillMaxSize()) {
       pageBitmap?.let { bitmap ->
         Image(
             bitmap = bitmap.asImageBitmap(),
             contentDescription = "Subscription pass",
             contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize().testTag(SubscriptionScreenTestTags.PDF_IMAGE),
+            modifier =
+                Modifier.weight(1f).fillMaxWidth().testTag(SubscriptionScreenTestTags.PDF_IMAGE),
         )
+      }
+
+      Row(
+          modifier = Modifier.fillMaxWidth().padding(16.dp),
+          horizontalArrangement = Arrangement.SpaceEvenly,
+      ) {
+        Button(
+            onClick = {
+              viewModel.onScannerAccepted()
+              onEntryConfirmed()
+            },
+            modifier = Modifier.testTag(SubscriptionScreenTestTags.ACCEPT_BUTTON),
+        ) {
+          Text("Scanner accepted")
+        }
+        Button(
+            // A declined scan must not count as an entry, so this stays a no-op: the pass
+            // just remains on screen for the user to try scanning again.
+            onClick = {},
+            modifier = Modifier.testTag(SubscriptionScreenTestTags.DECLINE_BUTTON),
+        ) {
+          Text("Scanner declined")
+        }
       }
     }
   }
