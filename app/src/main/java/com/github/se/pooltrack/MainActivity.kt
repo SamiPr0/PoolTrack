@@ -11,6 +11,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.github.se.pooltrack.ui.history.HistoryScreen
 import com.github.se.pooltrack.ui.home.HomeScreen
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
@@ -40,10 +41,14 @@ fun PoolTrackApp() {
 
   NavHost(navController = navController, startDestination = startDestination) {
     composable(Screen.Home.route) {
-      HomeScreen(onViewSubscription = { navigationActions.navigateTo(Screen.Subscription) })
+      HomeScreen(
+          onViewSubscription = { navigationActions.navigateTo(Screen.Subscription) },
+          onViewHistory = { navigationActions.navigateTo(Screen.History) },
+      )
     }
     composable(Screen.Subscription.route) {
       SubscriptionScreen(onEntryConfirmed = { navigationActions.goBack() })
     }
+    composable(Screen.History.route) { HistoryScreen() }
   }
 }

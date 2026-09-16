@@ -15,11 +15,12 @@ import com.github.se.pooltrack.ui.theme.PoolTrackTheme
 object HomeScreenTestTags {
   const val GREETING = "HomeScreenGreeting"
   const val VIEW_SUBSCRIPTION_BUTTON = "HomeScreenViewSubscriptionButton"
+  const val VIEW_HISTORY_BUTTON = "HomeScreenViewHistoryButton"
 }
 
 /** HomeScreen composable that is the first screen shown when the app launches. */
 @Composable
-fun HomeScreen(onViewSubscription: () -> Unit = {}) {
+fun HomeScreen(onViewSubscription: () -> Unit = {}, onViewHistory: () -> Unit = {}) {
   Column(
       modifier = Modifier.fillMaxSize(),
       verticalArrangement = Arrangement.Center,
@@ -34,6 +35,12 @@ fun HomeScreen(onViewSubscription: () -> Unit = {}) {
         modifier = Modifier.testTag(HomeScreenTestTags.VIEW_SUBSCRIPTION_BUTTON),
     ) {
       Text("View subscription")
+    }
+    Button(
+        onClick = onViewHistory,
+        modifier = Modifier.testTag(HomeScreenTestTags.VIEW_HISTORY_BUTTON),
+    ) {
+      Text("View entry history")
     }
   }
 }

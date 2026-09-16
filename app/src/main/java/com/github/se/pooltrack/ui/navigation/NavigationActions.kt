@@ -20,6 +20,12 @@ sealed class Screen(
           route = "subscription",
           name = "Subscription",
       )
+
+  object History :
+      Screen(
+          route = "history",
+          name = "History",
+      )
 }
 
 open class NavigationActions(
