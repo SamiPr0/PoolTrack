@@ -8,6 +8,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +54,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.subscription.Subscription
@@ -81,6 +83,7 @@ object SubscriptionScreenTestTags {
   const val CONFIRM_DELETE_BUTTON = "SubscriptionScreenConfirmDeleteButton"
   const val CANCEL_DELETE_BUTTON = "SubscriptionScreenCancelDeleteButton"
   const val ADD_BUTTON = "SubscriptionScreenAddButton"
+  const val DETAIL_DIALOG = "SubscriptionScreenDetailDialog"
 }
 
 // Built fresh on every call rather than cached as a val, so a locale change while the app is
@@ -91,7 +94,9 @@ private fun addedDateFormatter(): DateTimeFormatter =
 /**
  * SubscriptionScreen is the always-reachable bottom-nav tab for managing subscriptions: lists
  * every one the user has added - e.g. an expired one kept for reference alongside the new one
- * replacing it - lets them pick which is active, delete any of them, or add another.
+ * replacing it. Rows only show the basics (thumbnail, name, date, whether it's active); tapping
+ * one opens a detail dialog with the actual actions (set active, delete), so the list itself
+ * doesn't repeat the same two buttons on every single row.
  *
  * It deliberately does not display the active subscription's pass itself: that would just
  * duplicate [SubscriptionQuickViewScreen], which Home's FAB already opens for that.
@@ -103,12 +108,29 @@ fun SubscriptionScreen(
 ) {
   val subscriptions by viewModel.subscriptions.collectAsState()
   val activeSubscription by viewModel.activeSubscription.collectAsState()
+  var selectedSubscription by remember { mutableStateOf<Subscription?>(null) }
   var subscriptionPendingDeletion by remember { mutableStateOf<Subscription?>(null) }
 
   val pickPdfLauncher =
       rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) viewModel.onSubscriptionPicked(uri)
       }
+
+  selectedSubscription?.let { subscription ->
+    SubscriptionDetailDialog(
+        subscription = subscription,
+        isActive = subscription.id == activeSubscription?.id,
+        onSetActive = {
+          viewModel.onSetActive(subscription.id)
+          selectedSubscription = null
+        },
+        onDelete = {
+          selectedSubscription = null
+          subscriptionPendingDeletion = subscription
+        },
+        onDismiss = { selectedSubscription = null },
+    )
+  }
 
   subscriptionPendingDeletion?.let { subscription ->
     AlertDialog(
@@ -199,14 +221,13 @@ fun SubscriptionScreen(
                   .padding(paddingValues)
                   .testTag(SubscriptionScreenTestTags.SUBSCRIPTION_LIST),
           contentPadding = PaddingValues(16.dp),
-          verticalArrangement = Arrangement.spacedBy(16.dp),
+          verticalArrangement = Arrangement.spacedBy(12.dp),
       ) {
         items(subscriptions, key = { it.id }) { subscription ->
           SubscriptionRow(
               subscription = subscription,
               isActive = subscription.id == activeSubscription?.id,
-              onSetActive = { viewModel.onSetActive(subscription.id) },
-              onDelete = { subscriptionPendingDeletion = subscription },
+              onClick = { selectedSubscription = subscription },
           )
         }
       }
@@ -214,18 +235,14 @@ fun SubscriptionScreen(
   }
 }
 
+/** A single row: thumbnail, name, date, and whether it's active - no actions. Tap for those. */
 @Composable
-private fun SubscriptionRow(
-    subscription: Subscription,
-    isActive: Boolean,
-    onSetActive: () -> Unit,
-    onDelete: () -> Unit,
-) {
-  // Two rows rather than one long one: cramming the thumbnail, title, date, "Set active"
-  // button and delete icon onto a single line left no room for the date, which wrapped
-  // awkwardly and made cards uneven heights. Info on top, actions below, has room to breathe.
+private fun SubscriptionRow(subscription: Subscription, isActive: Boolean, onClick: () -> Unit) {
   Card(
-      modifier = Modifier.fillMaxWidth().testTag(SubscriptionScreenTestTags.SUBSCRIPTION_ITEM),
+      modifier =
+          Modifier.fillMaxWidth()
+              .clickable(onClick = onClick)
+              .testTag(SubscriptionScreenTestTags.SUBSCRIPTION_ITEM),
       shape = RoundedCornerShape(16.dp),
       colors =
           if (isActive) {
@@ -241,81 +258,117 @@ private fun SubscriptionRow(
           },
       elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 4.dp else 2.dp),
   ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        if (isActive) {
-          Icon(
-              imageVector = Icons.Filled.CheckCircle,
-              contentDescription = "Active",
-              tint = MaterialTheme.colorScheme.primary,
-              modifier = Modifier.size(28.dp).testTag(SubscriptionScreenTestTags.ACTIVE_BADGE),
-          )
-        } else {
-          Spacer(modifier = Modifier.size(28.dp))
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-
-        SubscriptionThumbnail(uri = subscription.uri)
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-          Text(
-              text = subscription.displayName,
-              style = MaterialTheme.typography.titleMedium,
-              fontWeight = FontWeight.SemiBold,
-          )
-          Text(
-              text = "Added ${addedDateFormatter().format(subscription.addedAt)}",
-              style = MaterialTheme.typography.bodySmall,
-              color =
-                  if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
-                  else MaterialTheme.colorScheme.onSurfaceVariant,
-          )
-        }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+      if (isActive) {
+        Icon(
+            imageVector = Icons.Filled.CheckCircle,
+            contentDescription = "Active",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(28.dp).testTag(SubscriptionScreenTestTags.ACTIVE_BADGE),
+        )
+      } else {
+        Spacer(modifier = Modifier.size(28.dp))
       }
+      Spacer(modifier = Modifier.width(12.dp))
 
-      Spacer(modifier = Modifier.height(12.dp))
+      SubscriptionThumbnail(uri = subscription.uri, width = 48.dp, height = 64.dp)
+      Spacer(modifier = Modifier.width(12.dp))
 
-      Row(
-          modifier = Modifier.fillMaxWidth(),
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.SpaceBetween,
-      ) {
-        if (isActive) {
-          Text(
-              text = "Active",
-              style = MaterialTheme.typography.labelLarge,
-              color = MaterialTheme.colorScheme.primary,
-          )
-        } else {
-          FilledTonalButton(
-              onClick = onSetActive,
-              modifier = Modifier.testTag(SubscriptionScreenTestTags.SET_ACTIVE_BUTTON),
-          ) {
-            Text("Set active")
-          }
-        }
-
-        IconButton(
-            onClick = onDelete,
-            modifier = Modifier.testTag(SubscriptionScreenTestTags.DELETE_BUTTON),
-        ) {
-          Icon(
-              imageVector = Icons.Filled.Delete,
-              contentDescription = "Delete subscription",
-              tint =
-                  if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
-                  else MaterialTheme.colorScheme.onSurfaceVariant,
-          )
-        }
+      Column(modifier = Modifier.weight(1f)) {
+        Text(
+            text = subscription.displayName,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = "Added ${addedDateFormatter().format(subscription.addedAt)}",
+            style = MaterialTheme.typography.bodySmall,
+            color =
+                if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
       }
     }
   }
 }
 
-/** A small preview of the PDF's first page, rendered asynchronously. */
+/** Details for one subscription, plus its "set active" / "delete" actions. */
 @Composable
-private fun SubscriptionThumbnail(uri: String) {
+private fun SubscriptionDetailDialog(
+    subscription: Subscription,
+    isActive: Boolean,
+    onSetActive: () -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      modifier = Modifier.testTag(SubscriptionScreenTestTags.DETAIL_DIALOG),
+      title = { Text(subscription.displayName) },
+      text = {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+          SubscriptionThumbnail(uri = subscription.uri, width = 96.dp, height = 128.dp)
+          Text(
+              text = "Added ${addedDateFormatter().format(subscription.addedAt)}",
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              modifier = Modifier.padding(top = 12.dp),
+          )
+          if (isActive) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 16.dp),
+            ) {
+              Icon(
+                  imageVector = Icons.Filled.CheckCircle,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.primary,
+                  modifier = Modifier.size(20.dp),
+              )
+              Text(
+                  text = "Currently active",
+                  style = MaterialTheme.typography.labelLarge,
+                  color = MaterialTheme.colorScheme.primary,
+                  modifier = Modifier.padding(start = 8.dp),
+              )
+            }
+          } else {
+            FilledTonalButton(
+                onClick = onSetActive,
+                modifier =
+                    Modifier.padding(top = 16.dp)
+                        .fillMaxWidth()
+                        .testTag(SubscriptionScreenTestTags.SET_ACTIVE_BUTTON),
+            ) {
+              Text("Set active")
+            }
+          }
+          TextButton(
+              onClick = onDelete,
+              modifier =
+                  Modifier.padding(top = 8.dp).testTag(SubscriptionScreenTestTags.DELETE_BUTTON),
+          ) {
+            Icon(
+                imageVector = Icons.Filled.Delete,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Delete", color = MaterialTheme.colorScheme.error)
+          }
+        }
+      },
+      confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+  )
+}
+
+/** A preview of the PDF's first page, rendered asynchronously, at the given [width]/[height]. */
+@Composable
+private fun SubscriptionThumbnail(uri: String, width: Dp, height: Dp) {
   val context = LocalContext.current
   var bitmap by remember(uri) { mutableStateOf<Bitmap?>(null) }
 
@@ -325,7 +378,7 @@ private fun SubscriptionThumbnail(uri: String) {
 
   Box(
       modifier =
-          Modifier.size(width = 48.dp, height = 64.dp)
+          Modifier.size(width = width, height = height)
               .clip(RoundedCornerShape(8.dp))
               .background(MaterialTheme.colorScheme.surfaceVariant)
               .border(
