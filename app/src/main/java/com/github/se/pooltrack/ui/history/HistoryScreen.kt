@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.stickyHeader
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
@@ -158,7 +157,7 @@ fun HistoryScreen(
           contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
       ) {
         entriesByDay.forEach { (day, entriesForDay) ->
-          stickyHeader(key = day.toEpochDay()) {
+          item(key = day.toEpochDay()) {
             DayHeader(label = dayLabel(day, today), entryCount = entriesForDay.size)
           }
           items(entriesForDay, key = { it.timestamp.toEpochMilli() }) { entry ->
@@ -174,7 +173,7 @@ fun HistoryScreen(
   }
 }
 
-/** Sticky section header grouping entries from the same calendar day. */
+/** Section header grouping entries from the same calendar day. */
 @Composable
 private fun DayHeader(label: String, entryCount: Int) {
   Surface(
