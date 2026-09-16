@@ -57,7 +57,9 @@ object SubscriptionListScreenTestTags {
   const val ADD_BUTTON = "SubscriptionListScreenAddButton"
 }
 
-private val ADDED_DATE_FORMATTER =
+// Built fresh on every call rather than cached as a val, so a locale change while the app is
+// running (without a process restart) is picked up instead of baked in at class-init time.
+private fun addedDateFormatter(): DateTimeFormatter =
     DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withZone(ZoneId.systemDefault())
 
 /**
@@ -175,7 +177,7 @@ private fun SubscriptionRow(
       Column(modifier = Modifier.weight(1f)) {
         Text(text = subscription.displayName, style = MaterialTheme.typography.titleMedium)
         Text(
-            text = "Added ${ADDED_DATE_FORMATTER.format(subscription.addedAt)}",
+            text = "Added ${addedDateFormatter().format(subscription.addedAt)}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
