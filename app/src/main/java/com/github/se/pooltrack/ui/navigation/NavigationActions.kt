@@ -26,6 +26,7 @@ sealed class Screen(
       Screen(
           route = "subscription",
           name = "Subscription",
+          isTopLevelDestination = true,
       )
 
   object SubscriptionList :

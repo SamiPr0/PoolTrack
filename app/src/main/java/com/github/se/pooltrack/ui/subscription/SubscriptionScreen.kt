@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -48,10 +49,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.github.se.pooltrack.model.subscription.remainingSubscriptionCooldown
+import com.github.se.pooltrack.ui.navigation.BottomNavigationMenu
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
+import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
+import java.time.Duration
+import java.time.Instant
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 object SubscriptionScreenTestTags {
@@ -62,11 +69,16 @@ object SubscriptionScreenTestTags {
   const val ACCEPT_BUTTON = "SubscriptionScreenAcceptButton"
   const val ADD_BUTTON = "SubscriptionScreenAddButton"
   const val MANAGE_BUTTON = "SubscriptionScreenManageButton"
+  const val COOLDOWN_MESSAGE = "SubscriptionScreenCooldownMessage"
 }
+
+/** How often the cooldown countdown re-checks the current time while this screen is on top. */
+private val COOLDOWN_REFRESH_INTERVAL = Duration.ofSeconds(30)
 
 /**
  * SubscriptionScreen displays the user's active subscription PDF at maximum screen brightness, so
  * it can be scanned at the pool entrance. If none is active yet, it prompts the user to add one.
+ * If the user entered the pool recently, it shows a cooldown message instead of the pass.
  */
 @Composable
 fun SubscriptionScreen(
@@ -75,20 +87,33 @@ fun SubscriptionScreen(
 ) {
   val activeSubscription by viewModel.activeSubscription.collectAsState()
   val subscriptions by viewModel.subscriptions.collectAsState()
+  val lastEntryTimestamp by viewModel.lastEntryTimestamp.collectAsState()
   val context = LocalContext.current
+
+  var now by remember { mutableStateOf(Instant.now()) }
+  LaunchedEffect(Unit) {
+    while (true) {
+      delay(COOLDOWN_REFRESH_INTERVAL.toMillis())
+      now = Instant.now()
+    }
+  }
+  val remainingCooldown = remainingSubscriptionCooldown(lastEntryTimestamp, now)
 
   val pickPdfLauncher =
       rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) viewModel.onSubscriptionPicked(uri)
       }
 
-  MaxBrightness()
+  // Only while the pass is actually being displayed - this is now a persistent tab someone
+  // might glance at without being at the scanner, unlike a screen you'd only deliberately open.
+  if (remainingCooldown == null && activeSubscription != null) {
+    MaxBrightness()
+  }
 
   Scaffold(
       topBar = {
         TopNavigationMenu(
             Screen.Subscription,
-            onGoBack = { navigationActions?.goBack() },
             actions = {
               // Once a subscription is used up (e.g. a monthly pass expired), the user needs a
               // way to add a new one without losing track of the old one.
@@ -111,9 +136,40 @@ fun SubscriptionScreen(
             },
         )
       },
+      bottomBar = {
+        BottomNavigationMenu(
+            selectedTab = Tab.Subscription,
+            onTabSelected = { tab -> navigationActions?.navigateTo(tab.destination) },
+        )
+      },
   ) { paddingValues ->
+    val cooldown = remainingCooldown
     val currentUri = activeSubscription?.uri
-    if (currentUri == null) {
+    if (cooldown != null) {
+      Column(
+          modifier = Modifier.fillMaxSize().padding(paddingValues).padding(32.dp),
+          verticalArrangement = Arrangement.Center,
+          horizontalAlignment = Alignment.CenterHorizontally,
+      ) {
+        Icon(
+            imageVector = Icons.Filled.Lock,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = "Already entered the pool",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
+        )
+        Text(
+            text = "You can show your pass again in ${formatCooldown(cooldown)}.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testTag(SubscriptionScreenTestTags.COOLDOWN_MESSAGE),
+        )
+      }
+    } else if (currentUri == null) {
       Column(
           modifier = Modifier.fillMaxSize().padding(paddingValues).padding(32.dp),
           verticalArrangement = Arrangement.Center,
@@ -193,7 +249,7 @@ fun SubscriptionScreen(
           Button(
               onClick = {
                 viewModel.onScannerAccepted()
-                navigationActions?.goBack()
+                navigationActions?.navigateTo(Screen.History)
               },
               contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
               modifier = Modifier.testTag(SubscriptionScreenTestTags.ACCEPT_BUTTON),
@@ -205,6 +261,17 @@ fun SubscriptionScreen(
         }
       }
     }
+  }
+}
+
+private fun formatCooldown(remaining: Duration): String {
+  val hours = remaining.toHours()
+  val minutes = remaining.minusHours(hours).toMinutes()
+  return when {
+    hours > 0 && minutes > 0 -> "${hours}h ${minutes}m"
+    hours > 0 -> "${hours}h"
+    minutes > 0 -> "${minutes}m"
+    else -> "less than a minute"
   }
 }
 
