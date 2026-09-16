@@ -41,7 +41,9 @@ import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeFormatterBuilder
 import java.time.format.FormatStyle
+import java.util.Locale
 
 object HistoryScreenTestTags {
   const val EMPTY_MESSAGE = "HistoryScreenEmptyMessage"
@@ -53,7 +55,11 @@ object HistoryScreenTestTags {
 }
 
 private val ENTRY_DATE_FORMATTER =
-    DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withZone(ZoneId.systemDefault())
+    DateTimeFormatterBuilder()
+        .appendPattern("EEEE, ")
+        .append(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM))
+        .toFormatter(Locale.getDefault())
+        .withZone(ZoneId.systemDefault())
 
 /** HistoryScreen lists every confirmed pool entry, most recent first. */
 @Composable
