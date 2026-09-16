@@ -48,4 +48,9 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
   fun onScannerAccepted() {
     viewModelScope.launch { entryRepository.addEntry(Entry(Instant.now())) }
   }
+
+  /** Records that the pass was just shown, starting the reopen cooldown. */
+  fun onPassShown() {
+    viewModelScope.launch { subscriptionRepository.setLastOpenedAt(Instant.now()) }
+  }
 }
