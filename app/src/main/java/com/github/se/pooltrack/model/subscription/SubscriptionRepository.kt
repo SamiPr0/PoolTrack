@@ -16,13 +16,13 @@ interface SubscriptionRepository {
    */
   suspend fun setSubscriptionUri(uri: String)
 
-  /** Emits when the subscription pass was last shown to the user, or `null` if never. */
-  fun getLastOpenedAt(): Flow<Instant?>
+  /** Emits when the user last entered the pool (a scanner-accepted scan), or `null` if never. */
+  fun getLastEnteredAt(): Flow<Instant?>
 
   /**
-   * Records that the subscription pass was just shown to the user.
+   * Records that the user just entered the pool.
    *
-   * @param at The instant it was opened.
+   * @param at The instant of entry.
    */
-  suspend fun setLastOpenedAt(at: Instant)
+  suspend fun setLastEnteredAt(at: Instant)
 }

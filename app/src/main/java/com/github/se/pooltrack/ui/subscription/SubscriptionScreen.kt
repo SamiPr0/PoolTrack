@@ -137,8 +137,6 @@ fun SubscriptionScreen(
     } else {
       var pageBitmap by remember(currentUri) { mutableStateOf<Bitmap?>(null) }
 
-      LaunchedEffect(Unit) { viewModel.onPassShown() }
-
       LaunchedEffect(currentUri) {
         pageBitmap =
             withContext(Dispatchers.IO) { renderFirstPage(context, Uri.parse(currentUri)) }

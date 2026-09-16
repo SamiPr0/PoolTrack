@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.stateIn
 
 /**
  * ViewModel for the Home screen. Exposes stats derived from the confirmed entries, and when the
- * subscription pass was last shown (so Home can gate reopening it during its cooldown).
+ * user last entered the pool (so Home can gate reopening the subscription during its cooldown).
  */
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -30,8 +30,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
           .map { entries: List<Entry> -> computeHomeStats(entries) }
           .stateIn(viewModelScope, SharingStarted.Eagerly, computeHomeStats(emptyList()))
 
-  val lastSubscriptionOpenAt: StateFlow<Instant?> =
+  val lastEnteredAt: StateFlow<Instant?> =
       subscriptionRepository
-          .getLastOpenedAt()
+          .getLastEnteredAt()
           .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 }

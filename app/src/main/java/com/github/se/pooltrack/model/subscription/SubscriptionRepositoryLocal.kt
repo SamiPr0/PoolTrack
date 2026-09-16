@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.map
 private val Context.subscriptionDataStore by preferencesDataStore(name = "subscription_prefs")
 
 private val SUBSCRIPTION_URI_KEY = stringPreferencesKey("subscription_uri")
-private val LAST_OPENED_AT_KEY = stringPreferencesKey("last_opened_at")
+private val LAST_ENTERED_AT_KEY = stringPreferencesKey("last_entered_at")
 
 /** Stores the subscription PDF URI on-device, using Jetpack DataStore. */
 class SubscriptionRepositoryLocal(private val context: Context) : SubscriptionRepository {
@@ -23,12 +23,12 @@ class SubscriptionRepositoryLocal(private val context: Context) : SubscriptionRe
     context.subscriptionDataStore.edit { it[SUBSCRIPTION_URI_KEY] = uri }
   }
 
-  override fun getLastOpenedAt(): Flow<Instant?> =
+  override fun getLastEnteredAt(): Flow<Instant?> =
       context.subscriptionDataStore.data.map { prefs ->
-        prefs[LAST_OPENED_AT_KEY]?.let { Instant.parse(it) }
+        prefs[LAST_ENTERED_AT_KEY]?.let { Instant.parse(it) }
       }
 
-  override suspend fun setLastOpenedAt(at: Instant) {
-    context.subscriptionDataStore.edit { it[LAST_OPENED_AT_KEY] = at.toString() }
+  override suspend fun setLastEnteredAt(at: Instant) {
+    context.subscriptionDataStore.edit { it[LAST_ENTERED_AT_KEY] = at.toString() }
   }
 }

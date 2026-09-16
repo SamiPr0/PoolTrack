@@ -44,13 +44,15 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
     viewModelScope.launch { subscriptionRepository.setSubscriptionUri(uri.toString()) }
   }
 
-  /** Records a confirmed entry. Call this only when the scanner accepted the scan. */
+  /**
+   * Records a confirmed entry and starts the reopen cooldown. Call this only when the scanner
+   * accepted the scan, i.e. the user actually entered the pool.
+   */
   fun onScannerAccepted() {
-    viewModelScope.launch { entryRepository.addEntry(Entry(Instant.now())) }
-  }
-
-  /** Records that the pass was just shown, starting the reopen cooldown. */
-  fun onPassShown() {
-    viewModelScope.launch { subscriptionRepository.setLastOpenedAt(Instant.now()) }
+    val now = Instant.now()
+    viewModelScope.launch {
+      entryRepository.addEntry(Entry(now))
+      subscriptionRepository.setLastEnteredAt(now)
+    }
   }
 }

@@ -68,7 +68,7 @@ fun HomeScreen(
     navigationActions: NavigationActions? = null,
 ) {
   val stats by viewModel.stats.collectAsState()
-  val lastSubscriptionOpenAt by viewModel.lastSubscriptionOpenAt.collectAsState()
+  val lastEnteredAt by viewModel.lastEnteredAt.collectAsState()
 
   var now by remember { mutableStateOf(Instant.now()) }
   LaunchedEffect(Unit) {
@@ -77,7 +77,7 @@ fun HomeScreen(
       now = Instant.now()
     }
   }
-  val remainingCooldown = remainingSubscriptionCooldown(lastSubscriptionOpenAt, now)
+  val remainingCooldown = remainingSubscriptionCooldown(lastEnteredAt, now)
 
   Scaffold(
       topBar = { TopNavigationMenu(Screen.Home) },
@@ -168,7 +168,7 @@ fun HomeScreen(
       }
       remainingCooldown?.let { cooldown ->
         Text(
-            text = "You can reopen it in ${formatCooldown(cooldown)}",
+            text = "You already entered the pool — reopen in ${formatCooldown(cooldown)}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
