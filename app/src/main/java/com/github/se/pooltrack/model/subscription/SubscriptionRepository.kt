@@ -2,16 +2,35 @@ package com.github.se.pooltrack.model.subscription
 
 import kotlinx.coroutines.flow.Flow
 
-/** Represents a repository that stores the URI of the user's subscription PDF. */
+/** Represents a repository that manages the user's subscription PDFs. */
 interface SubscriptionRepository {
 
-  /** Emits the currently stored subscription URI, or `null` if none was picked yet. */
-  fun getSubscriptionUri(): Flow<String?>
+  /** Emits every subscription that was ever added, most recently added first. */
+  fun getSubscriptions(): Flow<List<Subscription>>
+
+  /** Emits the currently active subscription, or `null` if none is active. */
+  fun getActiveSubscription(): Flow<Subscription?>
 
   /**
-   * Stores the URI of the subscription PDF the user picked.
+   * Adds a new subscription and marks it active.
    *
-   * @param uri The content URI of the PDF, as a string.
+   * @param uri The content URI of the PDF the user picked, as a string.
+   * @param displayName A human-readable label for it.
+   * @return The newly created [Subscription].
    */
-  suspend fun setSubscriptionUri(uri: String)
+  suspend fun addSubscription(uri: String, displayName: String): Subscription
+
+  /**
+   * Marks the subscription with [id] as the active one, deactivating any other.
+   *
+   * @param id The identifier of the subscription to activate.
+   */
+  suspend fun setActiveSubscription(id: String)
+
+  /**
+   * Removes a subscription. If it was the active one, no subscription is active afterwards.
+   *
+   * @param id The identifier of the subscription to remove.
+   */
+  suspend fun deleteSubscription(id: String)
 }

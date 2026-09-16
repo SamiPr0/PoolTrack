@@ -2,18 +2,37 @@ package com.github.se.pooltrack.ui.history
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.entry.Entry
@@ -22,26 +41,75 @@ import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeFormatterBuilder
 import java.time.format.FormatStyle
+import java.util.Locale
 
 object HistoryScreenTestTags {
   const val EMPTY_MESSAGE = "HistoryScreenEmptyMessage"
   const val ENTRY_LIST = "HistoryScreenEntryList"
+  const val DAY_HEADER = "HistoryScreenDayHeader"
   const val ENTRY_ITEM = "HistoryScreenEntryItem"
+  const val DELETE_BUTTON = "HistoryScreenDeleteButton"
+  const val CONFIRM_DELETE_BUTTON = "HistoryScreenConfirmDeleteButton"
+  const val CANCEL_DELETE_BUTTON = "HistoryScreenCancelDeleteButton"
 }
 
-private val ENTRY_DATE_FORMATTER =
-    DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withZone(ZoneId.systemDefault())
+private val ZONE = ZoneId.systemDefault()
 
-/** HistoryScreen lists every confirmed pool entry, most recent first. */
+private val ENTRY_TIME_FORMATTER =
+    DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withZone(ZONE)
+
+private val ENTRY_DATE_TIME_FORMATTER =
+    DateTimeFormatterBuilder()
+        .appendPattern("EEEE, ")
+        .append(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM))
+        .toFormatter(Locale.getDefault())
+        .withZone(ZONE)
+
+/** HistoryScreen lists every confirmed pool entry, grouped by day, most recent first. */
 @Composable
 fun HistoryScreen(
     viewModel: HistoryViewModel = viewModel(),
     navigationActions: NavigationActions? = null,
 ) {
   val entries by viewModel.entries.collectAsState()
+  var entryPendingDeletion by remember { mutableStateOf<Entry?>(null) }
+
+  entryPendingDeletion?.let { entry ->
+    AlertDialog(
+        onDismissRequest = { entryPendingDeletion = null },
+        title = { Text("Delete this entry?") },
+        text = {
+          Text(
+              "The entry from ${ENTRY_DATE_TIME_FORMATTER.format(entry.timestamp)} will be " +
+                  "permanently removed."
+          )
+        },
+        confirmButton = {
+          TextButton(
+              onClick = {
+                viewModel.onDeleteEntry(entry)
+                entryPendingDeletion = null
+              },
+              modifier = Modifier.testTag(HistoryScreenTestTags.CONFIRM_DELETE_BUTTON),
+          ) {
+            Text("Delete")
+          }
+        },
+        dismissButton = {
+          TextButton(
+              onClick = { entryPendingDeletion = null },
+              modifier = Modifier.testTag(HistoryScreenTestTags.CANCEL_DELETE_BUTTON),
+          ) {
+            Text("Cancel")
+          }
+        },
+    )
+  }
 
   Scaffold(
       topBar = { TopNavigationMenu(Screen.History) },
@@ -54,28 +122,123 @@ fun HistoryScreen(
   ) { paddingValues ->
     if (entries.isEmpty()) {
       Column(
-          modifier = Modifier.fillMaxSize().padding(paddingValues),
+          modifier = Modifier.fillMaxSize().padding(paddingValues).padding(32.dp),
           verticalArrangement = Arrangement.Center,
           horizontalAlignment = Alignment.CenterHorizontally,
       ) {
+        Icon(
+            imageVector = Icons.Outlined.DateRange,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Text(
             text = "No entries yet",
-            modifier = Modifier.testTag(HistoryScreenTestTags.EMPTY_MESSAGE),
+            style = MaterialTheme.typography.titleMedium,
+            modifier =
+                Modifier.padding(top = 16.dp).testTag(HistoryScreenTestTags.EMPTY_MESSAGE),
+        )
+        Text(
+            text = "Confirmed pool visits will show up here.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp),
         )
       }
     } else {
+      val today = LocalDate.now(ZONE)
+      val entriesByDay = entries.groupBy { LocalDate.ofInstant(it.timestamp, ZONE) }
+
       LazyColumn(
           modifier =
               Modifier.fillMaxSize()
                   .padding(paddingValues)
                   .testTag(HistoryScreenTestTags.ENTRY_LIST),
+          contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
       ) {
-        items(entries) { entry: Entry ->
-          Text(
-              text = ENTRY_DATE_FORMATTER.format(entry.timestamp),
-              modifier = Modifier.padding(16.dp).testTag(HistoryScreenTestTags.ENTRY_ITEM),
-          )
+        entriesByDay.forEach { (day, entriesForDay) ->
+          item(key = day.toEpochDay()) {
+            DayHeader(label = dayLabel(day, today), entryCount = entriesForDay.size)
+          }
+          items(entriesForDay, key = { it.timestamp.toEpochMilli() }) { entry ->
+            EntryRow(
+                entry = entry,
+                onDelete = { entryPendingDeletion = entry },
+                modifier = Modifier.padding(vertical = 4.dp),
+            )
+          }
         }
+      }
+    }
+  }
+}
+
+/** Section header grouping entries from the same calendar day. */
+@Composable
+private fun DayHeader(label: String, entryCount: Int) {
+  Surface(
+      modifier = Modifier.fillMaxWidth().testTag(HistoryScreenTestTags.DAY_HEADER),
+      color = MaterialTheme.colorScheme.background,
+  ) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Text(
+          text = label,
+          style = MaterialTheme.typography.titleSmall,
+          fontWeight = FontWeight.Bold,
+      )
+      Text(
+          text = if (entryCount == 1) "1 entry" else "$entryCount entries",
+          style = MaterialTheme.typography.labelMedium,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+    }
+  }
+}
+
+/** "Today", "Yesterday", or a weekday/date, omitting the year unless [day] isn't this year. */
+private fun dayLabel(day: LocalDate, today: LocalDate): String =
+    when (day) {
+      today -> "Today"
+      today.minusDays(1) -> "Yesterday"
+      else -> {
+        val pattern = if (day.year == today.year) "EEEE, MMM d" else "EEEE, MMM d, yyyy"
+        day.format(DateTimeFormatter.ofPattern(pattern, Locale.getDefault()))
+      }
+    }
+
+@Composable
+private fun EntryRow(entry: Entry, onDelete: () -> Unit, modifier: Modifier = Modifier) {
+  Card(modifier = modifier.fillMaxWidth().testTag(HistoryScreenTestTags.ENTRY_ITEM)) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = Icons.Filled.CheckCircle,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = ENTRY_TIME_FORMATTER.format(entry.timestamp),
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(vertical = 12.dp, horizontal = 12.dp),
+        )
+      }
+      IconButton(
+          onClick = onDelete,
+          modifier = Modifier.testTag(HistoryScreenTestTags.DELETE_BUTTON),
+      ) {
+        Icon(
+            imageVector = Icons.Filled.Delete,
+            contentDescription = "Delete entry",
+            tint = MaterialTheme.colorScheme.error,
+        )
       }
     }
   }
