@@ -27,16 +27,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -54,8 +57,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.addedAt
@@ -304,66 +309,145 @@ private fun SubscriptionDetailDialog(
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-  AlertDialog(
-      onDismissRequest = onDismiss,
-      modifier = Modifier.testTag(SubscriptionScreenTestTags.DETAIL_DIALOG),
-      title = { Text(subscription.displayName) },
-      text = {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-          SubscriptionThumbnail(uri = subscription.uri, width = 96.dp, height = 128.dp)
+  Dialog(onDismissRequest = onDismiss) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().testTag(SubscriptionScreenTestTags.DETAIL_DIALOG),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 6.dp,
+    ) {
+      Column(modifier = Modifier.padding(24.dp)) {
+        Row(verticalAlignment = Alignment.Top) {
           Text(
-              text = "Added ${addedDateFormatter().format(subscription.addedAt)}",
-              style = MaterialTheme.typography.bodyMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              modifier = Modifier.padding(top = 12.dp),
+              text = subscription.displayName,
+              style = MaterialTheme.typography.titleLarge,
+              fontWeight = FontWeight.Bold,
+              modifier = Modifier.weight(1f),
           )
-          if (isActive) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 16.dp),
-            ) {
-              Icon(
-                  imageVector = Icons.Filled.CheckCircle,
-                  contentDescription = null,
-                  tint = MaterialTheme.colorScheme.primary,
-                  modifier = Modifier.size(20.dp),
-              )
-              Text(
-                  text = "Currently active",
-                  style = MaterialTheme.typography.labelLarge,
-                  color = MaterialTheme.colorScheme.primary,
-                  modifier = Modifier.padding(start = 8.dp),
-              )
-            }
-          } else {
-            FilledTonalButton(
+          IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+            Icon(Icons.Filled.Close, contentDescription = "Close")
+          }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+          SubscriptionPreview(uri = subscription.uri, width = 140.dp, height = 184.dp)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Added ${addedDateFormatter().format(subscription.addedAt)}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+          StatusChip(isActive = isActive)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+          if (!isActive) {
+            Button(
                 onClick = onSetActive,
                 modifier =
-                    Modifier.padding(top = 16.dp)
-                        .fillMaxWidth()
-                        .testTag(SubscriptionScreenTestTags.SET_ACTIVE_BUTTON),
+                    Modifier.weight(1f).testTag(SubscriptionScreenTestTags.SET_ACTIVE_BUTTON),
             ) {
               Text("Set active")
             }
           }
-          TextButton(
+          OutlinedButton(
               onClick = onDelete,
+              colors =
+                  ButtonDefaults.outlinedButtonColors(
+                      contentColor = MaterialTheme.colorScheme.error,
+                  ),
+              border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
               modifier =
-                  Modifier.padding(top = 8.dp).testTag(SubscriptionScreenTestTags.DELETE_BUTTON),
+                  Modifier.weight(1f).testTag(SubscriptionScreenTestTags.DELETE_BUTTON),
           ) {
             Icon(
                 imageVector = Icons.Filled.Delete,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier.size(18.dp),
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Delete", color = MaterialTheme.colorScheme.error)
+            Text("Delete")
           }
         }
-      },
-      confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
-  )
+      }
+    }
+  }
+}
+
+@Composable
+private fun StatusChip(isActive: Boolean) {
+  val containerColor =
+      if (isActive) MaterialTheme.colorScheme.primaryContainer
+      else MaterialTheme.colorScheme.surfaceVariant
+  val contentColor =
+      if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
+      else MaterialTheme.colorScheme.onSurfaceVariant
+
+  Row(
+      verticalAlignment = Alignment.CenterVertically,
+      modifier =
+          Modifier.clip(RoundedCornerShape(50))
+              .background(containerColor)
+              .padding(horizontal = 14.dp, vertical = 8.dp),
+  ) {
+    if (isActive) {
+      Icon(
+          imageVector = Icons.Filled.CheckCircle,
+          contentDescription = null,
+          tint = contentColor,
+          modifier = Modifier.size(18.dp),
+      )
+      Spacer(modifier = Modifier.width(6.dp))
+    }
+    Text(
+        text = if (isActive) "Currently active" else "Not active",
+        style = MaterialTheme.typography.labelLarge,
+        color = contentColor,
+    )
+  }
+}
+
+/** A larger, elevated preview of the PDF's first page, used in the detail dialog. */
+@Composable
+private fun SubscriptionPreview(uri: String, width: Dp, height: Dp) {
+  val context = LocalContext.current
+  var bitmap by remember(uri) { mutableStateOf<Bitmap?>(null) }
+
+  LaunchedEffect(uri) {
+    bitmap = withContext(Dispatchers.IO) { renderFirstPdfPage(context, Uri.parse(uri)) }
+  }
+
+  Surface(
+      modifier = Modifier.size(width = width, height = height),
+      shape = RoundedCornerShape(16.dp),
+      color = MaterialTheme.colorScheme.surfaceVariant,
+      shadowElevation = 8.dp,
+  ) {
+    bitmap?.let {
+      Image(
+          bitmap = it.asImageBitmap(),
+          contentDescription = "Subscription pass preview",
+          contentScale = ContentScale.Crop,
+          modifier = Modifier.fillMaxSize(),
+      )
+    }
+  }
 }
 
 /** A preview of the PDF's first page, rendered asynchronously, at the given [width]/[height]. */
