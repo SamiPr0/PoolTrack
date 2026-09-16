@@ -1,9 +1,13 @@
 package com.github.se.pooltrack.ui.subscription
 
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -15,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
@@ -31,6 +36,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,24 +44,32 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.addedAt
+import com.github.se.pooltrack.model.subscription.renderFirstPdfPage
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 object SubscriptionListScreenTestTags {
   const val EMPTY_MESSAGE = "SubscriptionListScreenEmptyMessage"
   const val EMPTY_ADD_BUTTON = "SubscriptionListScreenEmptyAddButton"
   const val SUBSCRIPTION_LIST = "SubscriptionListScreenList"
   const val SUBSCRIPTION_ITEM = "SubscriptionListScreenItem"
+  const val THUMBNAIL = "SubscriptionListScreenThumbnail"
   const val ACTIVE_BADGE = "SubscriptionListScreenActiveBadge"
   const val SET_ACTIVE_BUTTON = "SubscriptionListScreenSetActiveButton"
   const val DELETE_BUTTON = "SubscriptionListScreenDeleteButton"
@@ -225,6 +239,9 @@ private fun SubscriptionRow(
       }
       Spacer(modifier = Modifier.width(12.dp))
 
+      SubscriptionThumbnail(uri = subscription.uri)
+      Spacer(modifier = Modifier.width(12.dp))
+
       Column(modifier = Modifier.weight(1f)) {
         Text(
             text = subscription.displayName,
@@ -262,6 +279,34 @@ private fun SubscriptionRow(
                 else MaterialTheme.colorScheme.onSurfaceVariant,
         )
       }
+    }
+  }
+}
+
+/** A small preview of the PDF's first page, rendered asynchronously. */
+@Composable
+private fun SubscriptionThumbnail(uri: String) {
+  val context = LocalContext.current
+  var bitmap by remember(uri) { mutableStateOf<Bitmap?>(null) }
+
+  LaunchedEffect(uri) {
+    bitmap = withContext(Dispatchers.IO) { renderFirstPdfPage(context, Uri.parse(uri)) }
+  }
+
+  Box(
+      modifier =
+          Modifier.size(width = 40.dp, height = 52.dp)
+              .clip(RoundedCornerShape(6.dp))
+              .background(MaterialTheme.colorScheme.surfaceVariant)
+              .testTag(SubscriptionListScreenTestTags.THUMBNAIL),
+  ) {
+    bitmap?.let {
+      Image(
+          bitmap = it.asImageBitmap(),
+          contentDescription = null,
+          contentScale = ContentScale.Crop,
+          modifier = Modifier.fillMaxSize(),
+      )
     }
   }
 }

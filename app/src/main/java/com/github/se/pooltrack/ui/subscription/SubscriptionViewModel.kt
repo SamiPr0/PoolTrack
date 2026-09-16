@@ -15,7 +15,6 @@ import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryLocal
 import java.time.Instant
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -42,12 +41,12 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
 
   /**
    * The timestamp of the most recent confirmed entry, or `null` if there is none. This is what
-   * the reopen cooldown is measured from - see [com.github.se.pooltrack.model.subscription.remainingSubscriptionCooldown].
+   * the reopen cooldown is measured from - see
+   * [com.github.se.pooltrack.model.subscription.remainingSubscriptionCooldown].
    */
   val lastEntryTimestamp: StateFlow<Instant?> =
       entryRepository
-          .getEntries()
-          .map { entries -> entries.maxOfOrNull { it.timestamp } }
+          .getLastEntryTimestamp()
           .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
   /**
