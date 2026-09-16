@@ -8,7 +8,6 @@ import android.net.Uri
 import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,13 +23,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -62,7 +58,6 @@ object SubscriptionScreenTestTags {
   const val LOADING_INDICATOR = "SubscriptionScreenLoadingIndicator"
   const val PDF_IMAGE = "SubscriptionScreenPdfImage"
   const val ACCEPT_BUTTON = "SubscriptionScreenAcceptButton"
-  const val DECLINE_BUTTON = "SubscriptionScreenDeclineButton"
 }
 
 /**
@@ -155,9 +150,12 @@ fun SubscriptionScreen(
           }
         }
 
+        // A scan the scanner declines must not count as an entry. There's no dedicated
+        // "Declined" control for that: simply not tapping Accepted already leaves nothing
+        // recorded, and the pass stays up for the user to try scanning again.
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            horizontalArrangement = Arrangement.Center,
         ) {
           Button(
               onClick = { viewModel.onScannerAccepted() },
@@ -167,22 +165,6 @@ fun SubscriptionScreen(
             Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text("Accepted")
-          }
-          OutlinedButton(
-              // A declined scan must not count as an entry, so this stays a no-op: the pass
-              // just remains on screen for the user to try scanning again.
-              onClick = {},
-              colors =
-                  ButtonDefaults.outlinedButtonColors(
-                      contentColor = MaterialTheme.colorScheme.error,
-                  ),
-              border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-              contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-              modifier = Modifier.testTag(SubscriptionScreenTestTags.DECLINE_BUTTON),
-          ) {
-            Icon(Icons.Filled.Close, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Declined")
           }
         }
       }
