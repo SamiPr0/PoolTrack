@@ -12,11 +12,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.CheckBoxOutlineBlank
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Card
@@ -320,7 +320,7 @@ private fun NoSubscriptionTodoCard(onClick: () -> Unit, modifier: Modifier = Mod
         modifier = Modifier.fillMaxWidth().padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-      Icon(imageVector = Icons.Outlined.CheckBoxOutlineBlank, contentDescription = null)
+      Icon(imageVector = Icons.Filled.Add, contentDescription = null)
       Spacer(modifier = Modifier.width(12.dp))
       Column {
         Text(
