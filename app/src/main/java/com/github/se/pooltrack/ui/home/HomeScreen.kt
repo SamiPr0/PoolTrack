@@ -16,13 +16,19 @@ import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -36,8 +42,11 @@ import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
+import com.github.se.pooltrack.ui.subscription.formatCooldown
+import com.github.se.pooltrack.ui.subscription.rememberRemainingCooldown
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 object HomeScreenTestTags {
   const val LAST_SWIM_HERO = "HomeScreenLastSwimHero"
@@ -56,6 +65,11 @@ fun HomeScreen(
     navigationActions: NavigationActions? = null,
 ) {
   val stats by viewModel.stats.collectAsState()
+  val lastEntryTimestamp by viewModel.lastEntryTimestamp.collectAsState()
+  val remainingCooldown = rememberRemainingCooldown(lastEntryTimestamp)
+
+  val snackbarHostState = remember { SnackbarHostState() }
+  val coroutineScope = rememberCoroutineScope()
 
   Scaffold(
       topBar = { TopNavigationMenu(Screen.Home) },
@@ -65,9 +79,29 @@ fun HomeScreen(
             onTabSelected = { tab -> navigationActions?.navigateTo(tab.destination) },
         )
       },
+      snackbarHost = { SnackbarHost(snackbarHostState) },
       floatingActionButton = {
+        // Stays clickable even while "locked" (rather than enabled = false) so tapping it can
+        // explain why, instead of silently doing nothing.
+        val cooldown = remainingCooldown
         FloatingActionButton(
-            onClick = { navigationActions?.navigateTo(Screen.Subscription) },
+            onClick = {
+              if (cooldown != null) {
+                coroutineScope.launch {
+                  snackbarHostState.showSnackbar(
+                      "Already entered the pool — reopen in ${formatCooldown(cooldown)}"
+                  )
+                }
+              } else {
+                navigationActions?.navigateTo(Screen.SubscriptionQuickView)
+              }
+            },
+            containerColor =
+                if (cooldown != null) MaterialTheme.colorScheme.surfaceVariant
+                else FloatingActionButtonDefaults.containerColor,
+            contentColor =
+                if (cooldown != null) MaterialTheme.colorScheme.onSurfaceVariant
+                else contentColorFor(FloatingActionButtonDefaults.containerColor),
             modifier = Modifier.testTag(HomeScreenTestTags.OPEN_SUBSCRIPTION_FAB),
         ) {
           Icon(Icons.Filled.Person, contentDescription = "Open subscription")

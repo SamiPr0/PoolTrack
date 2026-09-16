@@ -34,6 +34,16 @@ sealed class Screen(
           route = "subscription_list",
           name = "Your subscriptions",
       )
+
+  /**
+   * The focused "just show my pass" flow opened from Home's FAB: view + accept + back, with none
+   * of [Subscription]'s management actions.
+   */
+  object SubscriptionQuickView :
+      Screen(
+          route = "subscription_quick_view",
+          name = "Subscription",
+      )
 }
 
 open class NavigationActions(
