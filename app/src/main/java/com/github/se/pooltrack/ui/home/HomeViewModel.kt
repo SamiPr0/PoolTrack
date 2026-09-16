@@ -12,6 +12,7 @@ import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryLocal
 import java.time.Instant
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
@@ -49,4 +50,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
           .getSubscriptions()
           .map { subscriptions -> subscriptions.sumOf { it.price ?: 0.0 } }
           .stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+  /** How many confirmed entries were recorded against the currently active subscription. */
+  val activeSubscriptionUsedEntries: StateFlow<Int> =
+      combine(entryRepository.getEntries(), activeSubscription) { entries, active ->
+            if (active == null) 0 else entries.count { it.subscriptionId == active.id }
+          }
+          .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 }

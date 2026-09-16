@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.entry.Entry
+import com.github.se.pooltrack.model.entry.timestamp
 import com.github.se.pooltrack.ui.navigation.BottomNavigationMenu
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen

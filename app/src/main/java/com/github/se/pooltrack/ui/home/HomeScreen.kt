@@ -94,6 +94,7 @@ fun HomeScreen(
   val stats by viewModel.stats.collectAsState()
   val lastEntryTimestamp by viewModel.lastEntryTimestamp.collectAsState()
   val activeSubscription by viewModel.activeSubscription.collectAsState()
+  val activeSubscriptionUsedEntries by viewModel.activeSubscriptionUsedEntries.collectAsState()
   val totalSpent by viewModel.totalSpent.collectAsState()
   val remainingCooldown = rememberRemainingCooldown(lastEntryTimestamp)
 
@@ -154,6 +155,7 @@ fun HomeScreen(
       if (subscription != null) {
         ExpirationBanner(
             subscription = subscription,
+            usedCount = activeSubscriptionUsedEntries,
             modifier = Modifier.testTag(HomeScreenTestTags.EXPIRATION_BANNER),
         )
       } else {
@@ -283,16 +285,25 @@ private fun lastSwimValueLabel(daysSinceLastSwim: Long?): String =
 
 /** Draws attention to the active subscription's expiration, in red once it's urgent or past. */
 @Composable
-private fun ExpirationBanner(subscription: Subscription, modifier: Modifier = Modifier) {
+private fun ExpirationBanner(
+    subscription: Subscription,
+    usedCount: Int,
+    modifier: Modifier = Modifier,
+) {
   val days = subscription.daysUntilExpiration()
+  val remainingEntries = subscription.maxEntries?.let { (it - usedCount).coerceAtLeast(0) }
   val message =
       when {
         subscription.expiresAt != null -> expirationMessage(subscription)
-        subscription.maxEntries != null ->
-            "Your active pass is limited to ${subscription.maxEntries} entries"
+        remainingEntries != null ->
+            "$remainingEntries of ${subscription.maxEntries} " +
+                "${if (subscription.maxEntries == 1) "entry" else "entries"} left"
         else -> "Your active pass has no expiration"
       }
-  val isUrgent = subscription.isExpired || (days != null && days in 0..7)
+  val isUrgent =
+      subscription.isExpired ||
+          (days != null && days in 0..7) ||
+          (remainingEntries != null && remainingEntries <= 2)
   val containerColor =
       if (isUrgent) MaterialTheme.colorScheme.errorContainer
       else MaterialTheme.colorScheme.tertiaryContainer
