@@ -9,7 +9,9 @@ val SUBSCRIPTION_OPEN_COOLDOWN: Duration = Duration.ofHours(5)
 /**
  * How much longer the subscription pass stays locked, or `null` if it can be opened right now.
  *
- * @param lastEnteredAt When the user last entered the pool, or `null` if they never did.
+ * @param lastEnteredAt When the user last entered the pool - i.e. the most recent confirmed
+ *   [com.github.se.pooltrack.model.entry.Entry]'s timestamp, not a separately tracked value, so
+ *   deleting that entry immediately lifts the cooldown - or `null` if they never entered.
  * @param now The instant to check against.
  */
 fun remainingSubscriptionCooldown(

@@ -68,7 +68,6 @@ fun HomeScreen(
     navigationActions: NavigationActions? = null,
 ) {
   val stats by viewModel.stats.collectAsState()
-  val lastEnteredAt by viewModel.lastEnteredAt.collectAsState()
 
   var now by remember { mutableStateOf(Instant.now()) }
   LaunchedEffect(Unit) {
@@ -77,7 +76,7 @@ fun HomeScreen(
       now = Instant.now()
     }
   }
-  val remainingCooldown = remainingSubscriptionCooldown(lastEnteredAt, now)
+  val remainingCooldown = remainingSubscriptionCooldown(stats.lastEntryTimestamp, now)
 
   Scaffold(
       topBar = { TopNavigationMenu(Screen.Home) },

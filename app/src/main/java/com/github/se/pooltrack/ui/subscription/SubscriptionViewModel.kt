@@ -45,14 +45,11 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
   }
 
   /**
-   * Records a confirmed entry and starts the reopen cooldown. Call this only when the scanner
-   * accepted the scan, i.e. the user actually entered the pool.
+   * Records a confirmed entry. Call this only when the scanner accepted the scan, i.e. the user
+   * actually entered the pool. The reopen cooldown is derived from this same entry list (see
+   * [com.github.se.pooltrack.ui.home.HomeStats]), so there is nothing extra to record here.
    */
   fun onScannerAccepted() {
-    val now = Instant.now()
-    viewModelScope.launch {
-      entryRepository.addEntry(Entry(now))
-      subscriptionRepository.setLastEnteredAt(now)
-    }
+    viewModelScope.launch { entryRepository.addEntry(Entry(Instant.now())) }
   }
 }
