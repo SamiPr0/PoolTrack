@@ -22,17 +22,15 @@ sealed class Screen(
           isTopLevelDestination = true,
       )
 
+  /**
+   * Manages subscriptions: add, switch which is active, or delete. See also
+   * [SubscriptionQuickView].
+   */
   object Subscription :
       Screen(
           route = "subscription",
-          name = "Subscription",
+          name = "Subscriptions",
           isTopLevelDestination = true,
-      )
-
-  object SubscriptionList :
-      Screen(
-          route = "subscription_list",
-          name = "Your subscriptions",
       )
 
   /**
