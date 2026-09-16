@@ -5,5 +5,6 @@ object NavigationTestTags {
   const val GO_BACK_BUTTON = "GoBackButton"
   const val BOTTOM_NAVIGATION_MENU = "BottomNavigationMenu"
   const val HOME_TAB = "HomeTab"
+  const val SUBSCRIPTION_TAB = "SubscriptionTab"
   const val HISTORY_TAB = "HistoryTab"
 }

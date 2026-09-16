@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.List
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -23,11 +24,19 @@ sealed class Tab(
   object Home :
       Tab("Home", Icons.Outlined.Home, Screen.Home, NavigationTestTags.HOME_TAB)
 
+  object Subscription :
+      Tab(
+          "Subscription",
+          Icons.Outlined.Person,
+          Screen.Subscription,
+          NavigationTestTags.SUBSCRIPTION_TAB,
+      )
+
   object History :
       Tab("History", Icons.Outlined.List, Screen.History, NavigationTestTags.HISTORY_TAB)
 }
 
-private val tabs = listOf(Tab.Home, Tab.History)
+private val tabs = listOf(Tab.Home, Tab.Subscription, Tab.History)
 
 /** Bottom bar shared by every top-level screen, letting the user switch between them directly. */
 @Composable
