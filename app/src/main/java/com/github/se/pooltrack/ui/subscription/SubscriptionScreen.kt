@@ -23,7 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -31,6 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -55,23 +56,25 @@ import kotlinx.coroutines.withContext
 
 object SubscriptionScreenTestTags {
   const val PICK_BUTTON = "SubscriptionScreenPickButton"
+  const val CHOOSE_EXISTING_BUTTON = "SubscriptionScreenChooseExistingButton"
   const val LOADING_INDICATOR = "SubscriptionScreenLoadingIndicator"
   const val PDF_IMAGE = "SubscriptionScreenPdfImage"
   const val ACCEPT_BUTTON = "SubscriptionScreenAcceptButton"
-  const val REPLACE_BUTTON = "SubscriptionScreenReplaceButton"
+  const val ADD_BUTTON = "SubscriptionScreenAddButton"
+  const val MANAGE_BUTTON = "SubscriptionScreenManageButton"
 }
 
 /**
- * SubscriptionScreen displays the user's subscription PDF at maximum screen brightness, so it can
- * be scanned at the pool entrance. If no PDF has been picked yet, it prompts the user to choose
- * one.
+ * SubscriptionScreen displays the user's active subscription PDF at maximum screen brightness, so
+ * it can be scanned at the pool entrance. If none is active yet, it prompts the user to add one.
  */
 @Composable
 fun SubscriptionScreen(
     viewModel: SubscriptionViewModel = viewModel(),
     navigationActions: NavigationActions? = null,
 ) {
-  val subscriptionUri by viewModel.subscriptionUri.collectAsState()
+  val activeSubscription by viewModel.activeSubscription.collectAsState()
+  val subscriptions by viewModel.subscriptions.collectAsState()
   val context = LocalContext.current
 
   val pickPdfLauncher =
@@ -88,20 +91,28 @@ fun SubscriptionScreen(
             onGoBack = { navigationActions?.goBack() },
             actions = {
               // Once a subscription is used up (e.g. a monthly pass expired), the user needs a
-              // way to swap in a new one without deleting the app data by hand.
-              if (subscriptionUri != null) {
+              // way to add a new one without losing track of the old one.
+              if (activeSubscription != null) {
                 IconButton(
                     onClick = { pickPdfLauncher.launch(arrayOf("application/pdf")) },
-                    modifier = Modifier.testTag(SubscriptionScreenTestTags.REPLACE_BUTTON),
+                    modifier = Modifier.testTag(SubscriptionScreenTestTags.ADD_BUTTON),
                 ) {
-                  Icon(Icons.Filled.Edit, contentDescription = "Replace subscription")
+                  Icon(Icons.Filled.Add, contentDescription = "Add subscription")
+                }
+              }
+              if (subscriptions.isNotEmpty()) {
+                IconButton(
+                    onClick = { navigationActions?.navigateTo(Screen.SubscriptionList) },
+                    modifier = Modifier.testTag(SubscriptionScreenTestTags.MANAGE_BUTTON),
+                ) {
+                  Icon(Icons.Filled.List, contentDescription = "Manage subscriptions")
                 }
               }
             },
         )
       },
   ) { paddingValues ->
-    val currentUri = subscriptionUri
+    val currentUri = activeSubscription?.uri
     if (currentUri == null) {
       Column(
           modifier = Modifier.fillMaxSize().padding(paddingValues).padding(32.dp),
@@ -115,7 +126,7 @@ fun SubscriptionScreen(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            text = "No subscription yet",
+            text = "No active subscription",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
         )
@@ -132,6 +143,16 @@ fun SubscriptionScreen(
           Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
           Spacer(modifier = Modifier.width(8.dp))
           Text("Add subscription PDF")
+        }
+        if (subscriptions.isNotEmpty()) {
+          TextButton(
+              onClick = { navigationActions?.navigateTo(Screen.SubscriptionList) },
+              modifier =
+                  Modifier.padding(top = 8.dp)
+                      .testTag(SubscriptionScreenTestTags.CHOOSE_EXISTING_BUTTON),
+          ) {
+            Text("Or choose from your ${subscriptions.size} subscriptions")
+          }
         }
       }
     } else {

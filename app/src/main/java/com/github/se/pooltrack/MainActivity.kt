@@ -15,6 +15,7 @@ import com.github.se.pooltrack.ui.history.HistoryScreen
 import com.github.se.pooltrack.ui.home.HomeScreen
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
+import com.github.se.pooltrack.ui.subscription.SubscriptionListScreen
 import com.github.se.pooltrack.ui.subscription.SubscriptionScreen
 import com.github.se.pooltrack.ui.theme.PoolTrackTheme
 
@@ -43,6 +44,9 @@ fun PoolTrackApp() {
     composable(Screen.Home.route) { HomeScreen(navigationActions = navigationActions) }
     composable(Screen.Subscription.route) {
       SubscriptionScreen(navigationActions = navigationActions)
+    }
+    composable(Screen.SubscriptionList.route) {
+      SubscriptionListScreen(navigationActions = navigationActions)
     }
     composable(Screen.History.route) { HistoryScreen(navigationActions = navigationActions) }
   }
