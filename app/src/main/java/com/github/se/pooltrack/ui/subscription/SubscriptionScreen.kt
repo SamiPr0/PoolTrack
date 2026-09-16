@@ -4,8 +4,10 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -197,7 +199,7 @@ fun SubscriptionScreen(
                   .padding(paddingValues)
                   .testTag(SubscriptionScreenTestTags.SUBSCRIPTION_LIST),
           contentPadding = PaddingValues(16.dp),
-          verticalArrangement = Arrangement.spacedBy(12.dp),
+          verticalArrangement = Arrangement.spacedBy(16.dp),
       ) {
         items(subscriptions, key = { it.id }) { subscription ->
           SubscriptionRow(
@@ -224,6 +226,7 @@ private fun SubscriptionRow(
   // awkwardly and made cards uneven heights. Info on top, actions below, has room to breathe.
   Card(
       modifier = Modifier.fillMaxWidth().testTag(SubscriptionScreenTestTags.SUBSCRIPTION_ITEM),
+      shape = RoundedCornerShape(16.dp),
       colors =
           if (isActive) {
             CardDefaults.cardColors(
@@ -231,8 +234,12 @@ private fun SubscriptionRow(
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             )
           } else {
-            CardDefaults.cardColors()
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            )
           },
+      elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 4.dp else 2.dp),
   ) {
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
@@ -319,8 +326,12 @@ private fun SubscriptionThumbnail(uri: String) {
   Box(
       modifier =
           Modifier.size(width = 48.dp, height = 64.dp)
-              .clip(RoundedCornerShape(6.dp))
+              .clip(RoundedCornerShape(8.dp))
               .background(MaterialTheme.colorScheme.surfaceVariant)
+              .border(
+                  BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                  RoundedCornerShape(8.dp),
+              )
               .testTag(SubscriptionScreenTestTags.THUMBNAIL),
   ) {
     bitmap?.let {
