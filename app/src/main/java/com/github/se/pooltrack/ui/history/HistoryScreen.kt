@@ -14,15 +14,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -43,6 +48,8 @@ object HistoryScreenTestTags {
   const val ENTRY_LIST = "HistoryScreenEntryList"
   const val ENTRY_ITEM = "HistoryScreenEntryItem"
   const val DELETE_BUTTON = "HistoryScreenDeleteButton"
+  const val CONFIRM_DELETE_BUTTON = "HistoryScreenConfirmDeleteButton"
+  const val CANCEL_DELETE_BUTTON = "HistoryScreenCancelDeleteButton"
 }
 
 private val ENTRY_DATE_FORMATTER =
@@ -55,6 +62,39 @@ fun HistoryScreen(
     navigationActions: NavigationActions? = null,
 ) {
   val entries by viewModel.entries.collectAsState()
+  var entryPendingDeletion by remember { mutableStateOf<Entry?>(null) }
+
+  entryPendingDeletion?.let { entry ->
+    AlertDialog(
+        onDismissRequest = { entryPendingDeletion = null },
+        title = { Text("Delete this entry?") },
+        text = {
+          Text(
+              "The entry from ${ENTRY_DATE_FORMATTER.format(entry.timestamp)} will be " +
+                  "permanently removed."
+          )
+        },
+        confirmButton = {
+          TextButton(
+              onClick = {
+                viewModel.onDeleteEntry(entry)
+                entryPendingDeletion = null
+              },
+              modifier = Modifier.testTag(HistoryScreenTestTags.CONFIRM_DELETE_BUTTON),
+          ) {
+            Text("Delete")
+          }
+        },
+        dismissButton = {
+          TextButton(
+              onClick = { entryPendingDeletion = null },
+              modifier = Modifier.testTag(HistoryScreenTestTags.CANCEL_DELETE_BUTTON),
+          ) {
+            Text("Cancel")
+          }
+        },
+    )
+  }
 
   Scaffold(
       topBar = { TopNavigationMenu(Screen.History) },
@@ -100,7 +140,7 @@ fun HistoryScreen(
           verticalArrangement = Arrangement.spacedBy(8.dp),
       ) {
         items(entries) { entry: Entry ->
-          EntryRow(entry, onDelete = { viewModel.onDeleteEntry(entry) })
+          EntryRow(entry, onDelete = { entryPendingDeletion = entry })
         }
       }
     }
