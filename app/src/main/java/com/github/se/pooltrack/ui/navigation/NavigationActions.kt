@@ -27,6 +27,12 @@ sealed class Screen(
           route = "subscription",
           name = "Subscription",
       )
+
+  object SubscriptionList :
+      Screen(
+          route = "subscription_list",
+          name = "Your subscriptions",
+      )
 }
 
 open class NavigationActions(

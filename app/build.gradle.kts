@@ -4,6 +4,7 @@ plugins {
   alias(libs.plugins.androidApplication)
   alias(libs.plugins.ktfmt)
   alias(libs.plugins.kotlinCompose)
+  alias(libs.plugins.kotlinSerialization)
 }
 
 android {
@@ -51,6 +52,7 @@ dependencies {
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.activity.compose)
   implementation(libs.androidx.datastore.preferences)
+  implementation(libs.kotlinx.serialization.json)
 
   // Jetpack Compose UI
   implementation(libs.androidx.ui)
