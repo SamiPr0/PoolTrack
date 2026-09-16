@@ -3,6 +3,7 @@ package com.github.se.pooltrack.ui.home
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -13,11 +14,12 @@ import com.github.se.pooltrack.ui.theme.PoolTrackTheme
 
 object HomeScreenTestTags {
   const val GREETING = "HomeScreenGreeting"
+  const val VIEW_SUBSCRIPTION_BUTTON = "HomeScreenViewSubscriptionButton"
 }
 
 /** HomeScreen composable that is the first screen shown when the app launches. */
 @Composable
-fun HomeScreen() {
+fun HomeScreen(onViewSubscription: () -> Unit = {}) {
   Column(
       modifier = Modifier.fillMaxSize(),
       verticalArrangement = Arrangement.Center,
@@ -27,6 +29,12 @@ fun HomeScreen() {
         text = "Hello World",
         modifier = Modifier.testTag(HomeScreenTestTags.GREETING),
     )
+    Button(
+        onClick = onViewSubscription,
+        modifier = Modifier.testTag(HomeScreenTestTags.VIEW_SUBSCRIPTION_BUTTON),
+    ) {
+      Text("View subscription")
+    }
   }
 }
 
