@@ -141,14 +141,19 @@ private enum class ExpirationMode {
   ENTRIES,
 }
 
-/** A short line describing when/how a subscription expires, or `null` if it never does. */
-private fun expirationLabel(subscription: Subscription): String? {
+/**
+ * A short line describing when/how a subscription expires, or `null` if it never does.
+ * [usedCount] is how many confirmed entries have been recorded against it, used to turn a fixed
+ * entry limit into how many are actually left.
+ */
+private fun expirationLabel(subscription: Subscription, usedCount: Int): String? {
   subscription.expiresAt?.let { expiresAt ->
     val formatted = addedDateFormatter().format(expiresAt)
     return if (subscription.isExpired) "Expired $formatted" else "Expires $formatted"
   }
   subscription.maxEntries?.let { maxEntries ->
-    return "Limited to $maxEntries ${if (maxEntries == 1) "entry" else "entries"}"
+    val remaining = (maxEntries - usedCount).coerceAtLeast(0)
+    return "$remaining of $maxEntries ${if (maxEntries == 1) "entry" else "entries"} left"
   }
   return null
 }
@@ -165,8 +170,8 @@ private fun pricePerEntryLabel(subscription: Subscription): String? =
     subscription.pricePerEntry?.let { "${formatAmount(it)} / entry" }
 
 /** Expiration and price combined onto a single line, for the compact list row. */
-private fun rowDetailLine(subscription: Subscription): String? =
-    listOfNotNull(expirationLabel(subscription), priceLabel(subscription))
+private fun rowDetailLine(subscription: Subscription, usedCount: Int): String? =
+    listOfNotNull(expirationLabel(subscription, usedCount), priceLabel(subscription))
         .takeIf { it.isNotEmpty() }
         ?.joinToString(" · ")
 
@@ -187,6 +192,7 @@ fun SubscriptionScreen(
 ) {
   val subscriptions by viewModel.subscriptions.collectAsState()
   val activeSubscription by viewModel.activeSubscription.collectAsState()
+  val entryCountsBySubscriptionId by viewModel.entryCountsBySubscriptionId.collectAsState()
   var selectedSubscription by remember { mutableStateOf<Subscription?>(null) }
   var subscriptionPendingDeletion by remember { mutableStateOf<Subscription?>(null) }
   var pickedPdfUri by remember { mutableStateOf<Uri?>(null) }
@@ -210,6 +216,7 @@ fun SubscriptionScreen(
     SubscriptionDetailDialog(
         subscription = subscription,
         isActive = subscription.id == activeSubscription?.id,
+        usedCount = entryCountsBySubscriptionId[subscription.id] ?: 0,
         onSetActive = {
           viewModel.onSetActive(subscription.id)
           selectedSubscription = null
@@ -317,6 +324,7 @@ fun SubscriptionScreen(
           SubscriptionRow(
               subscription = subscription,
               isActive = subscription.id == activeSubscription?.id,
+              usedCount = entryCountsBySubscriptionId[subscription.id] ?: 0,
               onClick = { selectedSubscription = subscription },
           )
         }
@@ -327,7 +335,12 @@ fun SubscriptionScreen(
 
 /** A single row: thumbnail, name, date, and whether it's active - no actions. Tap for those. */
 @Composable
-private fun SubscriptionRow(subscription: Subscription, isActive: Boolean, onClick: () -> Unit) {
+private fun SubscriptionRow(
+    subscription: Subscription,
+    isActive: Boolean,
+    usedCount: Int,
+    onClick: () -> Unit,
+) {
   Card(
       modifier =
           Modifier.fillMaxWidth()
@@ -380,7 +393,7 @@ private fun SubscriptionRow(subscription: Subscription, isActive: Boolean, onCli
                 if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
                 else MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        rowDetailLine(subscription)?.let { label ->
+        rowDetailLine(subscription, usedCount)?.let { label ->
           Text(
               text = label,
               style = MaterialTheme.typography.bodySmall,
@@ -400,6 +413,7 @@ private fun SubscriptionRow(subscription: Subscription, isActive: Boolean, onCli
 private fun SubscriptionDetailDialog(
     subscription: Subscription,
     isActive: Boolean,
+    usedCount: Int,
     onSetActive: () -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
@@ -440,7 +454,7 @@ private fun SubscriptionDetailDialog(
             modifier = Modifier.fillMaxWidth(),
         )
 
-        expirationLabel(subscription)?.let { label ->
+        expirationLabel(subscription, usedCount)?.let { label ->
           Text(
               text = label,
               style = MaterialTheme.typography.bodyMedium,

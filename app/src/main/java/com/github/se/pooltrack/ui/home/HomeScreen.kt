@@ -1,24 +1,31 @@
 package com.github.se.pooltrack.ui.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.CheckBoxOutlineBlank
+import androidx.compose.material.icons.outlined.AddCircle
 import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
@@ -37,16 +44,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.daysUntilExpiration
+import com.github.se.pooltrack.model.subscription.expiresAt
 import com.github.se.pooltrack.model.subscription.isExpired
-import com.github.se.pooltrack.model.subscription.pricePerEntry
 import com.github.se.pooltrack.ui.navigation.BottomNavigationMenu
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
@@ -54,6 +64,9 @@ import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import com.github.se.pooltrack.ui.subscription.formatCooldown
 import com.github.se.pooltrack.ui.subscription.rememberRemainingCooldown
+import java.time.LocalDate
+import java.time.Period
+import java.time.ZoneId
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlinx.coroutines.launch
@@ -81,6 +94,7 @@ fun HomeScreen(
   val stats by viewModel.stats.collectAsState()
   val lastEntryTimestamp by viewModel.lastEntryTimestamp.collectAsState()
   val activeSubscription by viewModel.activeSubscription.collectAsState()
+  val activeSubscriptionUsedEntries by viewModel.activeSubscriptionUsedEntries.collectAsState()
   val totalSpent by viewModel.totalSpent.collectAsState()
   val remainingCooldown = rememberRemainingCooldown(lastEntryTimestamp)
 
@@ -141,6 +155,7 @@ fun HomeScreen(
       if (subscription != null) {
         ExpirationBanner(
             subscription = subscription,
+            usedCount = activeSubscriptionUsedEntries,
             modifier = Modifier.testTag(HomeScreenTestTags.EXPIRATION_BANNER),
         )
       } else {
@@ -155,12 +170,16 @@ fun HomeScreen(
             icon = Icons.Outlined.DateRange,
             label = "This week",
             value = "${stats.entriesThisWeek}",
+            accentColor = MaterialTheme.colorScheme.primary,
+            onAccentColor = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.THIS_WEEK_STAT),
         )
         StatTile(
             icon = Icons.Outlined.DateRange,
             label = "This month",
             value = "${stats.entriesThisMonth}",
+            accentColor = MaterialTheme.colorScheme.secondary,
+            onAccentColor = MaterialTheme.colorScheme.onSecondary,
             modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.THIS_MONTH_STAT),
         )
       }
@@ -169,26 +188,34 @@ fun HomeScreen(
             icon = Icons.Filled.CheckCircle,
             label = "Total entries",
             value = "${stats.totalEntries}",
+            accentColor = MaterialTheme.colorScheme.tertiary,
+            onAccentColor = MaterialTheme.colorScheme.onTertiary,
             modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.TOTAL_ENTRIES_STAT),
         )
         StatTile(
             icon = Icons.Filled.Star,
             label = "Avg. per week",
             value = averagePerWeekLabel(stats.averageEntriesPerWeek),
+            accentColor = MaterialTheme.colorScheme.primary,
+            onAccentColor = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.AVERAGE_PER_WEEK_STAT),
         )
       }
       Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         StatTile(
-            icon = Icons.Outlined.Info,
+            icon = Icons.Outlined.ShoppingCart,
             label = "Total spent",
             value = amountLabel(totalSpent),
+            accentColor = MaterialTheme.colorScheme.secondary,
+            onAccentColor = MaterialTheme.colorScheme.onSecondary,
             modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.TOTAL_SPENT_STAT),
         )
         StatTile(
             icon = Icons.Outlined.Info,
             label = "Cost / entry",
-            value = amountLabel(activeSubscription?.pricePerEntry),
+            value = amountLabel(costPerEntry(totalSpent, stats.totalEntries)),
+            accentColor = MaterialTheme.colorScheme.tertiary,
+            onAccentColor = MaterialTheme.colorScheme.onTertiary,
             modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.COST_PER_ENTRY_STAT),
         )
       }
@@ -197,22 +224,20 @@ fun HomeScreen(
         val dayName = day.getDisplayName(TextStyle.FULL, Locale.getDefault())
         Card(
             modifier = Modifier.fillMaxWidth().testTag(HomeScreenTestTags.FAVORITE_DAY_BANNER),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         ) {
           Row(
               modifier = Modifier.fillMaxWidth().padding(12.dp),
               verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.Center,
           ) {
-            Icon(
-                imageVector = Icons.Filled.Star,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+            IconBadge(
+                icon = Icons.Outlined.Favorite,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
             )
             Text(
                 text = "You usually swim on $dayName",
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(start = 8.dp),
+                modifier = Modifier.padding(start = 12.dp),
             )
           }
         }
@@ -260,26 +285,35 @@ private fun lastSwimValueLabel(daysSinceLastSwim: Long?): String =
 
 /** Draws attention to the active subscription's expiration, in red once it's urgent or past. */
 @Composable
-private fun ExpirationBanner(subscription: Subscription, modifier: Modifier = Modifier) {
+private fun ExpirationBanner(
+    subscription: Subscription,
+    usedCount: Int,
+    modifier: Modifier = Modifier,
+) {
   val days = subscription.daysUntilExpiration()
+  val remainingEntries = subscription.maxEntries?.let { (it - usedCount).coerceAtLeast(0) }
   val message =
       when {
-        days != null && days < 0 ->
-            "Your active pass expired ${-days} ${if (-days == 1L) "day" else "days"} ago"
-        days == 0L -> "Your active pass expires today"
-        days == 1L -> "Your active pass expires tomorrow"
-        days != null -> "Your active pass expires in $days days"
-        subscription.maxEntries != null ->
-            "Your active pass is limited to ${subscription.maxEntries} entries"
+        subscription.expiresAt != null -> expirationMessage(subscription)
+        remainingEntries != null ->
+            "$remainingEntries of ${subscription.maxEntries} " +
+                "${if (subscription.maxEntries == 1) "entry" else "entries"} left"
         else -> "Your active pass has no expiration"
       }
-  val isUrgent = subscription.isExpired || (days != null && days in 0..7)
+  val isUrgent =
+      subscription.isExpired ||
+          (days != null && days in 0..7) ||
+          (remainingEntries != null && remainingEntries <= 2)
   val containerColor =
       if (isUrgent) MaterialTheme.colorScheme.errorContainer
-      else MaterialTheme.colorScheme.surfaceVariant
+      else MaterialTheme.colorScheme.tertiaryContainer
   val contentColor =
       if (isUrgent) MaterialTheme.colorScheme.onErrorContainer
-      else MaterialTheme.colorScheme.onSurfaceVariant
+      else MaterialTheme.colorScheme.onTertiaryContainer
+  val badgeColor =
+      if (isUrgent) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
+  val onBadgeColor =
+      if (isUrgent) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onTertiary
 
   Card(
       modifier = modifier.fillMaxWidth(),
@@ -289,20 +323,58 @@ private fun ExpirationBanner(subscription: Subscription, modifier: Modifier = Mo
     Row(
         modifier = Modifier.fillMaxWidth().padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
     ) {
-      Icon(
-          imageVector = if (isUrgent) Icons.Filled.Lock else Icons.Outlined.Info,
-          contentDescription = null,
-          tint = contentColor,
+      IconBadge(
+          icon = if (isUrgent) Icons.Filled.Lock else Icons.Outlined.Notifications,
+          containerColor = badgeColor,
+          contentColor = onBadgeColor,
       )
       Text(
           text = message,
           style = MaterialTheme.typography.bodyMedium,
-          modifier = Modifier.padding(start = 8.dp),
+          modifier = Modifier.padding(start = 12.dp),
       )
     }
   }
+}
+
+/**
+ * Rounds the time until/since [subscription]'s expiration to its largest sensible unit - "in 1
+ * year" or "expired 2 months ago" rather than the exact (and much less readable) day count.
+ */
+private fun expirationMessage(subscription: Subscription): String {
+  val zone = ZoneId.systemDefault()
+  val today = LocalDate.now(zone)
+  val expiryDate = subscription.expiresAt!!.atZone(zone).toLocalDate()
+  return when {
+    expiryDate.isEqual(today) -> "Your active pass expires today"
+    expiryDate.isAfter(today) -> {
+      val period = Period.between(today, expiryDate)
+      if (period.years == 0 && period.months == 0 && period.days == 1) {
+        "Your active pass expires tomorrow"
+      } else {
+        "Your active pass expires in ${humanizePeriod(period)}"
+      }
+    }
+    else -> "Your active pass expired ${humanizePeriod(Period.between(expiryDate, today))} ago"
+  }
+}
+
+/** The largest non-zero unit of a non-negative [period], pluralized: "1 year", "11 months". */
+private fun humanizePeriod(period: Period): String {
+  val amount =
+      when {
+        period.years > 0 -> period.years
+        period.months > 0 -> period.months
+        else -> period.days
+      }
+  val unit =
+      when {
+        period.years > 0 -> "year"
+        period.months > 0 -> "month"
+        else -> "day"
+      }
+  return "$amount $unit${if (amount == 1) "" else "s"}"
 }
 
 /** A to-do-style prompt shown on Home whenever there's no active subscription to track with. */
@@ -312,15 +384,19 @@ private fun NoSubscriptionTodoCard(onClick: () -> Unit, modifier: Modifier = Mod
       modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
       colors =
           CardDefaults.cardColors(
-              containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-              contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+              containerColor = MaterialTheme.colorScheme.secondaryContainer,
+              contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
           ),
   ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-      Icon(imageVector = Icons.Outlined.CheckBoxOutlineBlank, contentDescription = null)
+      IconBadge(
+          icon = Icons.Outlined.AddCircle,
+          containerColor = MaterialTheme.colorScheme.secondary,
+          contentColor = MaterialTheme.colorScheme.onSecondary,
+      )
       Spacer(modifier = Modifier.width(12.dp))
       Column {
         Text(
@@ -337,6 +413,14 @@ private fun NoSubscriptionTodoCard(onClick: () -> Unit, modifier: Modifier = Mod
   }
 }
 
+/**
+ * The actual average cost per pool visit so far - [totalSpent] divided by every entry ever
+ * confirmed, not tied to a single subscription's plan. Unlike a fixed price/maxEntries ratio,
+ * this moves every time a new entry is recorded.
+ */
+private fun costPerEntry(totalSpent: Double, totalEntries: Int): Double? =
+    if (totalSpent == 0.0 || totalEntries == 0) null else totalSpent / totalEntries
+
 /** "29.90", or "-" if [amount] is `null` or zero (i.e. nothing meaningful was recorded). */
 private fun amountLabel(amount: Double?): String =
     if (amount == null || amount == 0.0) "-" else String.format(Locale.getDefault(), "%.2f", amount)
@@ -350,6 +434,8 @@ private fun StatTile(
     icon: ImageVector,
     label: String,
     value: String,
+    accentColor: Color,
+    onAccentColor: Color,
     modifier: Modifier = Modifier,
 ) {
   Card(modifier = modifier) {
@@ -357,16 +443,12 @@ private fun StatTile(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-      Icon(
-          imageVector = icon,
-          contentDescription = null,
-          tint = MaterialTheme.colorScheme.primary,
-      )
+      IconBadge(icon = icon, containerColor = accentColor, contentColor = onAccentColor)
       Text(
           text = value,
           style = MaterialTheme.typography.titleLarge,
           fontWeight = FontWeight.Bold,
-          modifier = Modifier.padding(top = 4.dp),
+          modifier = Modifier.padding(top = 8.dp),
       )
       Text(
           text = label,
@@ -375,5 +457,27 @@ private fun StatTile(
           textAlign = TextAlign.Center,
       )
     }
+  }
+}
+
+/** A small colored circle behind an icon - the recurring "accent" element across Home's cards. */
+@Composable
+private fun IconBadge(
+    icon: ImageVector,
+    containerColor: Color,
+    contentColor: Color,
+    modifier: Modifier = Modifier,
+    size: Dp = 40.dp,
+) {
+  Box(
+      modifier = modifier.size(size).clip(CircleShape).background(containerColor),
+      contentAlignment = Alignment.Center,
+  ) {
+    Icon(
+        imageVector = icon,
+        contentDescription = null,
+        tint = contentColor,
+        modifier = Modifier.size(size / 2),
+    )
   }
 }

@@ -15,6 +15,7 @@ import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryLocal
 import java.time.Instant
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -48,6 +49,13 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
       entryRepository
           .getLastEntryTimestamp()
           .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+  /** How many confirmed entries each subscription has, keyed by subscription id. */
+  val entryCountsBySubscriptionId: StateFlow<Map<String, Int>> =
+      entryRepository
+          .getEntries()
+          .map { entries -> entries.mapNotNull { it.subscriptionId }.groupingBy { it }.eachCount() }
+          .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
   /**
    * Adds the PDF the user just picked as a new subscription and makes it the active one, taking a
@@ -96,10 +104,15 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
   /**
    * Records a confirmed entry. Call this only when the scanner accepted the scan, i.e. the user
    * actually entered the pool. The reopen cooldown is derived from this same entry list (see
-   * [com.github.se.pooltrack.ui.home.HomeStats]), so there is nothing extra to record here.
+   * [com.github.se.pooltrack.ui.home.HomeStats]), so there is nothing extra to record here. The
+   * entry is tagged with whichever subscription is active right now, so an entry-limited
+   * subscription can count how many of its entries have actually been used.
    */
   fun onScannerAccepted() {
-    viewModelScope.launch { entryRepository.addEntry(Entry(Instant.now())) }
+    val subscriptionId = activeSubscription.value?.id
+    val entry =
+        Entry(timestampEpochMilli = Instant.now().toEpochMilli(), subscriptionId = subscriptionId)
+    viewModelScope.launch { entryRepository.addEntry(entry) }
   }
 
   /** Looks up [uri]'s display name via the content provider, falling back to a generic label. */
