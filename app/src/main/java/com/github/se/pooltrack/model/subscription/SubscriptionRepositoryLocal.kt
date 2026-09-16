@@ -44,6 +44,7 @@ class SubscriptionRepositoryLocal(private val context: Context) : SubscriptionRe
       displayName: String,
       expiresAtEpochMilli: Long?,
       maxEntries: Int?,
+      price: Double?,
   ): Subscription {
     val subscription =
         Subscription(
@@ -53,6 +54,7 @@ class SubscriptionRepositoryLocal(private val context: Context) : SubscriptionRe
             addedAtEpochMilli = System.currentTimeMillis(),
             expiresAtEpochMilli = expiresAtEpochMilli,
             maxEntries = maxEntries,
+            price = price,
         )
     context.subscriptionDataStore.edit { prefs ->
       val existing =

@@ -57,15 +57,21 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
    * @param expiresAtEpochMilli When it expires, as epoch milliseconds, or `null` for no date-based
    *   expiration.
    * @param maxEntries The number of entries it's good for, or `null` for no entry-count limit.
+   * @param price How much it cost, or `null` if not recorded.
    */
-  fun onSubscriptionPicked(uri: Uri, expiresAtEpochMilli: Long? = null, maxEntries: Int? = null) {
+  fun onSubscriptionPicked(
+      uri: Uri,
+      expiresAtEpochMilli: Long? = null,
+      maxEntries: Int? = null,
+      price: Double? = null,
+  ) {
     getApplication<Application>()
         .contentResolver
         .takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
     val displayName = queryDisplayName(uri)
     viewModelScope.launch {
       subscriptionRepository.addSubscription(
-          uri.toString(), displayName, expiresAtEpochMilli, maxEntries)
+          uri.toString(), displayName, expiresAtEpochMilli, maxEntries, price)
     }
   }
 

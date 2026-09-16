@@ -19,6 +19,7 @@ interface SubscriptionRepository {
    * @param expiresAtEpochMilli When it expires, as epoch milliseconds, or `null` for no date-based
    *   expiration.
    * @param maxEntries The number of entries it's good for, or `null` for no entry-count limit.
+   * @param price How much it cost, or `null` if not recorded.
    * @return The newly created [Subscription].
    */
   suspend fun addSubscription(
@@ -26,6 +27,7 @@ interface SubscriptionRepository {
       displayName: String,
       expiresAtEpochMilli: Long? = null,
       maxEntries: Int? = null,
+      price: Double? = null,
   ): Subscription
 
   /**
