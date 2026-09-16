@@ -60,10 +60,14 @@ object HistoryScreenTestTags {
 
 private val ZONE = ZoneId.systemDefault()
 
-private val ENTRY_TIME_FORMATTER =
-    DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withZone(ZONE)
+// Built fresh on every call rather than cached as a val, so a locale change while the app is
+// running (without a process restart) is picked up instead of baked in at class-init time.
+private fun entryTimeFormatter(): DateTimeFormatter =
+    DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+        .withLocale(Locale.getDefault())
+        .withZone(ZONE)
 
-private val ENTRY_DATE_TIME_FORMATTER =
+private fun entryDateTimeFormatter(): DateTimeFormatter =
     DateTimeFormatterBuilder()
         .appendPattern("EEEE, ")
         .append(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM))
@@ -85,7 +89,7 @@ fun HistoryScreen(
         title = { Text("Delete this entry?") },
         text = {
           Text(
-              "The entry from ${ENTRY_DATE_TIME_FORMATTER.format(entry.timestamp)} will be " +
+              "The entry from ${entryDateTimeFormatter().format(entry.timestamp)} will be " +
                   "permanently removed."
           )
         },
@@ -147,7 +151,7 @@ fun HistoryScreen(
       }
     } else {
       val today = LocalDate.now(ZONE)
-      val entriesByDay = entries.groupBy { LocalDate.ofInstant(it.timestamp, ZONE) }
+      val entriesByDay = entries.groupBy { it.timestamp.atZone(ZONE).toLocalDate() }
 
       LazyColumn(
           modifier =
@@ -225,7 +229,7 @@ private fun EntryRow(entry: Entry, onDelete: () -> Unit, modifier: Modifier = Mo
             tint = MaterialTheme.colorScheme.primary,
         )
         Text(
-            text = ENTRY_TIME_FORMATTER.format(entry.timestamp),
+            text = entryTimeFormatter().format(entry.timestamp),
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(vertical = 12.dp, horizontal = 12.dp),
         )

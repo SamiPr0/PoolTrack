@@ -3,7 +3,6 @@ package com.github.se.pooltrack.ui.home
 import com.github.se.pooltrack.model.entry.Entry
 import java.time.DayOfWeek
 import java.time.Instant
-import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -42,7 +41,7 @@ fun computeHomeStats(
     now: Instant = Instant.now(),
     zone: ZoneId = ZoneId.systemDefault(),
 ): HomeStats {
-  val today = LocalDate.ofInstant(now, zone)
+  val today = now.atZone(zone).toLocalDate()
   val weekFields = WeekFields.of(Locale.getDefault())
   val startOfWeek = today.with(weekFields.dayOfWeek(), 1L)
   val startOfWeekInstant = startOfWeek.atStartOfDay(zone).toInstant()
@@ -50,9 +49,9 @@ fun computeHomeStats(
 
   val entriesThisWeek = entries.count { !it.timestamp.isBefore(startOfWeekInstant) }
   val entriesThisMonth =
-      entries.count { YearMonth.from(LocalDate.ofInstant(it.timestamp, zone)) == thisMonth }
+      entries.count { YearMonth.from(it.timestamp.atZone(zone).toLocalDate()) == thisMonth }
 
-  val entryDates = entries.map { LocalDate.ofInstant(it.timestamp, zone) }
+  val entryDates = entries.map { it.timestamp.atZone(zone).toLocalDate() }
   val lastEntryTimestamp = entries.maxOfOrNull { it.timestamp }
   val daysSinceLastSwim = entryDates.maxOrNull()?.let { ChronoUnit.DAYS.between(it, today) }
   val averageEntriesPerWeek =
