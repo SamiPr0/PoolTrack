@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -18,7 +20,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.subscription.Subscription
@@ -47,6 +53,7 @@ import java.time.format.FormatStyle
 
 object SubscriptionListScreenTestTags {
   const val EMPTY_MESSAGE = "SubscriptionListScreenEmptyMessage"
+  const val EMPTY_ADD_BUTTON = "SubscriptionListScreenEmptyAddButton"
   const val SUBSCRIPTION_LIST = "SubscriptionListScreenList"
   const val SUBSCRIPTION_ITEM = "SubscriptionListScreenItem"
   const val ACTIVE_BADGE = "SubscriptionListScreenActiveBadge"
@@ -57,7 +64,9 @@ object SubscriptionListScreenTestTags {
   const val ADD_BUTTON = "SubscriptionListScreenAddButton"
 }
 
-private val ADDED_DATE_FORMATTER =
+// Built fresh on every call rather than cached as a val, so a locale change while the app is
+// running (without a process restart) is picked up instead of baked in at class-init time.
+private fun addedDateFormatter(): DateTimeFormatter =
     DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withZone(ZoneId.systemDefault())
 
 /**
@@ -128,11 +137,33 @@ fun SubscriptionListScreen(
           verticalArrangement = Arrangement.Center,
           horizontalAlignment = Alignment.CenterHorizontally,
       ) {
+        Icon(
+            imageVector = Icons.Filled.Add,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Text(
             text = "No subscriptions yet",
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.testTag(SubscriptionListScreenTestTags.EMPTY_MESSAGE),
+            modifier =
+                Modifier.padding(top = 16.dp, bottom = 4.dp)
+                    .testTag(SubscriptionListScreenTestTags.EMPTY_MESSAGE),
         )
+        Text(
+            text = "Subscriptions you add will show up here.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 24.dp),
+        )
+        Button(
+            onClick = { pickPdfLauncher.launch(arrayOf("application/pdf")) },
+            modifier = Modifier.testTag(SubscriptionListScreenTestTags.EMPTY_ADD_BUTTON),
+        ) {
+          Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Add subscription PDF")
+        }
       }
     } else {
       LazyColumn(
@@ -141,7 +172,7 @@ fun SubscriptionListScreen(
                   .padding(paddingValues)
                   .testTag(SubscriptionListScreenTestTags.SUBSCRIPTION_LIST),
           contentPadding = PaddingValues(16.dp),
-          verticalArrangement = Arrangement.spacedBy(8.dp),
+          verticalArrangement = Arrangement.spacedBy(12.dp),
       ) {
         items(subscriptions, key = { it.id }) { subscription ->
           SubscriptionRow(
@@ -165,47 +196,60 @@ private fun SubscriptionRow(
 ) {
   Card(
       modifier = Modifier.fillMaxWidth().testTag(SubscriptionListScreenTestTags.SUBSCRIPTION_ITEM),
+      colors =
+          if (isActive) {
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+          } else {
+            CardDefaults.cardColors()
+          },
   ) {
     Row(
         modifier =
-            Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+            Modifier.fillMaxWidth()
+                .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
+      if (isActive) {
+        Icon(
+            imageVector = Icons.Filled.CheckCircle,
+            contentDescription = "Active",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier =
+                Modifier.size(28.dp).testTag(SubscriptionListScreenTestTags.ACTIVE_BADGE),
+        )
+      } else {
+        Spacer(modifier = Modifier.size(28.dp))
+      }
+      Spacer(modifier = Modifier.width(12.dp))
+
       Column(modifier = Modifier.weight(1f)) {
-        Text(text = subscription.displayName, style = MaterialTheme.typography.titleMedium)
         Text(
-            text = "Added ${ADDED_DATE_FORMATTER.format(subscription.addedAt)}",
+            text = subscription.displayName,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = "Added ${addedDateFormatter().format(subscription.addedAt)}",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color =
+                if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
+                else MaterialTheme.colorScheme.onSurfaceVariant,
         )
       }
-      if (isActive) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.testTag(SubscriptionListScreenTestTags.ACTIVE_BADGE),
-        ) {
-          Icon(
-              imageVector = Icons.Filled.CheckCircle,
-              contentDescription = null,
-              tint = MaterialTheme.colorScheme.primary,
-              modifier = Modifier.size(18.dp),
-          )
-          Text(
-              text = "Active",
-              color = MaterialTheme.colorScheme.primary,
-              style = MaterialTheme.typography.labelLarge,
-              modifier = Modifier.padding(start = 4.dp),
-          )
-        }
-      } else {
-        TextButton(
+
+      if (!isActive) {
+        FilledTonalButton(
             onClick = onSetActive,
             modifier = Modifier.testTag(SubscriptionListScreenTestTags.SET_ACTIVE_BUTTON),
         ) {
           Text("Set active")
         }
+        Spacer(modifier = Modifier.width(4.dp))
       }
+
       IconButton(
           onClick = onDelete,
           modifier = Modifier.testTag(SubscriptionListScreenTestTags.DELETE_BUTTON),
@@ -213,7 +257,9 @@ private fun SubscriptionRow(
         Icon(
             imageVector = Icons.Filled.Delete,
             contentDescription = "Delete subscription",
-            tint = MaterialTheme.colorScheme.error,
+            tint =
+                if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
+                else MaterialTheme.colorScheme.onSurfaceVariant,
         )
       }
     }
