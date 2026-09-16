@@ -218,6 +218,9 @@ private fun SubscriptionRow(
     onSetActive: () -> Unit,
     onDelete: () -> Unit,
 ) {
+  // Two rows rather than one long one: cramming the thumbnail, title, date, "Set active"
+  // button and delete icon onto a single line left no room for the date, which wrapped
+  // awkwardly and made cards uneven heights. Info on top, actions below, has room to breathe.
   Card(
       modifier = Modifier.fillMaxWidth().testTag(SubscriptionScreenTestTags.SUBSCRIPTION_ITEM),
       colors =
@@ -230,63 +233,73 @@ private fun SubscriptionRow(
             CardDefaults.cardColors()
           },
   ) {
-    Row(
-        modifier =
-            Modifier.fillMaxWidth()
-                .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-      if (isActive) {
-        Icon(
-            imageVector = Icons.Filled.CheckCircle,
-            contentDescription = "Active",
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(28.dp).testTag(SubscriptionScreenTestTags.ACTIVE_BADGE),
-        )
-      } else {
-        Spacer(modifier = Modifier.size(28.dp))
-      }
-      Spacer(modifier = Modifier.width(12.dp))
-
-      SubscriptionThumbnail(uri = subscription.uri)
-      Spacer(modifier = Modifier.width(12.dp))
-
-      Column(modifier = Modifier.weight(1f)) {
-        Text(
-            text = subscription.displayName,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = "Added ${addedDateFormatter().format(subscription.addedAt)}",
-            style = MaterialTheme.typography.bodySmall,
-            color =
-                if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-      }
-
-      if (!isActive) {
-        FilledTonalButton(
-            onClick = onSetActive,
-            modifier = Modifier.testTag(SubscriptionScreenTestTags.SET_ACTIVE_BUTTON),
-        ) {
-          Text("Set active")
+    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        if (isActive) {
+          Icon(
+              imageVector = Icons.Filled.CheckCircle,
+              contentDescription = "Active",
+              tint = MaterialTheme.colorScheme.primary,
+              modifier = Modifier.size(28.dp).testTag(SubscriptionScreenTestTags.ACTIVE_BADGE),
+          )
+        } else {
+          Spacer(modifier = Modifier.size(28.dp))
         }
-        Spacer(modifier = Modifier.width(4.dp))
+        Spacer(modifier = Modifier.width(12.dp))
+
+        SubscriptionThumbnail(uri = subscription.uri)
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+          Text(
+              text = subscription.displayName,
+              style = MaterialTheme.typography.titleMedium,
+              fontWeight = FontWeight.SemiBold,
+          )
+          Text(
+              text = "Added ${addedDateFormatter().format(subscription.addedAt)}",
+              style = MaterialTheme.typography.bodySmall,
+              color =
+                  if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
+                  else MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+        }
       }
 
-      IconButton(
-          onClick = onDelete,
-          modifier = Modifier.testTag(SubscriptionScreenTestTags.DELETE_BUTTON),
+      Spacer(modifier = Modifier.height(12.dp))
+
+      Row(
+          modifier = Modifier.fillMaxWidth(),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.SpaceBetween,
       ) {
-        Icon(
-            imageVector = Icons.Filled.Delete,
-            contentDescription = "Delete subscription",
-            tint =
-                if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (isActive) {
+          Text(
+              text = "Active",
+              style = MaterialTheme.typography.labelLarge,
+              color = MaterialTheme.colorScheme.primary,
+          )
+        } else {
+          FilledTonalButton(
+              onClick = onSetActive,
+              modifier = Modifier.testTag(SubscriptionScreenTestTags.SET_ACTIVE_BUTTON),
+          ) {
+            Text("Set active")
+          }
+        }
+
+        IconButton(
+            onClick = onDelete,
+            modifier = Modifier.testTag(SubscriptionScreenTestTags.DELETE_BUTTON),
+        ) {
+          Icon(
+              imageVector = Icons.Filled.Delete,
+              contentDescription = "Delete subscription",
+              tint =
+                  if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
+                  else MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+        }
       }
     }
   }
@@ -304,7 +317,7 @@ private fun SubscriptionThumbnail(uri: String) {
 
   Box(
       modifier =
-          Modifier.size(width = 40.dp, height = 52.dp)
+          Modifier.size(width = 48.dp, height = 64.dp)
               .clip(RoundedCornerShape(6.dp))
               .background(MaterialTheme.colorScheme.surfaceVariant)
               .testTag(SubscriptionScreenTestTags.THUMBNAIL),
