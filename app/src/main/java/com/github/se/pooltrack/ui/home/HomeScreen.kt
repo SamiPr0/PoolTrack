@@ -1,11 +1,14 @@
 package com.github.se.pooltrack.ui.home
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -13,6 +16,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.CheckBoxOutlineBlank
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Card
@@ -62,6 +66,7 @@ object HomeScreenTestTags {
   const val AVERAGE_PER_WEEK_STAT = "HomeScreenAveragePerWeekStat"
   const val FAVORITE_DAY_BANNER = "HomeScreenFavoriteDayBanner"
   const val EXPIRATION_BANNER = "HomeScreenExpirationBanner"
+  const val NO_SUBSCRIPTION_TODO = "HomeScreenNoSubscriptionTodo"
   const val TOTAL_SPENT_STAT = "HomeScreenTotalSpentStat"
   const val COST_PER_ENTRY_STAT = "HomeScreenCostPerEntryStat"
   const val OPEN_SUBSCRIPTION_FAB = "HomeScreenOpenSubscriptionFab"
@@ -132,10 +137,16 @@ fun HomeScreen(
           modifier = Modifier.testTag(HomeScreenTestTags.LAST_SWIM_HERO),
       )
 
-      activeSubscription?.let { subscription ->
+      val subscription = activeSubscription
+      if (subscription != null) {
         ExpirationBanner(
             subscription = subscription,
             modifier = Modifier.testTag(HomeScreenTestTags.EXPIRATION_BANNER),
+        )
+      } else {
+        NoSubscriptionTodoCard(
+            onClick = { navigationActions?.navigateTo(Screen.Subscription) },
+            modifier = Modifier.testTag(HomeScreenTestTags.NO_SUBSCRIPTION_TODO),
         )
       }
 
@@ -290,6 +301,38 @@ private fun ExpirationBanner(subscription: Subscription, modifier: Modifier = Mo
           style = MaterialTheme.typography.bodyMedium,
           modifier = Modifier.padding(start = 8.dp),
       )
+    }
+  }
+}
+
+/** A to-do-style prompt shown on Home whenever there's no active subscription to track with. */
+@Composable
+private fun NoSubscriptionTodoCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
+  Card(
+      modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
+      colors =
+          CardDefaults.cardColors(
+              containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+              contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+          ),
+  ) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Icon(imageVector = Icons.Outlined.CheckBoxOutlineBlank, contentDescription = null)
+      Spacer(modifier = Modifier.width(12.dp))
+      Column {
+        Text(
+            text = "To do: add a subscription",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = "Add or activate one to start tracking your entries.",
+            style = MaterialTheme.typography.bodySmall,
+        )
+      }
     }
   }
 }

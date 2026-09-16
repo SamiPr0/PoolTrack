@@ -36,6 +36,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,6 +48,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -78,9 +82,11 @@ import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
+import java.time.Instant
 import java.time.LocalDate
 import java.time.Period
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -105,6 +111,7 @@ object SubscriptionScreenTestTags {
   const val EXPIRATION_DATE_BUTTON = "SubscriptionScreenExpirationDateButton"
   const val EXPIRATION_ENTRIES_BUTTON = "SubscriptionScreenExpirationEntriesButton"
   const val EXPIRATION_ENTRIES_FIELD = "SubscriptionScreenExpirationEntriesField"
+  const val EXPIRATION_PURCHASE_DATE_BUTTON = "SubscriptionScreenExpirationPurchaseDateButton"
   const val EXPIRATION_PRICE_FIELD = "SubscriptionScreenExpirationPriceField"
   const val EXPIRATION_CONFIRM_BUTTON = "SubscriptionScreenExpirationConfirmButton"
 }
@@ -121,8 +128,11 @@ private enum class DatePreset(val label: String, val period: Period) {
   ONE_YEAR("1 year", Period.ofYears(1)),
 }
 
-private fun DatePreset.expiresAtEpochMilli(zone: ZoneId = ZoneId.systemDefault()): Long =
-    LocalDate.now(zone).plus(period).atStartOfDay(zone).toInstant().toEpochMilli()
+/** [purchasedOn] plus this preset's period, i.e. the expiration date - not counted from today. */
+private fun DatePreset.expiresAtEpochMilli(
+    purchasedOn: LocalDate,
+    zone: ZoneId = ZoneId.systemDefault(),
+): Long = purchasedOn.plus(period).atStartOfDay(zone).toInstant().toEpochMilli()
 
 /** Which kind of expiration is being configured in [AddSubscriptionExpirationDialog]. */
 private enum class ExpirationMode {
@@ -506,6 +516,7 @@ private fun SubscriptionDetailDialog(
  * a date (via quick presets) or an entry-count limit - and its price are captured from the start
  * rather than missing entirely.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddSubscriptionExpirationDialog(
     onConfirm: (expiresAtEpochMilli: Long?, maxEntries: Int?, price: Double?) -> Unit,
@@ -513,6 +524,8 @@ private fun AddSubscriptionExpirationDialog(
 ) {
   var mode by remember { mutableStateOf(ExpirationMode.NONE) }
   var selectedPreset by remember { mutableStateOf<DatePreset?>(null) }
+  var purchaseDate by remember { mutableStateOf(LocalDate.now()) }
+  var showPurchaseDatePicker by remember { mutableStateOf(false) }
   var entriesText by remember { mutableStateOf("") }
   var priceText by remember { mutableStateOf("") }
 
@@ -568,17 +581,31 @@ private fun AddSubscriptionExpirationDialog(
 
           when (mode) {
             ExpirationMode.DATE ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                  DatePreset.entries.forEach { preset ->
-                    ChoiceButton(
-                        label = preset.label,
-                        selected = selectedPreset == preset,
-                        modifier = Modifier.weight(1f),
-                        onClick = { selectedPreset = preset },
-                    )
+                Column {
+                  Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.spacedBy(8.dp),
+                  ) {
+                    DatePreset.entries.forEach { preset ->
+                      ChoiceButton(
+                          label = preset.label,
+                          selected = selectedPreset == preset,
+                          modifier = Modifier.weight(1f),
+                          onClick = { selectedPreset = preset },
+                      )
+                    }
+                  }
+
+                  Spacer(modifier = Modifier.height(12.dp))
+
+                  val purchaseDateTag = SubscriptionScreenTestTags.EXPIRATION_PURCHASE_DATE_BUTTON
+                  OutlinedButton(
+                      onClick = { showPurchaseDatePicker = true },
+                      modifier = Modifier.fillMaxWidth().testTag(purchaseDateTag),
+                  ) {
+                    val purchaseInstant =
+                        purchaseDate.atStartOfDay(ZoneId.systemDefault()).toInstant()
+                    Text("Bought on ${addedDateFormatter().format(purchaseInstant)}")
                   }
                 }
             ExpirationMode.ENTRIES ->
@@ -618,7 +645,11 @@ private fun AddSubscriptionExpirationDialog(
         TextButton(
             onClick = {
               val expiresAtEpochMilli =
-                  if (mode == ExpirationMode.DATE) selectedPreset?.expiresAtEpochMilli() else null
+                  if (mode == ExpirationMode.DATE) {
+                    selectedPreset?.expiresAtEpochMilli(purchasedOn = purchaseDate)
+                  } else {
+                    null
+                  }
               val maxEntries =
                   if (mode == ExpirationMode.ENTRIES) entriesText.toIntOrNull() else null
               onConfirm(expiresAtEpochMilli, maxEntries, priceText.toDoubleOrNull())
@@ -631,6 +662,36 @@ private fun AddSubscriptionExpirationDialog(
       },
       dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
   )
+
+  if (showPurchaseDatePicker) {
+    val datePickerState =
+        rememberDatePickerState(
+            // The picker itself works in UTC, so the selection is anchored there too and
+            // converted back the same way, rather than through the device's own zone.
+            initialSelectedDateMillis =
+                purchaseDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+        )
+    DatePickerDialog(
+        onDismissRequest = { showPurchaseDatePicker = false },
+        confirmButton = {
+          TextButton(
+              onClick = {
+                datePickerState.selectedDateMillis?.let { millis ->
+                  purchaseDate = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+                }
+                showPurchaseDatePicker = false
+              },
+          ) {
+            Text("OK")
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = { showPurchaseDatePicker = false }) { Text("Cancel") }
+        },
+    ) {
+      DatePicker(state = datePickerState)
+    }
+  }
 }
 
 private val CHOICE_BUTTON_PADDING = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
