@@ -177,7 +177,7 @@ private fun PassDisplayAndAccept(
   var pageBitmap by remember(uri) { mutableStateOf<Bitmap?>(null) }
   var scale by remember(uri) { mutableStateOf(MIN_ZOOM_SCALE) }
   var offset by remember(uri) { mutableStateOf(Offset.Zero) }
-  val transformableState = rememberTransformableState { zoomChange, panChange, _ ->
+  val transformableState = rememberTransformableState { _, zoomChange, panChange, _ ->
     scale = (scale * zoomChange).coerceIn(MIN_ZOOM_SCALE, MAX_ZOOM_SCALE)
     offset = if (scale <= MIN_ZOOM_SCALE) Offset.Zero else offset + panChange
   }
