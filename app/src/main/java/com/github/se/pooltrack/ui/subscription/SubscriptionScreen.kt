@@ -199,7 +199,12 @@ fun SubscriptionScreen(
 
   val pickPdfLauncher =
       rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        if (uri != null) pickedPdfUri = uri
+        if (uri != null) {
+          // Mutually exclusive with the detail dialog below - picking a new PDF while an
+          // existing subscription's details are open would otherwise stack both dialogs.
+          selectedSubscription = null
+          pickedPdfUri = uri
+        }
       }
 
   pickedPdfUri?.let { uri ->
@@ -325,7 +330,13 @@ fun SubscriptionScreen(
               subscription = subscription,
               isActive = subscription.id == activeSubscription?.id,
               usedCount = entryCountsBySubscriptionId[subscription.id] ?: 0,
-              onClick = { selectedSubscription = subscription },
+              onClick = {
+                // Mutually exclusive with the add-subscription flow above - picking a new
+                // subscription's details while a PDF is still being added would otherwise
+                // stack both dialogs.
+                pickedPdfUri = null
+                selectedSubscription = subscription
+              },
           )
         }
       }
