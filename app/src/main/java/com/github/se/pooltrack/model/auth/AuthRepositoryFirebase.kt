@@ -5,7 +5,7 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.NoCredentialException
 import com.github.se.pooltrack.model.backup.awaitResult
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
@@ -36,12 +36,10 @@ class AuthRepositoryFirebase : AuthRepository {
                 "Google sign-in isn't set up yet - enable the Google provider in the Firebase " +
                     "console, then rebuild"
             )
-    val googleIdOption =
-        GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(false)
-            .setServerClientId(webClientId)
-            .build()
-    val request = GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
+    // GetSignInWithGoogleOption (rather than GetGoogleIdOption) is what lets the picker offer
+    // any Google account, not just ones already "authorized" for this app on this device.
+    val signInOption = GetSignInWithGoogleOption.Builder(webClientId).build()
+    val request = GetCredentialRequest.Builder().addCredentialOption(signInOption).build()
 
     val credential =
         try {
