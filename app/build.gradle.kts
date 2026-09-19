@@ -37,7 +37,10 @@ android {
     targetCompatibility = JavaVersion.VERSION_17
   }
 
-  buildFeatures { compose = true }
+  buildFeatures {
+    compose = true
+    buildConfig = true
+  }
 }
 
 // With AGP 9+ we have to set the JVM target on a kotlin block outside the Android block.

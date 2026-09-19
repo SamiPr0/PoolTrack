@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.se.pooltrack.BuildConfig
 import com.github.se.pooltrack.model.auth.AuthRepository
 import com.github.se.pooltrack.model.auth.AuthRepositoryFirebase
 import com.github.se.pooltrack.model.auth.AuthUser
@@ -24,6 +25,15 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
 
   val currentUser: StateFlow<AuthUser?> =
       authRepository.getCurrentUser().stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+  init {
+    // Debug builds only: bootstraps an anonymous session automatically, so local development
+    // doesn't require setting up a real Google account on an emulator/device. Release builds
+    // still hard-require real Google sign-in - see the gate in MainActivity.kt.
+    if (BuildConfig.DEBUG) {
+      viewModelScope.launch { authRepository.signInAnonymously() }
+    }
+  }
 
   /**
    * Starts the Google sign-in flow. [context] must be an Activity context, since it's used to
