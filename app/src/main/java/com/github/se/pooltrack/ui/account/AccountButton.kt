@@ -26,11 +26,11 @@ object AccountButtonTestTags {
 }
 
 /**
- * Top-bar account control. A brand-new install is signed in anonymously in the background (see
- * [AccountViewModel]), so its backup already works, but that's not a "real" account - tapping the
- * button then still offers Google sign-in, same as a fully signed-out user. Once actually signed
- * in with Google, it offers to sign back out instead. [onError] surfaces a failed or cancelled
- * sign-in attempt, e.g. as a Snackbar.
+ * Home's account control, showing who's signed in and offering to sign out. Reaching Home at all
+ * already requires a real (non-anonymous) Google account - see `PoolTrackApp` in
+ * `MainActivity.kt` - so the "not signed in" branch here is only a defensive fallback, e.g. for
+ * the brief moment right after tapping sign-out. [onError] surfaces a failed sign-in attempt from
+ * that fallback, e.g. as a Snackbar.
  */
 @Composable
 fun RowScope.AccountButton(onError: (String) -> Unit, viewModel: AccountViewModel = viewModel()) {

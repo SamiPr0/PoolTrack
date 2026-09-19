@@ -13,9 +13,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel for the sign-in/sign-out control on Home. Signing in is what lets subscriptions and
- * pool entries be backed up to Firestore - the local repositories mirror to it whenever a user is
- * signed in, and silently skip the mirror otherwise.
+ * ViewModel backing both [SignInScreen] and Home's account control. Signing in is required to use
+ * the app at all - see `PoolTrackApp` in `MainActivity.kt` - since subscriptions and entries are
+ * backed up to the signed-in account, and the local repositories mirror to it whenever a user is
+ * signed in.
  */
 class AccountViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -23,14 +24,6 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
 
   val currentUser: StateFlow<AuthUser?> =
       authRepository.getCurrentUser().stateIn(viewModelScope, SharingStarted.Eagerly, null)
-
-  init {
-    // Bootstraps a session immediately so backup starts working without requiring the user to
-    // tap anything first - signInAnonymously() is a no-op if someone's already signed in. Ignored
-    // on failure (e.g. anonymous auth not yet enabled in the Firebase console): the app works
-    // exactly as if nobody were signed in, same as before this existed.
-    viewModelScope.launch { authRepository.signInAnonymously() }
-  }
 
   /**
    * Starts the Google sign-in flow. [context] must be an Activity context, since it's used to

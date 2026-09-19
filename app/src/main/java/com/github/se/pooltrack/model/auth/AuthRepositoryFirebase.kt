@@ -53,14 +53,6 @@ class AuthRepositoryFirebase : AuthRepository {
     user.toAuthUser()
   }
 
-  override suspend fun signInAnonymously(): Result<AuthUser> = runCatching {
-    val user =
-        auth.currentUser
-            ?: auth.signInAnonymously().awaitResult().user
-            ?: error("Anonymous sign-in succeeded but returned no user")
-    user.toAuthUser()
-  }
-
   override fun signOut() {
     auth.signOut()
   }
