@@ -57,6 +57,7 @@ import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.daysUntilExpiration
 import com.github.se.pooltrack.model.subscription.expiresAt
 import com.github.se.pooltrack.model.subscription.isExpired
+import com.github.se.pooltrack.ui.account.AccountButton
 import com.github.se.pooltrack.ui.navigation.BottomNavigationMenu
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
@@ -102,7 +103,18 @@ fun HomeScreen(
   val coroutineScope = rememberCoroutineScope()
 
   Scaffold(
-      topBar = { TopNavigationMenu(Screen.Home) },
+      topBar = {
+        TopNavigationMenu(
+            Screen.Home,
+            actions = {
+              AccountButton(
+                  onError = { message ->
+                    coroutineScope.launch { snackbarHostState.showSnackbar(message) }
+                  },
+              )
+            },
+        )
+      },
       bottomBar = {
         BottomNavigationMenu(
             selectedTab = Tab.Home,
