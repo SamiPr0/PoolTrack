@@ -5,6 +5,8 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.view.WindowManager
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,10 +38,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.subscription.renderFirstPdfPage
@@ -154,7 +159,14 @@ private fun CooldownLockedMessage(cooldown: Duration, modifier: Modifier = Modif
   }
 }
 
-/** Renders the pass full-screen plus the Accept button; calls [onAccepted] once tapped. */
+private const val MIN_ZOOM_SCALE = 1f
+private const val MAX_ZOOM_SCALE = 6f
+
+/**
+ * Renders the pass plus the Accept button; calls [onAccepted] once tapped. The user pinch-zooms
+ * and pans to bring the QR code up to size themselves - rather than the app guessing where it is
+ * on the page - since that guess depends on on-device detection that isn't always available.
+ */
 @Composable
 private fun PassDisplayAndAccept(
     uri: String,
@@ -163,12 +175,25 @@ private fun PassDisplayAndAccept(
 ) {
   val context = LocalContext.current
   var pageBitmap by remember(uri) { mutableStateOf<Bitmap?>(null) }
+  var scale by remember(uri) { mutableStateOf(MIN_ZOOM_SCALE) }
+  var offset by remember(uri) { mutableStateOf(Offset.Zero) }
+  val transformableState = rememberTransformableState { zoomChange, panChange, _ ->
+    scale = (scale * zoomChange).coerceIn(MIN_ZOOM_SCALE, MAX_ZOOM_SCALE)
+    offset = if (scale <= MIN_ZOOM_SCALE) Offset.Zero else offset + panChange
+  }
 
   LaunchedEffect(uri) {
     pageBitmap = withContext(Dispatchers.IO) { renderFirstPdfPage(context, Uri.parse(uri)) }
   }
 
   Column(modifier = modifier.fillMaxSize()) {
+    Text(
+        text = "Pinch to zoom in on the QR code so it fills the screen for the scanner.",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+    )
     Box(
         modifier = Modifier.weight(1f).fillMaxWidth(),
         contentAlignment = Alignment.Center,
@@ -181,10 +206,19 @@ private fun PassDisplayAndAccept(
       } else {
         Image(
             bitmap = bitmap.asImageBitmap(),
-            contentDescription = "Subscription pass",
+            contentDescription = "Subscription pass - pinch to zoom in on its QR code",
             contentScale = ContentScale.Fit,
             modifier =
-                Modifier.fillMaxSize().testTag(SubscriptionQuickViewScreenTestTags.PDF_IMAGE),
+                Modifier.fillMaxSize()
+                    .padding(24.dp)
+                    .graphicsLayer(
+                        scaleX = scale,
+                        scaleY = scale,
+                        translationX = offset.x,
+                        translationY = offset.y,
+                    )
+                    .transformable(transformableState)
+                    .testTag(SubscriptionQuickViewScreenTestTags.PDF_IMAGE),
         )
       }
     }
