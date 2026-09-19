@@ -3,7 +3,6 @@ package com.github.se.pooltrack.model.auth
 import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
-import com.github.se.pooltrack.R
 import com.github.se.pooltrack.model.backup.awaitResult
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -31,10 +30,15 @@ class AuthRepositoryFirebase : AuthRepository {
   }
 
   override suspend fun signInWithGoogle(context: Context): Result<AuthUser> = runCatching {
+    val webClientId =
+        context.defaultWebClientIdOrNull()
+            ?: error(
+                "Google sign-in isn't set up yet - enable the Google provider in the Firebase " +
+                    "console, then rebuild")
     val googleIdOption =
         GetGoogleIdOption.Builder()
             .setFilterByAuthorizedAccounts(false)
-            .setServerClientId(context.getString(R.string.default_web_client_id))
+            .setServerClientId(webClientId)
             .build()
     val request = GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
 
@@ -64,3 +68,14 @@ class AuthRepositoryFirebase : AuthRepository {
 
 private fun FirebaseUser.toAuthUser() =
     AuthUser(uid = uid, displayName = displayName, email = email, isAnonymous = isAnonymous)
+
+/**
+ * Looks up `R.string.default_web_client_id` by name rather than referencing it directly. The
+ * google-services Gradle plugin only generates that resource once `google-services.json` has an
+ * OAuth client in it (i.e. once Google sign-in is enabled in the Firebase console) - referencing
+ * it directly would fail to compile until then.
+ */
+private fun Context.defaultWebClientIdOrNull(): String? {
+  val resId = resources.getIdentifier("default_web_client_id", "string", packageName)
+  return if (resId != 0) getString(resId) else null
+}
