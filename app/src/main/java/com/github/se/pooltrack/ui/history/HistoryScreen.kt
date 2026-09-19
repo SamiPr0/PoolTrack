@@ -140,8 +140,7 @@ fun HistoryScreen(
         Text(
             text = "No entries yet",
             style = MaterialTheme.typography.titleMedium,
-            modifier =
-                Modifier.padding(top = 16.dp).testTag(HistoryScreenTestTags.EMPTY_MESSAGE),
+            modifier = Modifier.padding(top = 16.dp).testTag(HistoryScreenTestTags.EMPTY_MESSAGE),
         )
         Text(
             text = "Confirmed pool visits will show up here.",

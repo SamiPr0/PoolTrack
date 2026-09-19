@@ -28,9 +28,9 @@ object AccountButtonTestTags {
 /**
  * Home's account control, showing who's signed in and offering to sign out. Reaching Home at all
  * already requires a real (non-anonymous) Google account - see `PoolTrackApp` in
- * `MainActivity.kt` - so the "not signed in" branch here is only a defensive fallback, e.g. for
- * the brief moment right after tapping sign-out. [onError] surfaces a failed sign-in attempt from
- * that fallback, e.g. as a Snackbar.
+ * `MainActivity.kt` - so the "not signed in" branch here is only a defensive fallback, e.g. for the
+ * brief moment right after tapping sign-out. [onError] surfaces a failed sign-in attempt from that
+ * fallback, e.g. as a Snackbar.
  */
 @Composable
 fun RowScope.AccountButton(onError: (String) -> Unit, viewModel: AccountViewModel = viewModel()) {
@@ -61,7 +61,8 @@ fun RowScope.AccountButton(onError: (String) -> Unit, viewModel: AccountViewMode
         text = {
           Text(
               "Signed in as ${user.displayName ?: user.email ?: "your Google account"}. " +
-                  "Subscriptions and entries are backed up to the cloud.")
+                  "Subscriptions and entries are backed up to the cloud."
+          )
         },
         confirmButton = {
           TextButton(

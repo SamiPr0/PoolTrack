@@ -3,6 +3,7 @@ package com.github.se.pooltrack.model.auth
 import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.NoCredentialException
 import com.github.se.pooltrack.model.backup.awaitResult
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -21,10 +22,9 @@ class AuthRepositoryFirebase : AuthRepository {
   private val auth: FirebaseAuth = Firebase.auth
 
   override fun getCurrentUser(): Flow<AuthUser?> = callbackFlow {
-    val listener =
-        FirebaseAuth.AuthStateListener { firebaseAuth ->
-          trySend(firebaseAuth.currentUser?.toAuthUser())
-        }
+    val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+      trySend(firebaseAuth.currentUser?.toAuthUser())
+    }
     auth.addAuthStateListener(listener)
     awaitClose { auth.removeAuthStateListener(listener) }
   }
@@ -34,7 +34,8 @@ class AuthRepositoryFirebase : AuthRepository {
         context.defaultWebClientIdOrNull()
             ?: error(
                 "Google sign-in isn't set up yet - enable the Google provider in the Firebase " +
-                    "console, then rebuild")
+                    "console, then rebuild"
+            )
     val googleIdOption =
         GetGoogleIdOption.Builder()
             .setFilterByAuthorizedAccounts(false)
@@ -42,10 +43,14 @@ class AuthRepositoryFirebase : AuthRepository {
             .build()
     val request = GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
 
-    val credential = CredentialManager.create(context).getCredential(context, request).credential
+    val credential =
+        try {
+          CredentialManager.create(context).getCredential(context, request).credential
+        } catch (e: NoCredentialException) {
+          error("No Google account found on this device - add one in Settings first")
+        }
     val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-    val firebaseCredential =
-        GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
+    val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
 
     val user =
         auth.signInWithCredential(firebaseCredential).awaitResult().user
@@ -64,8 +69,8 @@ private fun FirebaseUser.toAuthUser() =
 /**
  * Looks up `R.string.default_web_client_id` by name rather than referencing it directly. The
  * google-services Gradle plugin only generates that resource once `google-services.json` has an
- * OAuth client in it (i.e. once Google sign-in is enabled in the Firebase console) - referencing
- * it directly would fail to compile until then.
+ * OAuth client in it (i.e. once Google sign-in is enabled in the Firebase console) - referencing it
+ * directly would fail to compile until then.
  */
 private fun Context.defaultWebClientIdOrNull(): String? {
   val resId = resources.getIdentifier("default_web_client_id", "string", packageName)

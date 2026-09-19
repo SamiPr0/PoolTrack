@@ -142,9 +142,9 @@ private enum class ExpirationMode {
 }
 
 /**
- * A short line describing when/how a subscription expires, or `null` if it never does.
- * [usedCount] is how many confirmed entries have been recorded against it, used to turn a fixed
- * entry limit into how many are actually left.
+ * A short line describing when/how a subscription expires, or `null` if it never does. [usedCount]
+ * is how many confirmed entries have been recorded against it, used to turn a fixed entry limit
+ * into how many are actually left.
  */
 private fun expirationLabel(subscription: Subscription, usedCount: Int): String? {
   subscription.expiresAt?.let { expiresAt ->
@@ -176,14 +176,14 @@ private fun rowDetailLine(subscription: Subscription, usedCount: Int): String? =
         ?.joinToString(" · ")
 
 /**
- * SubscriptionScreen is the always-reachable bottom-nav tab for managing subscriptions: lists
- * every one the user has added - e.g. an expired one kept for reference alongside the new one
- * replacing it. Rows only show the basics (thumbnail, name, date, whether it's active); tapping
- * one opens a detail dialog with the actual actions (set active, delete), so the list itself
- * doesn't repeat the same two buttons on every single row.
+ * SubscriptionScreen is the always-reachable bottom-nav tab for managing subscriptions: lists every
+ * one the user has added - e.g. an expired one kept for reference alongside the new one replacing
+ * it. Rows only show the basics (thumbnail, name, date, whether it's active); tapping one opens a
+ * detail dialog with the actual actions (set active, delete), so the list itself doesn't repeat the
+ * same two buttons on every single row.
  *
- * It deliberately does not display the active subscription's pass itself: that would just
- * duplicate [SubscriptionQuickViewScreen], which Home's FAB already opens for that.
+ * It deliberately does not display the active subscription's pass itself: that would just duplicate
+ * [SubscriptionQuickViewScreen], which Home's FAB already opens for that.
  */
 @Composable
 fun SubscriptionScreen(
@@ -508,8 +508,7 @@ private fun SubscriptionDetailDialog(
                       contentColor = MaterialTheme.colorScheme.error,
                   ),
               border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-              modifier =
-                  Modifier.weight(1f).testTag(SubscriptionScreenTestTags.DELETE_BUTTON),
+              modifier = Modifier.weight(1f).testTag(SubscriptionScreenTestTags.DELETE_BUTTON),
           ) {
             Icon(
                 imageVector = Icons.Filled.Delete,
@@ -526,8 +525,8 @@ private fun SubscriptionDetailDialog(
 }
 
 /**
- * Shown right after picking a subscription PDF, before it's actually added, so its expiration -
- * a date (via quick presets) or an entry-count limit - and its price are captured from the start
+ * Shown right after picking a subscription PDF, before it's actually added, so its expiration - a
+ * date (via quick presets) or an entry-count limit - and its price are captured from the start
  * rather than missing entirely.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -569,16 +568,14 @@ private fun AddSubscriptionExpirationDialog(
                 label = "No limit",
                 selected = mode == ExpirationMode.NONE,
                 modifier =
-                    Modifier.weight(1f)
-                        .testTag(SubscriptionScreenTestTags.EXPIRATION_NONE_BUTTON),
+                    Modifier.weight(1f).testTag(SubscriptionScreenTestTags.EXPIRATION_NONE_BUTTON),
                 onClick = { mode = ExpirationMode.NONE },
             )
             ChoiceButton(
                 label = "By date",
                 selected = mode == ExpirationMode.DATE,
                 modifier =
-                    Modifier.weight(1f)
-                        .testTag(SubscriptionScreenTestTags.EXPIRATION_DATE_BUTTON),
+                    Modifier.weight(1f).testTag(SubscriptionScreenTestTags.EXPIRATION_DATE_BUTTON),
                 onClick = { mode = ExpirationMode.DATE },
             )
             ChoiceButton(

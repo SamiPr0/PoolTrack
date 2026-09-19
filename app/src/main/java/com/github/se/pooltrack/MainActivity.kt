@@ -37,9 +37,9 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * `PoolTrackApp` is the main composable function that sets up the whole app UI. Gated behind
- * Google sign-in - [SignInScreen] is shown instead until a real (non-anonymous) account is
- * signed in - since subscriptions and entries are only meaningful once backed up to one.
+ * `PoolTrackApp` is the main composable function that sets up the whole app UI. Gated behind Google
+ * sign-in - [SignInScreen] is shown instead until a real (non-anonymous) account is signed in -
+ * since subscriptions and entries are only meaningful once backed up to one.
  */
 @Composable
 fun PoolTrackApp(accountViewModel: AccountViewModel = viewModel()) {

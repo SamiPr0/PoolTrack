@@ -65,7 +65,9 @@ class EntryRepositoryLocal(private val context: Context) : EntryRepository {
 
   /** Reads from the current JSON storage, falling back to the legacy plain-text format. */
   private fun readEntries(prefs: Preferences): List<Entry> {
-    prefs[ENTRIES_KEY]?.let { return Json.decodeFromString<List<Entry>>(it) }
+    prefs[ENTRIES_KEY]?.let {
+      return Json.decodeFromString<List<Entry>>(it)
+    }
     return prefs[LEGACY_ENTRY_TIMESTAMPS_KEY]?.let { raw ->
       raw.split(LEGACY_TIMESTAMP_SEPARATOR)
           .filter { it.isNotBlank() }

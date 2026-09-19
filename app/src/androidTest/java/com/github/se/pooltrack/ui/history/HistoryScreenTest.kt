@@ -24,7 +24,8 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_showsEmptyMessage_whenNoEntriesRecorded() {
-    composeTestRule.setContent { HistoryScreen(viewModel = HistoryViewModel(application)) }
+    val viewModel = HistoryViewModel(application)
+    composeTestRule.setContent { HistoryScreen(viewModel = viewModel) }
 
     composeTestRule.onNodeWithTag(HistoryScreenTestTags.EMPTY_MESSAGE).assertIsDisplayed()
   }
