@@ -24,6 +24,14 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
   val currentUser: StateFlow<AuthUser?> =
       authRepository.getCurrentUser().stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
+  init {
+    // Bootstraps a session immediately so backup starts working without requiring the user to
+    // tap anything first - signInAnonymously() is a no-op if someone's already signed in. Ignored
+    // on failure (e.g. anonymous auth not yet enabled in the Firebase console): the app works
+    // exactly as if nobody were signed in, same as before this existed.
+    viewModelScope.launch { authRepository.signInAnonymously() }
+  }
+
   /**
    * Starts the Google sign-in flow. [context] must be an Activity context, since it's used to
    * launch the system account picker. Calls [onError] with a short message if it fails or is

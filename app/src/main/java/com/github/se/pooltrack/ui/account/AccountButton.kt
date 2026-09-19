@@ -26,9 +26,11 @@ object AccountButtonTestTags {
 }
 
 /**
- * Top-bar account control: signed out, it starts Google sign-in (needed to back subscriptions and
- * entries up to Firestore); signed in, it offers to sign back out. [onError] surfaces a failed or
- * cancelled sign-in attempt, e.g. as a Snackbar.
+ * Top-bar account control. A brand-new install is signed in anonymously in the background (see
+ * [AccountViewModel]), so its backup already works, but that's not a "real" account - tapping the
+ * button then still offers Google sign-in, same as a fully signed-out user. Once actually signed
+ * in with Google, it offers to sign back out instead. [onError] surfaces a failed or cancelled
+ * sign-in attempt, e.g. as a Snackbar.
  */
 @Composable
 fun RowScope.AccountButton(onError: (String) -> Unit, viewModel: AccountViewModel = viewModel()) {
@@ -36,21 +38,21 @@ fun RowScope.AccountButton(onError: (String) -> Unit, viewModel: AccountViewMode
   val context = LocalContext.current
   var showAccountDialog by remember { mutableStateOf(false) }
 
+  val user = currentUser
+  val isRealAccount = user != null && !user.isAnonymous
+
   IconButton(
       onClick = {
-        if (currentUser == null) viewModel.onSignInClick(context, onError)
-        else showAccountDialog = true
+        if (isRealAccount) showAccountDialog = true else viewModel.onSignInClick(context, onError)
       },
       modifier = Modifier.testTag(AccountButtonTestTags.BUTTON),
   ) {
     Icon(
         imageVector = Icons.Filled.Person,
-        contentDescription =
-            if (currentUser == null) "Sign in to back up your data" else "Account",
+        contentDescription = if (isRealAccount) "Account" else "Sign in to back up your data",
     )
   }
 
-  val user = currentUser
   if (showAccountDialog && user != null) {
     AlertDialog(
         onDismissRequest = { showAccountDialog = false },

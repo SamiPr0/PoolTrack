@@ -16,6 +16,13 @@ interface AuthRepository {
    */
   suspend fun signInWithGoogle(context: Context): Result<AuthUser>
 
+  /**
+   * Signs the user in anonymously, so their data can start being backed up before they've set up
+   * (or chosen to use) a real Google account. A no-op returning the existing user if someone is
+   * already signed in, anonymously or otherwise.
+   */
+  suspend fun signInAnonymously(): Result<AuthUser>
+
   /** Signs the current user out. */
   fun signOut()
 }
