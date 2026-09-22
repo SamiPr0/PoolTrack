@@ -18,6 +18,13 @@ the Build Output panel). Treat every change as unverified until they
 confirm it, and when they report an error, fix the actual root cause named
 in the error message rather than guessing.
 
+The same limitation means Claude Code's global `run` skill ("launch and
+drive this project's app to see a change working") doesn't apply here -
+there's no emulator or device reachable from this sandbox to launch
+against. Don't attempt it; point the user to build and try it themselves
+instead. See `pre-pr-review` for which other global review skills *do* work
+here and when to use them.
+
 Because of this, be extra careful with anything a compiler would normally
 catch immediately: icon names, import paths, lambda receiver types,
 argument order after changing a function signature. The checks below exist
