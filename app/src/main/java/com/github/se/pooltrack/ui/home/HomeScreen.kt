@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -57,6 +58,7 @@ import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.daysUntilExpiration
 import com.github.se.pooltrack.model.subscription.expiresAt
 import com.github.se.pooltrack.model.subscription.isExpired
+import com.github.se.pooltrack.ui.account.AccountButton
 import com.github.se.pooltrack.ui.navigation.BottomNavigationMenu
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
@@ -102,7 +104,18 @@ fun HomeScreen(
   val coroutineScope = rememberCoroutineScope()
 
   Scaffold(
-      topBar = { TopNavigationMenu(Screen.Home) },
+      topBar = {
+        TopNavigationMenu(
+            Screen.Home,
+            actions = {
+              AccountButton(
+                  onError = { message ->
+                    coroutineScope.launch { snackbarHostState.showSnackbar(message) }
+                  },
+              )
+            },
+        )
+      },
       bottomBar = {
         BottomNavigationMenu(
             selectedTab = Tab.Home,
@@ -221,7 +234,7 @@ fun HomeScreen(
       }
 
       stats.favoriteDayOfWeek?.let { day ->
-        val dayName = day.getDisplayName(TextStyle.FULL, Locale.getDefault())
+        val dayName = day.getDisplayName(TextStyle.FULL, LocalLocale.current.platformLocale)
         Card(
             modifier = Modifier.fillMaxWidth().testTag(HomeScreenTestTags.FAVORITE_DAY_BANNER),
         ) {
@@ -415,8 +428,8 @@ private fun NoSubscriptionTodoCard(onClick: () -> Unit, modifier: Modifier = Mod
 
 /**
  * The actual average cost per pool visit so far - [totalSpent] divided by every entry ever
- * confirmed, not tied to a single subscription's plan. Unlike a fixed price/maxEntries ratio,
- * this moves every time a new entry is recorded.
+ * confirmed, not tied to a single subscription's plan. Unlike a fixed price/maxEntries ratio, this
+ * moves every time a new entry is recorded.
  */
 private fun costPerEntry(totalSpent: Double, totalEntries: Int): Double? =
     if (totalSpent == 0.0 || totalEntries == 0) null else totalSpent / totalEntries

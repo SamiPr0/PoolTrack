@@ -35,9 +35,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
           .stateIn(viewModelScope, SharingStarted.Eagerly, computeHomeStats(emptyList()))
 
   val lastEntryTimestamp: StateFlow<Instant?> =
-      entryRepository
-          .getLastEntryTimestamp()
-          .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+      entryRepository.getLastEntryTimestamp().stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
   val activeSubscription: StateFlow<Subscription?> =
       subscriptionRepository

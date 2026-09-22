@@ -21,8 +21,7 @@ sealed class Tab(
     val destination: Screen,
     val testTag: String,
 ) {
-  object Home :
-      Tab("Home", Icons.Outlined.Home, Screen.Home, NavigationTestTags.HOME_TAB)
+  object Home : Tab("Home", Icons.Outlined.Home, Screen.Home, NavigationTestTags.HOME_TAB)
 
   object Subscription :
       Tab(

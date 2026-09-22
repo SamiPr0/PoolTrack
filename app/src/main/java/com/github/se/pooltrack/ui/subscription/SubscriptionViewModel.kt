@@ -21,8 +21,8 @@ import kotlinx.coroutines.launch
 
 /**
  * ViewModel shared by the Subscription and "manage subscriptions" screens. Manages the list of
- * subscription PDFs the user has added, which one is active, and records a confirmed entry once
- * the scanner accepts a scan.
+ * subscription PDFs the user has added, which one is active, and records a confirmed entry once the
+ * scanner accepts a scan.
  */
 class SubscriptionViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -41,14 +41,12 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
           .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
   /**
-   * The timestamp of the most recent confirmed entry, or `null` if there is none. This is what
-   * the reopen cooldown is measured from - see
+   * The timestamp of the most recent confirmed entry, or `null` if there is none. This is what the
+   * reopen cooldown is measured from - see
    * [com.github.se.pooltrack.model.subscription.remainingSubscriptionCooldown].
    */
   val lastEntryTimestamp: StateFlow<Instant?> =
-      entryRepository
-          .getLastEntryTimestamp()
-          .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+      entryRepository.getLastEntryTimestamp().stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
   /** How many confirmed entries each subscription has, keyed by subscription id. */
   val entryCountsBySubscriptionId: StateFlow<Map<String, Int>> =
@@ -79,7 +77,12 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
     val displayName = queryDisplayName(uri)
     viewModelScope.launch {
       subscriptionRepository.addSubscription(
-          uri.toString(), displayName, expiresAtEpochMilli, maxEntries, price)
+          uri.toString(),
+          displayName,
+          expiresAtEpochMilli,
+          maxEntries,
+          price,
+      )
     }
   }
 

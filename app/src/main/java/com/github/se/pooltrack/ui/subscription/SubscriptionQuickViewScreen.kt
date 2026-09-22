@@ -1,9 +1,9 @@
 package com.github.se.pooltrack.ui.subscription
 
-import android.app.Activity
 import android.graphics.Bitmap
 import android.net.Uri
 import android.view.WindowManager
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
@@ -246,7 +246,7 @@ private fun PassDisplayAndAccept(
 /** Forces the current activity's screen brightness to maximum while this composable is shown. */
 @Composable
 private fun MaxBrightness() {
-  val activity = LocalContext.current as? Activity ?: return
+  val activity = LocalActivity.current ?: return
   DisposableEffect(activity) {
     val window = activity.window
     val originalBrightness = window.attributes.screenBrightness

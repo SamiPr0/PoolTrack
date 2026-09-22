@@ -17,8 +17,8 @@ import java.util.Locale
  * @property entriesThisWeek How many entries fall within the current calendar week.
  * @property entriesThisMonth How many entries fall within the current calendar month.
  * @property daysSinceLastSwim Whole days since the most recent entry, or `null` if there is none.
- * @property averageEntriesPerWeek Entries per calendar week since the first one, or `null` if
- *   there is none.
+ * @property averageEntriesPerWeek Entries per calendar week since the first one, or `null` if there
+ *   is none.
  * @property favoriteDayOfWeek The day of the week with the most entries, or `null` if there is
  *   none.
  */
@@ -44,8 +44,9 @@ fun computeHomeStats(
   val thisMonth = YearMonth.from(today)
 
   val entriesThisWeek = entries.count { !it.timestamp.isBefore(startOfWeekInstant) }
-  val entriesThisMonth =
-      entries.count { YearMonth.from(it.timestamp.atZone(zone).toLocalDate()) == thisMonth }
+  val entriesThisMonth = entries.count {
+    YearMonth.from(it.timestamp.atZone(zone).toLocalDate()) == thisMonth
+  }
 
   val entryDates = entries.map { it.timestamp.atZone(zone).toLocalDate() }
   val daysSinceLastSwim = entryDates.maxOrNull()?.let { ChronoUnit.DAYS.between(it, today) }

@@ -12,8 +12,7 @@ import kotlinx.serialization.Serializable
  *   `null` if none was (or for entries recorded before this was tracked). This is what lets an
  *   entry-limited subscription count how many of its entries have actually been used.
  */
-@Serializable
-data class Entry(val timestampEpochMilli: Long, val subscriptionId: String? = null)
+@Serializable data class Entry(val timestampEpochMilli: Long, val subscriptionId: String? = null)
 
 /** The instant this entry was confirmed. */
 val Entry.timestamp: Instant

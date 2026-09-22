@@ -34,8 +34,8 @@ sealed class Screen(
       )
 
   /**
-   * The focused "just show my pass" flow opened from Home's FAB: view + accept + back, with none
-   * of [Subscription]'s management actions.
+   * The focused "just show my pass" flow opened from Home's FAB: view + accept + back, with none of
+   * [Subscription]'s management actions.
    */
   object SubscriptionQuickView :
       Screen(

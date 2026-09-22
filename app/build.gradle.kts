@@ -5,6 +5,7 @@ plugins {
   alias(libs.plugins.ktfmt)
   alias(libs.plugins.kotlinCompose)
   alias(libs.plugins.kotlinSerialization)
+  alias(libs.plugins.googleServices)
 }
 
 android {
@@ -36,7 +37,10 @@ android {
     targetCompatibility = JavaVersion.VERSION_17
   }
 
-  buildFeatures { compose = true }
+  buildFeatures {
+    compose = true
+    buildConfig = true
+  }
 }
 
 // With AGP 9+ we have to set the JVM target on a kotlin block outside the Android block.
@@ -53,6 +57,14 @@ dependencies {
   implementation(libs.androidx.activity.compose)
   implementation(libs.androidx.datastore.preferences)
   implementation(libs.kotlinx.serialization.json)
+
+  // Firebase: Google Sign-In (via Credential Manager) + Firestore backup of local data.
+  implementation(platform(libs.firebase.bom))
+  implementation(libs.firebase.auth)
+  implementation(libs.firebase.firestore)
+  implementation(libs.androidx.credentials)
+  implementation(libs.androidx.credentials.play.services.auth)
+  implementation(libs.googleid)
 
   // Jetpack Compose UI
   implementation(libs.androidx.ui)

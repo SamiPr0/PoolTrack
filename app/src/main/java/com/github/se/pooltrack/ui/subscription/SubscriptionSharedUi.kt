@@ -13,8 +13,8 @@ import kotlinx.coroutines.delay
 
 /**
  * Cooldown logic shared by [com.github.se.pooltrack.ui.home.HomeScreen] (which grays out its FAB
- * during the cooldown) and [SubscriptionQuickViewScreen] (which shows a locked state instead of
- * the pass) - both need to know the same "can the pass be shown right now" answer.
+ * during the cooldown) and [SubscriptionQuickViewScreen] (which shows a locked state instead of the
+ * pass) - both need to know the same "can the pass be shown right now" answer.
  */
 
 /** How often the cooldown countdown re-checks the current time while a screen is on top. */
