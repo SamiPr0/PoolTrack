@@ -163,9 +163,9 @@ private const val MIN_ZOOM_SCALE = 1f
 private const val MAX_ZOOM_SCALE = 6f
 
 /**
- * Renders the pass plus the Accept button; calls [onAccepted] once tapped. The user pinch-zooms
- * and pans to bring the QR code up to size themselves - rather than the app guessing where it is
- * on the page - since that guess depends on on-device detection that isn't always available.
+ * Renders the pass plus the Accept button; calls [onAccepted] once tapped. The user pinch-zooms and
+ * pans to bring the QR code up to size themselves - rather than the app guessing where it is on the
+ * page - since that guess depends on on-device detection that isn't always available.
  */
 @Composable
 private fun PassDisplayAndAccept(
