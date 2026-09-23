@@ -14,6 +14,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
+import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
 import com.github.se.pooltrack.ui.account.AccountViewModel
 import com.github.se.pooltrack.ui.account.SignInScreen
 import com.github.se.pooltrack.ui.history.HistoryScreen
@@ -31,6 +33,8 @@ class MainActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    EntryRepositoryProvider.init(this)
+    SubscriptionRepositoryProvider.init(this)
 
     setContent { PoolTrackTheme { Surface(modifier = Modifier.fillMaxSize()) { PoolTrackApp() } } }
   }

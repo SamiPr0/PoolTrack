@@ -12,10 +12,10 @@ interface SubscriptionRepository {
   fun getActiveSubscription(): Flow<Subscription?>
 
   /**
-   * Adds a new subscription and marks it active.
+   * Adds a new subscription and marks it active. The implementation keeps the PDF readable across
+   * app and device restarts, and derives a human-readable label for it from the file itself.
    *
    * @param uri The content URI of the PDF the user picked, as a string.
-   * @param displayName A human-readable label for it.
    * @param expiresAtEpochMilli When it expires, as epoch milliseconds, or `null` for no date-based
    *   expiration.
    * @param maxEntries The number of entries it's good for, or `null` for no entry-count limit.
@@ -24,7 +24,6 @@ interface SubscriptionRepository {
    */
   suspend fun addSubscription(
       uri: String,
-      displayName: String,
       expiresAtEpochMilli: Long? = null,
       maxEntries: Int? = null,
       price: Double? = null,

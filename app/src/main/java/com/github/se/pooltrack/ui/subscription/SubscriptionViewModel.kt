@@ -1,17 +1,13 @@
 package com.github.se.pooltrack.ui.subscription
 
-import android.app.Application
-import android.content.Intent
-import android.net.Uri
-import android.provider.OpenableColumns
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.model.entry.EntryRepository
-import com.github.se.pooltrack.model.entry.EntryRepositoryLocal
+import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
 import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.SubscriptionRepository
-import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryLocal
+import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
 import java.time.Instant
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,12 +19,15 @@ import kotlinx.coroutines.launch
  * ViewModel shared by the Subscription and "manage subscriptions" screens. Manages the list of
  * subscription PDFs the user has added, which one is active, and records a confirmed entry once the
  * scanner accepts a scan.
+ *
+ * @property subscriptionRepository The repository used to read and manage the subscriptions.
+ * @property entryRepository The repository used to read and record the confirmed entries.
  */
-class SubscriptionViewModel(application: Application) : AndroidViewModel(application) {
-
-  private val subscriptionRepository: SubscriptionRepository =
-      SubscriptionRepositoryLocal(application)
-  private val entryRepository: EntryRepository = EntryRepositoryLocal(application)
+class SubscriptionViewModel(
+    private val subscriptionRepository: SubscriptionRepository =
+        SubscriptionRepositoryProvider.repository,
+    private val entryRepository: EntryRepository = EntryRepositoryProvider.repository,
+) : ViewModel() {
 
   val subscriptions: StateFlow<List<Subscription>> =
       subscriptionRepository
@@ -56,33 +55,22 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
           .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
   /**
-   * Adds the PDF the user just picked as a new subscription and makes it the active one, taking a
-   * long-lived read permission on it so it can still be opened after the app or device restarts.
+   * Adds the PDF the user just picked as a new subscription and makes it the active one.
    *
-   * @param uri The content URI returned by the document picker.
+   * @param uri The content URI returned by the document picker, as a string.
    * @param expiresAtEpochMilli When it expires, as epoch milliseconds, or `null` for no date-based
    *   expiration.
    * @param maxEntries The number of entries it's good for, or `null` for no entry-count limit.
    * @param price How much it cost, or `null` if not recorded.
    */
   fun onSubscriptionPicked(
-      uri: Uri,
+      uri: String,
       expiresAtEpochMilli: Long? = null,
       maxEntries: Int? = null,
       price: Double? = null,
   ) {
-    getApplication<Application>()
-        .contentResolver
-        .takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    val displayName = queryDisplayName(uri)
     viewModelScope.launch {
-      subscriptionRepository.addSubscription(
-          uri.toString(),
-          displayName,
-          expiresAtEpochMilli,
-          maxEntries,
-          price,
-      )
+      subscriptionRepository.addSubscription(uri, expiresAtEpochMilli, maxEntries, price)
     }
   }
 
@@ -116,19 +104,5 @@ class SubscriptionViewModel(application: Application) : AndroidViewModel(applica
     val entry =
         Entry(timestampEpochMilli = Instant.now().toEpochMilli(), subscriptionId = subscriptionId)
     viewModelScope.launch { entryRepository.addEntry(entry) }
-  }
-
-  /** Looks up [uri]'s display name via the content provider, falling back to a generic label. */
-  private fun queryDisplayName(uri: Uri): String {
-    val resolver = getApplication<Application>().contentResolver
-    resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-      val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-      if (nameIndex >= 0 && cursor.moveToFirst()) {
-        cursor.getString(nameIndex)?.let {
-          return it
-        }
-      }
-    }
-    return "Subscription"
   }
 }

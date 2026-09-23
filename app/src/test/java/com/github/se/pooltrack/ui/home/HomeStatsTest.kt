@@ -1,0 +1,102 @@
+package com.github.se.pooltrack.ui.home
+
+import com.github.se.pooltrack.model.entry.Entry
+import java.time.DayOfWeek
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.util.Locale
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Before
+import org.junit.Test
+
+class HomeStatsTest {
+
+  // Wednesday 23 September 2026, noon UTC.
+  private val now = Instant.parse("2026-09-23T12:00:00Z")
+  private val zone = ZoneOffset.UTC
+
+  private val wednesday = entryAt("2026-09-23T08:00:00Z")
+  private val mondayMidnight = entryAt("2026-09-21T00:00:00Z")
+  private val sundayLateNight = entryAt("2026-09-20T23:59:00Z")
+  private val lastMonthMonday = entryAt("2026-08-31T10:00:00Z")
+  private val allEntries = listOf(wednesday, mondayMidnight, sundayLateNight, lastMonthMonday)
+
+  private lateinit var previousLocale: Locale
+
+  @Before
+  fun setUp() {
+    previousLocale = Locale.getDefault()
+    // Weeks start on Monday in France, so the week of `now` starts on the 21st.
+    Locale.setDefault(Locale.FRANCE)
+  }
+
+  @After
+  fun tearDown() {
+    Locale.setDefault(previousLocale)
+  }
+
+  private fun entryAt(iso: String) = Entry(timestampEpochMilli = Instant.parse(iso).toEpochMilli())
+
+  @Test
+  fun computeHomeStats_returnsEmptyStats_whenNoEntries() {
+    assertEquals(
+        HomeStats(
+            totalEntries = 0,
+            entriesThisWeek = 0,
+            entriesThisMonth = 0,
+            daysSinceLastSwim = null,
+            averageEntriesPerWeek = null,
+            favoriteDayOfWeek = null,
+        ),
+        computeHomeStats(emptyList(), now, zone),
+    )
+  }
+
+  @Test
+  fun computeHomeStats_computesEveryStat_whenEntriesSpanWeeksAndMonths() {
+    assertEquals(
+        HomeStats(
+            totalEntries = 4,
+            // The week starts Monday the 21st at midnight, which is included; Sunday is not.
+            entriesThisWeek = 2,
+            // Everything except the 31st of August.
+            entriesThisMonth = 3,
+            daysSinceLastSwim = 0,
+            // First entry on 31 August: 3 full weeks elapsed, plus the current one = 4 weeks.
+            averageEntriesPerWeek = 1.0,
+            // Two Mondays, one Wednesday, one Sunday.
+            favoriteDayOfWeek = DayOfWeek.MONDAY,
+        ),
+        computeHomeStats(allEntries, now, zone),
+    )
+  }
+
+  @Test
+  fun computeHomeStats_startsTheWeekOnSunday_whenTheLocaleDoes() {
+    Locale.setDefault(Locale.US)
+
+    assertEquals(3, computeHomeStats(allEntries, now, zone).entriesThisWeek)
+  }
+
+  @Test
+  fun computeHomeStats_countsWholeDaysSinceLastSwim_whenLastEntryIsOlder() {
+    val stats = computeHomeStats(listOf(entryAt("2026-09-18T20:00:00Z")), now, zone)
+
+    assertEquals(5L, stats.daysSinceLastSwim)
+  }
+
+  @Test
+  fun computeHomeStats_countsCalendarDaysInTheGivenZone() {
+    // 23:30 UTC on the 22nd is already the 23rd in Zurich (UTC+2 in September).
+    val stats =
+        computeHomeStats(
+            listOf(entryAt("2026-09-22T23:30:00Z")),
+            now,
+            ZoneId.of("Europe/Zurich"),
+        )
+
+    assertEquals(0L, stats.daysSinceLastSwim)
+  }
+}

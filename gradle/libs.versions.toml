@@ -24,6 +24,8 @@ googleid = "1.1.1"
 # Testing Unit
 junit = "4.13.2"
 robolectric = "4.16.1"
+mockk = "1.14.11"
+kotlinxCoroutines = "1.11.0"
 
 # Testing UI
 espressoCore = "3.7.0"
@@ -56,6 +58,8 @@ androidx-credentials-play-services-auth = { module = "androidx.credentials:crede
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 junit = { module = "junit:junit", version.ref = "junit" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
