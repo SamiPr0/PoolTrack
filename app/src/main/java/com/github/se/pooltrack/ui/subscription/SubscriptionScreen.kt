@@ -210,7 +210,7 @@ fun SubscriptionScreen(
   pickedPdfUri?.let { uri ->
     AddSubscriptionExpirationDialog(
         onConfirm = { expiresAtEpochMilli, maxEntries, price ->
-          viewModel.onSubscriptionPicked(uri, expiresAtEpochMilli, maxEntries, price)
+          viewModel.onSubscriptionPicked(uri.toString(), expiresAtEpochMilli, maxEntries, price)
           pickedPdfUri = null
         },
         onDismiss = { pickedPdfUri = null },

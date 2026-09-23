@@ -1,6 +1,9 @@
 package com.github.se.pooltrack.model.subscription
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -47,16 +50,21 @@ class SubscriptionRepositoryLocal(private val context: Context) : SubscriptionRe
 
   override suspend fun addSubscription(
       uri: String,
-      displayName: String,
       expiresAtEpochMilli: Long?,
       maxEntries: Int?,
       price: Double?,
   ): Subscription {
+    val contentUri = Uri.parse(uri)
+    // Take a long-lived read permission, so the PDF can still be opened after a restart.
+    context.contentResolver.takePersistableUriPermission(
+        contentUri,
+        Intent.FLAG_GRANT_READ_URI_PERMISSION,
+    )
     val subscription =
         Subscription(
             id = UUID.randomUUID().toString(),
             uri = uri,
-            displayName = displayName,
+            displayName = queryDisplayName(contentUri),
             addedAtEpochMilli = System.currentTimeMillis(),
             expiresAtEpochMilli = expiresAtEpochMilli,
             maxEntries = maxEntries,
@@ -100,5 +108,20 @@ class SubscriptionRepositoryLocal(private val context: Context) : SubscriptionRe
       }
     }
     deleteFromFirestore(collection = BACKUP_COLLECTION, docId = id)
+  }
+
+  /** Looks up [uri]'s display name via the content provider, falling back to a generic label. */
+  private fun queryDisplayName(uri: Uri): String {
+    context.contentResolver
+        .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+        ?.use { cursor ->
+          val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+          if (nameIndex >= 0 && cursor.moveToFirst()) {
+            cursor.getString(nameIndex)?.let {
+              return it
+            }
+          }
+        }
+    return "Subscription"
   }
 }
