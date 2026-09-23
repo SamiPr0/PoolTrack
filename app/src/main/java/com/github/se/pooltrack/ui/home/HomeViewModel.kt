@@ -1,14 +1,13 @@
 package com.github.se.pooltrack.ui.home
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.model.entry.EntryRepository
-import com.github.se.pooltrack.model.entry.EntryRepositoryLocal
+import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
 import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.SubscriptionRepository
-import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryLocal
+import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
 import java.time.Instant
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,12 +20,15 @@ import kotlinx.coroutines.flow.stateIn
  * last entered the pool (so Home can gray out its "open subscription" shortcut during the reopen
  * cooldown, same rule the Subscription screen itself enforces), and money/expiration stats derived
  * from the subscriptions themselves.
+ *
+ * @property entryRepository The repository used to read the confirmed entries.
+ * @property subscriptionRepository The repository used to read the subscriptions.
  */
-class HomeViewModel(application: Application) : AndroidViewModel(application) {
-
-  private val entryRepository: EntryRepository = EntryRepositoryLocal(application)
-  private val subscriptionRepository: SubscriptionRepository =
-      SubscriptionRepositoryLocal(application)
+class HomeViewModel(
+    private val entryRepository: EntryRepository = EntryRepositoryProvider.repository,
+    private val subscriptionRepository: SubscriptionRepository =
+        SubscriptionRepositoryProvider.repository,
+) : ViewModel() {
 
   val stats: StateFlow<HomeStats> =
       entryRepository

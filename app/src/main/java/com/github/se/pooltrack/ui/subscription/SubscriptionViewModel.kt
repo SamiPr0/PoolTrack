@@ -1,14 +1,13 @@
 package com.github.se.pooltrack.ui.subscription
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.model.entry.EntryRepository
-import com.github.se.pooltrack.model.entry.EntryRepositoryLocal
+import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
 import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.SubscriptionRepository
-import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryLocal
+import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
 import java.time.Instant
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,12 +19,15 @@ import kotlinx.coroutines.launch
  * ViewModel shared by the Subscription and "manage subscriptions" screens. Manages the list of
  * subscription PDFs the user has added, which one is active, and records a confirmed entry once the
  * scanner accepts a scan.
+ *
+ * @property subscriptionRepository The repository used to read and manage the subscriptions.
+ * @property entryRepository The repository used to read and record the confirmed entries.
  */
-class SubscriptionViewModel(application: Application) : AndroidViewModel(application) {
-
-  private val subscriptionRepository: SubscriptionRepository =
-      SubscriptionRepositoryLocal(application)
-  private val entryRepository: EntryRepository = EntryRepositoryLocal(application)
+class SubscriptionViewModel(
+    private val subscriptionRepository: SubscriptionRepository =
+        SubscriptionRepositoryProvider.repository,
+    private val entryRepository: EntryRepository = EntryRepositoryProvider.repository,
+) : ViewModel() {
 
   val subscriptions: StateFlow<List<Subscription>> =
       subscriptionRepository
