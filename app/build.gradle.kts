@@ -131,3 +131,12 @@ tasks.register<JacocoCoverageVerification>("coverageVerification") {
     }
   }
 }
+
+// Robolectric loads app classes through its own sandbox classloader; without this JaCoCo records
+// nothing for them, and Compose/Robolectric tests would show 0% coverage.
+tasks.withType<Test>().configureEach {
+  extensions.configure<JacocoTaskExtension> {
+    isIncludeNoLocationClasses = true
+    excludes = listOf("jdk.internal.*")
+  }
+}
