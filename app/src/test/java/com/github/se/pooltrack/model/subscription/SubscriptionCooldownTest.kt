@@ -4,6 +4,7 @@ import java.time.Duration
 import java.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SubscriptionCooldownTest {
@@ -35,5 +36,23 @@ class SubscriptionCooldownTest {
   @Test
   fun remainingSubscriptionCooldown_isNull_whenCooldownIsOver() {
     assertNull(remainingSubscriptionCooldown(now.minus(Duration.ofHours(6)), now))
+  }
+
+  @Test
+  fun remainingSubscriptionCooldown_isNull_whenNeverEnteredAndNowIsTheSystemClock() {
+    assertNull(remainingSubscriptionCooldown(lastEnteredAt = null))
+  }
+
+  @Test
+  fun remainingSubscriptionCooldown_isNull_whenLastEntryWasADayAgoAndNowIsTheSystemClock() {
+    assertNull(remainingSubscriptionCooldown(Instant.now().minus(Duration.ofDays(1))))
+  }
+
+  @Test
+  fun remainingSubscriptionCooldown_isAtMostTheCooldown_whenJustEnteredAndNowIsTheSystemClock() {
+    val remaining = remainingSubscriptionCooldown(Instant.now())
+
+    assertTrue(remaining != null && remaining <= SUBSCRIPTION_OPEN_COOLDOWN)
+    assertTrue(remaining!! > Duration.ofHours(4))
   }
 }
