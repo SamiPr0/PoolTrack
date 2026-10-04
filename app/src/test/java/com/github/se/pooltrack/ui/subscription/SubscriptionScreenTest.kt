@@ -136,9 +136,10 @@ class SubscriptionScreenTest {
         object : ActivityResultRegistryOwner {
           override val activityResultRegistry = registry
         }
+    val viewModel = SubscriptionViewModel(subscriptions, entries)
     composeRule.setContent {
       CompositionLocalProvider(LocalActivityResultRegistryOwner provides owner) {
-        SubscriptionScreen(SubscriptionViewModel(subscriptions, entries), navigation)
+        SubscriptionScreen(viewModel, navigation)
       }
     }
     return registry
