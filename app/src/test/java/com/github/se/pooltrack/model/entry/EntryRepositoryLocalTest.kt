@@ -87,7 +87,11 @@ class EntryRepositoryLocalTest {
     verify(exactly = 1) { firebase.targetCollection.document("1000_pass-a") }
     verify(exactly = 1) {
       firebase.targetDocument.set(
-          mapOf("timestampEpochMilli" to 1_000L, "subscriptionId" to "pass-a")
+          mapOf(
+              "timestampEpochMilli" to 1_000L,
+              "subscriptionId" to "pass-a",
+              "swimDurationMillis" to null,
+          )
       )
     }
   }
@@ -98,7 +102,13 @@ class EntryRepositoryLocalTest {
 
     verify(exactly = 1) { firebase.targetCollection.document("2000_none") }
     verify(exactly = 1) {
-      firebase.targetDocument.set(mapOf("timestampEpochMilli" to 2_000L, "subscriptionId" to null))
+      firebase.targetDocument.set(
+          mapOf(
+              "timestampEpochMilli" to 2_000L,
+              "subscriptionId" to null,
+              "swimDurationMillis" to null,
+          )
+      )
     }
   }
 
@@ -119,6 +129,46 @@ class EntryRepositoryLocalTest {
 
     verify(exactly = 0) { signedOut.firestore.collection(any()) }
     assertEquals(listOf(oldest), repository.getEntries().first())
+  }
+
+  @Test
+  fun recordSwimDuration_storesDurationOnThatEntryOnly() = runTest {
+    repository.addEntry(oldest)
+    repository.addEntry(newest)
+
+    repository.recordSwimDuration(newest, 4_000L)
+
+    assertEquals(
+        listOf(newest.copy(swimDurationMillis = 4_000L), oldest),
+        repository.getEntries().first(),
+    )
+  }
+
+  @Test
+  fun recordSwimDuration_mirrorsUpdatedEntryToFirestore() = runTest {
+    repository.addEntry(oldest)
+
+    repository.recordSwimDuration(oldest, 4_000L)
+
+    verify(exactly = 1) {
+      firebase.targetDocument.set(
+          mapOf(
+              "timestampEpochMilli" to 1_000L,
+              "subscriptionId" to "pass-a",
+              "swimDurationMillis" to 4_000L,
+          )
+      )
+    }
+  }
+
+  @Test
+  fun recordSwimDuration_doesNothing_whenEntryWasDeleted() = runTest {
+    repository.addEntry(oldest)
+    repository.deleteEntry(oldest)
+
+    repository.recordSwimDuration(oldest, 4_000L)
+
+    assertEquals(emptyList<Entry>(), repository.getEntries().first())
   }
 
   @Test
