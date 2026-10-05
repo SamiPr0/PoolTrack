@@ -1,5 +1,6 @@
 package com.github.se.pooltrack
 
+import android.view.WindowManager
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -19,6 +20,7 @@ import com.github.se.pooltrack.utils.FakeSubscriptionRepository
 import com.github.se.pooltrack.utils.FirebaseTestApp
 import com.github.se.pooltrack.utils.MainDispatcherRule
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -51,7 +53,6 @@ class MainActivityTest {
     AuthRepositoryProvider.repository = FakeAuthRepository(initialUser = null)
 
     ActivityScenario.launch(MainActivity::class.java).use {
-      // Debug builds sign in anonymously on start, which is still gated behind real sign-in.
       composeRule.onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON).assertIsDisplayed()
     }
   }
@@ -63,6 +64,19 @@ class MainActivityTest {
     ActivityScenario.launch(MainActivity::class.java).use {
       composeRule.onNodeWithTag(NavigationTestTags.TOP_BAR_TITLE).assertTextEquals("Home")
       composeRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertIsDisplayed()
+    }
+  }
+
+  @Test
+  fun onCreate_securesTheWindow_onlyInReleaseBuilds() {
+    AuthRepositoryProvider.repository = FakeAuthRepository(initialUser = null)
+
+    ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+      scenario.onActivity { activity ->
+        val flags = activity.window.attributes.flags
+        val isSecure = flags and WindowManager.LayoutParams.FLAG_SECURE != 0
+        assertEquals(!BuildConfig.DEBUG, isSecure)
+      }
     }
   }
 }

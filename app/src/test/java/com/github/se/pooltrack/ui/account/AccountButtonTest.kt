@@ -29,7 +29,7 @@ class AccountButtonTest {
   private val errors = mutableListOf<String>()
 
   private fun show(repository: FakeAuthRepository): AccountViewModel {
-    val viewModel = AccountViewModel(repository, signInAnonymouslyOnStart = false)
+    val viewModel = AccountViewModel(repository)
     composeRule.setContent {
       Row { AccountButton(onError = { errors += it }, viewModel = viewModel) }
     }

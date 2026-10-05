@@ -17,9 +17,6 @@ class FakeAuthRepository(
 
   private val currentUser = MutableStateFlow(initialUser)
 
-  var signInAnonymouslyCalls = 0
-    private set
-
   var signOutCalls = 0
     private set
 
@@ -28,13 +25,6 @@ class FakeAuthRepository(
   override suspend fun signInWithGoogle(context: Context): Result<AuthUser> {
     googleSignInResult.onSuccess { currentUser.value = it }
     return googleSignInResult
-  }
-
-  override suspend fun signInAnonymously(): Result<AuthUser> {
-    signInAnonymouslyCalls++
-    val user = currentUser.value ?: ANONYMOUS_USER
-    currentUser.value = user
-    return Result.success(user)
   }
 
   override fun signOut() {
