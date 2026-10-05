@@ -2,8 +2,10 @@ import { initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/
 import { readFile } from 'fs/promises';
 import { setLogLevel } from 'firebase/firestore';
 
-const HOST = "127.0.0.1";
-const FIRESTORE_PORT = 8080;
+// firebase emulators:exec sets FIRESTORE_EMULATOR_HOST to the emulator it started (the port
+// from firebase.json); fall back to that default when the emulator was started by hand.
+const [HOST = "127.0.0.1", PORT = "8080"] = (process.env["FIRESTORE_EMULATOR_HOST"] ?? "").split(":").filter(Boolean);
+const FIRESTORE_PORT = Number(PORT);
 
 export async function checkIfEmulatorsAreRunning() {
   try {
