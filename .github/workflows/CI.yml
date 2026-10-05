@@ -117,6 +117,13 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # The emulator needs about 7.4 GB for its data partition and a hosted runner has less free.
+      # The NDK and the .NET and Haskell toolchains are not used by this build.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android/sdk/ndk /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+          df -h /
+
       - name: Run instrumentation tests
         timeout-minutes: 40
         uses: reactivecircus/android-emulator-runner@v2
@@ -126,8 +133,6 @@ jobs:
           arch: x86_64
           avd-name: github
           force-avd-creation: true
-          # The default 7.3 GB data partition does not fit on a hosted runner.
-          disk-size: 4096M
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -skin 1080x2400
           disable-animations: true
           script: ./gradlew connectedCheck --parallel --build-cache
