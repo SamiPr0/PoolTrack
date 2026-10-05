@@ -1,0 +1,78 @@
+name: Release
+
+# Publishes a signed APK as a GitHub release when a version tag is pushed. The app's in-app
+# updater reads the latest release, so pushing a tag is all it takes to roll out an update:
+#   1. bump appVersionName in app/build.gradle.kts and merge it,
+#   2. git tag v<that version> && git push origin v<that version>
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish the APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Check the tag matches the app version
+        run: |
+          VERSION=$(sed -n 's/^val appVersionName = "\(.*\)"$/\1/p' app/build.gradle.kts)
+          if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match appVersionName $VERSION in app/build.gradle.kts."
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Retrieve gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+      - name: Decode secrets
+        env:
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
+          RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE }}
+        run: |
+          for name in GOOGLE_SERVICES RELEASE_KEYSTORE; do
+            if [ -z "${!name}" ]; then
+              echo "::error::The $name secret is not set. See docs/RELEASING.md."
+              exit 1
+            fi
+          done
+          echo "$GOOGLE_SERVICES" | base64 --decode > ./app/google-services.json
+          echo "$RELEASE_KEYSTORE" | base64 --decode > "$RUNNER_TEMP/release.jks"
+
+      - name: Build the signed release APK
+        env:
+          RELEASE_KEYSTORE_FILE: ${{ runner.temp }}/release.jks
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APK="PoolTrack-$VERSION.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$APK"
+          gh release create "$GITHUB_REF_NAME" "$APK" --title "PoolTrack $VERSION" --generate-notes

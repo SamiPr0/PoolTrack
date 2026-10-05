@@ -34,9 +34,25 @@ android {
     vectorDrawables { useSupportLibrary = true }
   }
 
+  // Release builds are signed with the key described by these variables, set by the release
+  // workflow. Every release must use the same key, or Android refuses to install it as an update.
+  // Without them (local builds, CI checks) the release build is simply left unsigned.
+  val releaseKeystore: String? = System.getenv("RELEASE_KEYSTORE_FILE")
+  if (releaseKeystore != null) {
+    signingConfigs {
+      create("release") {
+        storeFile = file(releaseKeystore)
+        storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+        keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+        keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+      }
+    }
+  }
+
   buildTypes {
     debug { enableUnitTestCoverage = true }
     release {
+      if (releaseKeystore != null) signingConfig = signingConfigs.getByName("release")
       // R8 shrinks and obfuscates the release build, so the shipped code is not readable as-is.
       isMinifyEnabled = true
       isShrinkResources = true
