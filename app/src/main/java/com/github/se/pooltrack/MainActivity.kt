@@ -33,6 +33,8 @@ class MainActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    // Debug builds stay screenshot-able, for design reviews and bug reports.
+    window.applyScreenSecurity(secure = !BuildConfig.DEBUG)
     EntryRepositoryProvider.init(this)
     SubscriptionRepositoryProvider.init(this)
 
