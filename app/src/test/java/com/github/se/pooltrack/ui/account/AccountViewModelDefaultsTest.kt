@@ -1,7 +1,6 @@
 package com.github.se.pooltrack.ui.account
 
 import androidx.test.core.app.ApplicationProvider
-import com.github.se.pooltrack.BuildConfig
 import com.github.se.pooltrack.model.auth.AuthRepository
 import com.github.se.pooltrack.model.auth.AuthRepositoryProvider
 import com.github.se.pooltrack.utils.FakeAuthRepository
@@ -35,14 +34,12 @@ class AccountViewModelDefaultsTest {
   }
 
   @Test
-  fun constructor_usesTheProvidedRepository_andBuildTypeDefault() {
+  fun constructor_usesTheProvidedRepository() {
     val repository = FakeAuthRepository()
     AuthRepositoryProvider.repository = repository
 
     val viewModel = AccountViewModel()
 
-    val expectedAnonymousSignIns = if (BuildConfig.DEBUG) 1 else 0
-    assertEquals(expectedAnonymousSignIns, repository.signInAnonymouslyCalls)
     viewModel.onSignOutClick()
     assertEquals(1, repository.signOutCalls)
   }

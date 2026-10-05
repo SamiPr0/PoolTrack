@@ -51,7 +51,6 @@ class MainActivityTest {
     AuthRepositoryProvider.repository = FakeAuthRepository(initialUser = null)
 
     ActivityScenario.launch(MainActivity::class.java).use {
-      // Debug builds sign in anonymously on start, which is still gated behind real sign-in.
       composeRule.onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON).assertIsDisplayed()
     }
   }

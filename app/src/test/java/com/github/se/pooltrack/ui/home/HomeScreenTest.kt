@@ -99,7 +99,7 @@ class HomeScreenTest {
       ViewModelStoreOwner, HasDefaultViewModelProviderFactory {
     override val viewModelStore = ViewModelStore()
     override val defaultViewModelProviderFactory: ViewModelProvider.Factory = viewModelFactory {
-      initializer { AccountViewModel(authRepository, signInAnonymouslyOnStart = false) }
+      initializer { AccountViewModel(authRepository) }
     }
     override val defaultViewModelCreationExtras: CreationExtras = CreationExtras.Empty
   }
