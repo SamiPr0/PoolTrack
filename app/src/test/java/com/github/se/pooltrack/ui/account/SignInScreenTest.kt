@@ -22,7 +22,7 @@ class SignInScreenTest {
   @get:Rule(order = 1) val composeRule = createComposeRule()
 
   private fun show(repository: FakeAuthRepository): AccountViewModel {
-    val viewModel = AccountViewModel(repository, signInAnonymouslyOnStart = false)
+    val viewModel = AccountViewModel(repository)
     composeRule.setContent { SignInScreen(viewModel = viewModel) }
     return viewModel
   }
