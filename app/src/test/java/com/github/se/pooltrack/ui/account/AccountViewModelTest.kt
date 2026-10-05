@@ -2,7 +2,6 @@ package com.github.se.pooltrack.ui.account
 
 import android.content.Context
 import com.github.se.pooltrack.utils.FakeAuthRepository
-import com.github.se.pooltrack.utils.FakeAuthRepository.Companion.ANONYMOUS_USER
 import com.github.se.pooltrack.utils.FakeAuthRepository.Companion.GOOGLE_USER
 import com.github.se.pooltrack.utils.MainDispatcherRule
 import io.mockk.mockk
@@ -18,20 +17,9 @@ class AccountViewModelTest {
   private val context = mockk<Context>()
 
   @Test
-  fun init_signsInAnonymously_whenAskedToOnStart() {
-    val repository = FakeAuthRepository()
-    val viewModel = AccountViewModel(repository, signInAnonymouslyOnStart = true)
+  fun init_staysSignedOut_whenNobodyIsSignedIn() {
+    val viewModel = AccountViewModel(FakeAuthRepository())
 
-    assertEquals(1, repository.signInAnonymouslyCalls)
-    assertEquals(ANONYMOUS_USER, viewModel.currentUser.value)
-  }
-
-  @Test
-  fun init_staysSignedOut_whenNotAskedToSignInOnStart() {
-    val repository = FakeAuthRepository()
-    val viewModel = AccountViewModel(repository, signInAnonymouslyOnStart = false)
-
-    assertEquals(0, repository.signInAnonymouslyCalls)
     assertNull(viewModel.currentUser.value)
   }
 
@@ -40,7 +28,6 @@ class AccountViewModelTest {
     val viewModel =
         AccountViewModel(
             FakeAuthRepository(initialUser = GOOGLE_USER),
-            signInAnonymouslyOnStart = false,
         )
 
     assertEquals(GOOGLE_USER, viewModel.currentUser.value)
@@ -48,7 +35,7 @@ class AccountViewModelTest {
 
   @Test
   fun onSignInClick_signsInWithoutError_whenGoogleSignInSucceeds() {
-    val viewModel = AccountViewModel(FakeAuthRepository(), signInAnonymouslyOnStart = false)
+    val viewModel = AccountViewModel(FakeAuthRepository())
     val errors = mutableListOf<String>()
 
     viewModel.onSignInClick(context) { errors += it }
@@ -61,7 +48,7 @@ class AccountViewModelTest {
   fun onSignInClick_reportsTheFailureMessage_whenGoogleSignInFails() {
     val repository =
         FakeAuthRepository(googleSignInResult = Result.failure(IllegalStateException("No account")))
-    val viewModel = AccountViewModel(repository, signInAnonymouslyOnStart = false)
+    val viewModel = AccountViewModel(repository)
     val errors = mutableListOf<String>()
 
     viewModel.onSignInClick(context) { errors += it }
@@ -73,7 +60,7 @@ class AccountViewModelTest {
   @Test
   fun onSignInClick_reportsAGenericMessage_whenFailureHasNoMessage() {
     val repository = FakeAuthRepository(googleSignInResult = Result.failure(RuntimeException()))
-    val viewModel = AccountViewModel(repository, signInAnonymouslyOnStart = false)
+    val viewModel = AccountViewModel(repository)
     val errors = mutableListOf<String>()
 
     viewModel.onSignInClick(context) { errors += it }
@@ -84,7 +71,7 @@ class AccountViewModelTest {
   @Test
   fun onSignOutClick_signsTheUserOut() {
     val repository = FakeAuthRepository(initialUser = GOOGLE_USER)
-    val viewModel = AccountViewModel(repository, signInAnonymouslyOnStart = false)
+    val viewModel = AccountViewModel(repository)
 
     viewModel.onSignOutClick()
 

@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">PoolTrack</string>
+    <string name="swim_tracking_channel_name">Swim tracking</string>
+    <string name="swim_tracking_ongoing_title">Enjoy your swim</string>
+    <string name="swim_tracking_ongoing_text">PoolTrack will tell you how long you swam when you unlock your phone.</string>
+    <string name="swim_report_channel_name">Swim summary</string>
+    <string name="swim_report_title">Swim complete</string>
+    <string name="swim_report_text">You swam %1$s.</string>
 </resources>

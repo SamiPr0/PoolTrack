@@ -11,8 +11,16 @@ import kotlinx.serialization.Serializable
  * @property subscriptionId The subscription that was active when this entry was confirmed, or
  *   `null` if none was (or for entries recorded before this was tracked). This is what lets an
  *   entry-limited subscription count how many of its entries have actually been used.
+ * @property swimDurationMillis How long the swim lasted, in milliseconds, once the user picked
+ *   their phone back up and it was reported to them; `null` while the swim is still in progress (or
+ *   for entries recorded before this was tracked).
  */
-@Serializable data class Entry(val timestampEpochMilli: Long, val subscriptionId: String? = null)
+@Serializable
+data class Entry(
+    val timestampEpochMilli: Long,
+    val subscriptionId: String? = null,
+    val swimDurationMillis: Long? = null,
+)
 
 /** The instant this entry was confirmed. */
 val Entry.timestamp: Instant

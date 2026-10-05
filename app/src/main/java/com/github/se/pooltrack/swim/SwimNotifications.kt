@@ -1,0 +1,75 @@
+package com.github.se.pooltrack.swim
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import com.github.se.pooltrack.MainActivity
+import com.github.se.pooltrack.R
+import com.github.se.pooltrack.model.swim.formatSwimDuration
+import java.time.Duration
+
+/** Builds and posts the notifications of swim tracking. */
+object SwimNotifications {
+
+  const val TRACKING_CHANNEL_ID = "swim_tracking"
+  const val REPORT_CHANNEL_ID = "swim_report"
+  const val TRACKING_NOTIFICATION_ID = 1
+  const val REPORT_NOTIFICATION_ID = 2
+
+  /** Creates both channels; safe to call repeatedly. */
+  fun createChannels(context: Context) {
+    val manager = context.getSystemService(NotificationManager::class.java)
+    manager.createNotificationChannel(
+        NotificationChannel(
+            TRACKING_CHANNEL_ID,
+            context.getString(R.string.swim_tracking_channel_name),
+            NotificationManager.IMPORTANCE_MIN,
+        )
+    )
+    manager.createNotificationChannel(
+        NotificationChannel(
+            REPORT_CHANNEL_ID,
+            context.getString(R.string.swim_report_channel_name),
+            NotificationManager.IMPORTANCE_HIGH,
+        )
+    )
+  }
+
+  /** The silent, ongoing notification the foreground service has to show while it waits. */
+  fun trackingNotification(context: Context): Notification =
+      Notification.Builder(context, TRACKING_CHANNEL_ID)
+          .setSmallIcon(R.drawable.ic_swim_notification)
+          .setContentTitle(context.getString(R.string.swim_tracking_ongoing_title))
+          .setContentText(context.getString(R.string.swim_tracking_ongoing_text))
+          .setOngoing(true)
+          .setContentIntent(openAppIntent(context))
+          .build()
+
+  /** Posts the "you swam ..." notification. Silently dropped if notifications are not allowed. */
+  fun postReport(context: Context, duration: Duration) {
+    val notification =
+        Notification.Builder(context, REPORT_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_swim_notification)
+            .setContentTitle(context.getString(R.string.swim_report_title))
+            .setContentText(
+                context.getString(R.string.swim_report_text, formatSwimDuration(duration))
+            )
+            .setAutoCancel(true)
+            .setContentIntent(openAppIntent(context))
+            .build()
+    context
+        .getSystemService(NotificationManager::class.java)
+        .notify(REPORT_NOTIFICATION_ID, notification)
+  }
+
+  private fun openAppIntent(context: Context): PendingIntent =
+      PendingIntent.getActivity(
+          context,
+          0,
+          Intent(context, MainActivity::class.java),
+          PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+      )
+}

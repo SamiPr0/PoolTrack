@@ -25,6 +25,15 @@ interface EntryRepository {
   suspend fun deleteEntry(entry: Entry)
 
   /**
+   * Stores how long the swim of an already recorded entry lasted. Does nothing if [entry] is no
+   * longer recorded (e.g. it was deleted in the meantime).
+   *
+   * @param entry The entry the swim belongs to.
+   * @param durationMillis The swim duration, in milliseconds.
+   */
+  suspend fun recordSwimDuration(entry: Entry, durationMillis: Long)
+
+  /**
    * Emits the timestamp of the most recent entry, or `null` if there is none. This is the single
    * source of truth for "when did I last enter the pool" - derived from the entries themselves so
    * that deleting the latest one (e.g. to undo a misclick) is immediately reflected in it.

@@ -53,7 +53,9 @@ android {
     debug { enableUnitTestCoverage = true }
     release {
       if (releaseKeystore != null) signingConfig = signingConfigs.getByName("release")
-      isMinifyEnabled = false
+      // R8 shrinks and obfuscates the release build, so the shipped code is not readable as-is.
+      isMinifyEnabled = true
+      isShrinkResources = true
       proguardFiles(
           getDefaultProguardFile("proguard-android-optimize.txt"),
           "proguard-rules.pro",
