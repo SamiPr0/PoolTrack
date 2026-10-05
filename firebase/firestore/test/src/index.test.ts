@@ -1,0 +1,204 @@
+import { describe, test, afterAll, beforeEach } from 'vitest';
+import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
+import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
+import { setup } from './setup.js';
+
+// Documents shaped exactly like the ones the app writes (see FirestoreBackup.kt and the
+// *RepositoryLocal classes): optional values are sent as explicit nulls.
+const now = Date.now();
+const subscriptionId = '0b9e3c56-1f0d-4f0e-9a52-7d7c2b1e4a11';
+
+const entry = { timestampEpochMilli: now, subscriptionId };
+const entryId = `${now}_${subscriptionId}`;
+const untaggedEntry = { timestampEpochMilli: now, subscriptionId: null };
+const untaggedEntryId = `${now}_none`;
+
+const subscription = {
+  id: subscriptionId,
+  displayName: 'Abonnement piscine.pdf',
+  addedAtEpochMilli: now,
+  expiresAtEpochMilli: now + 30 * 24 * 3600 * 1000,
+  maxEntries: null,
+  price: 60.5,
+};
+
+describe('Firestore rules tests', async () => {
+  const env = await setup();
+
+  const me = env.authenticatedContext('alice').firestore();
+  const other = env.authenticatedContext('bob').firestore();
+  const anonymous = env.unauthenticatedContext().firestore();
+
+  const myEntry = (id = entryId) => doc(me, `users/alice/entries/${id}`);
+  const mySubscription = (id = subscriptionId) => doc(me, `users/alice/subscriptions/${id}`);
+
+  beforeEach(async () => {
+    await env.clearFirestore();
+    await env.withSecurityRulesDisabled(async ctx => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, `users/alice/entries/${entryId}`), entry);
+      await setDoc(doc(db, `users/alice/subscriptions/${subscriptionId}`), subscription);
+    });
+  });
+
+  afterAll(async () => {
+    await env.clearFirestore();
+    await env.cleanup();
+  });
+
+  describe('What the app does', () => {
+    test('Users can back up an entry tagged with a subscription', async () => {
+      await env.clearFirestore();
+      await assertSucceeds(setDoc(myEntry(), entry));
+    });
+
+    test('Users can back up an entry with no subscription', async () => {
+      await assertSucceeds(setDoc(myEntry(untaggedEntryId), untaggedEntry));
+    });
+
+    test('Users can re-save an existing entry', async () => {
+      await assertSucceeds(setDoc(myEntry(), entry));
+    });
+
+    test('Users can back up a subscription', async () => {
+      await env.clearFirestore();
+      await assertSucceeds(setDoc(mySubscription(), subscription));
+    });
+
+    test('Users can back up an entry-limited subscription with no price or date', async () => {
+      const id = '5f1c2a3b-0000-4000-8000-000000000001';
+      await assertSucceeds(setDoc(mySubscription(id), {
+        ...subscription, id, expiresAtEpochMilli: null, maxEntries: 10, price: null,
+      }));
+    });
+
+    test('Users can back up a subscription that already expired', async () => {
+      const id = '5f1c2a3b-0000-4000-8000-000000000002';
+      await assertSucceeds(setDoc(mySubscription(id), {
+        ...subscription, id, expiresAtEpochMilli: now - 24 * 3600 * 1000,
+      }));
+    });
+
+    test('Users can delete their own entry and subscription', async () => {
+      await assertSucceeds(deleteDoc(myEntry()));
+      await assertSucceeds(deleteDoc(mySubscription()));
+    });
+
+    test('Users can read their own backup', async () => {
+      await assertSucceeds(getDoc(myEntry()));
+      await assertSucceeds(getDocs(collection(me, 'users/alice/subscriptions')));
+    });
+  });
+
+  describe('Access control', () => {
+    test('Signed-out users cannot read or write anything', async () => {
+      await assertFails(getDoc(doc(anonymous, `users/alice/entries/${entryId}`)));
+      await assertFails(getDocs(collection(anonymous, 'users/alice/entries')));
+      await assertFails(setDoc(doc(anonymous, `users/alice/entries/${untaggedEntryId}`), untaggedEntry));
+    });
+
+    test("Users cannot read another user's backup", async () => {
+      await assertFails(getDoc(doc(other, `users/alice/entries/${entryId}`)));
+      await assertFails(getDocs(collection(other, 'users/alice/subscriptions')));
+    });
+
+    test("Users cannot write into another user's backup", async () => {
+      await assertFails(setDoc(doc(other, `users/alice/entries/${untaggedEntryId}`), untaggedEntry));
+      await assertFails(setDoc(doc(other, `users/alice/subscriptions/${subscriptionId}`), subscription));
+    });
+
+    test("Users cannot delete another user's backup", async () => {
+      await assertFails(deleteDoc(doc(other, `users/alice/entries/${entryId}`)));
+      await assertFails(deleteDoc(doc(other, `users/alice/subscriptions/${subscriptionId}`)));
+    });
+
+    test('Users cannot list every user', async () => {
+      await assertFails(getDocs(collection(me, 'users')));
+    });
+
+    test('Users cannot write their users/{uid} document or other collections', async () => {
+      await assertFails(setDoc(doc(me, 'users/alice'), { isAdmin: true }));
+      await assertFails(setDoc(doc(me, 'users/alice/notes/x'), { text: 'hi' }));
+      await assertFails(setDoc(doc(me, 'somethingElse/x'), { text: 'hi' }));
+    });
+  });
+
+  describe('Entry validation', () => {
+    test('Entries must keep their ID in sync with their fields', async () => {
+      await assertFails(setDoc(myEntry('anything'), untaggedEntry));
+      await assertFails(setDoc(myEntry(untaggedEntryId), entry));
+    });
+
+    test('Entries must have both fields, and no others', async () => {
+      await assertFails(setDoc(myEntry(untaggedEntryId), { timestampEpochMilli: now }));
+      await assertFails(setDoc(myEntry(untaggedEntryId), { ...untaggedEntry, extra: 'x' }));
+    });
+
+    test('Entry timestamps must be past, positive integers', async () => {
+      const future = now + 2 * 24 * 3600 * 1000;
+      await assertFails(setDoc(myEntry(`${future}_none`), { timestampEpochMilli: future, subscriptionId: null }));
+      await assertFails(setDoc(myEntry('-5_none'), { timestampEpochMilli: -5, subscriptionId: null }));
+      await assertFails(setDoc(myEntry(`${now}.5_none`), { timestampEpochMilli: now + 0.5, subscriptionId: null }));
+      await assertFails(setDoc(myEntry(`${now}_none`), { timestampEpochMilli: `${now}`, subscriptionId: null }));
+    });
+
+    test('Entry subscription IDs must be short strings', async () => {
+      const long = 'x'.repeat(65);
+      await assertFails(setDoc(myEntry(`${now}_${long}`), { timestampEpochMilli: now, subscriptionId: long }));
+      await assertFails(setDoc(myEntry(`${now}_42`), { timestampEpochMilli: now, subscriptionId: 42 }));
+    });
+
+    test('Entries cannot be updated into an invalid state', async () => {
+      await assertFails(updateDoc(myEntry(), { subscriptionId: null }));
+      await assertFails(updateDoc(myEntry(), { extra: 'x'.repeat(100000) }));
+    });
+  });
+
+  describe('Subscription validation', () => {
+    const newId = '9a9a9a9a-0000-4000-8000-000000000003';
+    const valid = { ...subscription, id: newId };
+
+    test('Subscriptions must match their document ID', async () => {
+      await assertFails(setDoc(mySubscription(newId), subscription));
+    });
+
+    test('Subscriptions must have every field, and no others', async () => {
+      const { price, ...withoutPrice } = valid;
+      await assertFails(setDoc(mySubscription(newId), withoutPrice));
+      await assertFails(setDoc(mySubscription(newId), { ...valid, uri: 'content://x' }));
+    });
+
+    test('Display names must be 1 to 500 characters', async () => {
+      await assertFails(setDoc(mySubscription(newId), { ...valid, displayName: '' }));
+      await assertFails(setDoc(mySubscription(newId), { ...valid, displayName: 'x'.repeat(501) }));
+      await assertFails(setDoc(mySubscription(newId), { ...valid, displayName: 7 }));
+      await assertSucceeds(setDoc(mySubscription(newId), { ...valid, displayName: 'x'.repeat(500) }));
+    });
+
+    test('Numbers must be in range and of the right type', async () => {
+      await assertFails(setDoc(mySubscription(newId), { ...valid, price: -1 }));
+      await assertFails(setDoc(mySubscription(newId), { ...valid, price: 100001 }));
+      await assertFails(setDoc(mySubscription(newId), { ...valid, price: '60' }));
+      await assertFails(setDoc(mySubscription(newId), { ...valid, maxEntries: 0 }));
+      await assertFails(setDoc(mySubscription(newId), { ...valid, maxEntries: 2.5 }));
+      await assertFails(setDoc(mySubscription(newId), { ...valid, maxEntries: 100001 }));
+      await assertFails(setDoc(mySubscription(newId), { ...valid, expiresAtEpochMilli: 0 }));
+      await assertFails(setDoc(mySubscription(newId), { ...valid, addedAtEpochMilli: now + 2 * 24 * 3600 * 1000 }));
+      await assertSucceeds(setDoc(mySubscription(newId), { ...valid, price: 0 }));
+    });
+
+    test('Subscriptions can be re-saved with new details', async () => {
+      await assertSucceeds(setDoc(mySubscription(), { ...subscription, displayName: 'Renamed.pdf', price: 70 }));
+    });
+
+    test('The ID and added date of a subscription cannot change', async () => {
+      await assertFails(updateDoc(mySubscription(), { addedAtEpochMilli: now - 1000 }));
+      await assertFails(updateDoc(mySubscription(), { id: newId }));
+    });
+
+    test('Subscriptions cannot be updated into an invalid state', async () => {
+      await assertFails(updateDoc(mySubscription(), { displayName: 'x'.repeat(100000) }));
+      await assertFails(updateDoc(mySubscription(), { isAdmin: true }));
+    });
+  });
+});
