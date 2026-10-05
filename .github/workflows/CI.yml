@@ -110,6 +110,10 @@ jobs:
         run: |
           ./gradlew testDebugUnitTest --parallel --build-cache
 
+      - name: Check coverage gate
+        run: |
+          ./gradlew coverageVerification
+
       # GitHub-hosted runners need KVM enabled to run the x86_64 emulator at usable speed.
       - name: Enable KVM
         run: |
