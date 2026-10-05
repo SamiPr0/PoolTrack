@@ -143,6 +143,17 @@ class ThemeTest {
   }
 
   @Test
+  fun poolTrackTheme_providesTheAppTypography() {
+    lateinit var typography: MaterialTypography
+    composeRule.setContent {
+      PoolTrackTheme(darkTheme = false) { typography = MaterialTheme.typography }
+    }
+    composeRule.waitForIdle()
+
+    assertEquals(Typography, typography)
+  }
+
+  @Test
   fun poolTrackTheme_usesMaterialDefaultTypography() {
     lateinit var typography: MaterialTypography
     composeRule.setContent {
