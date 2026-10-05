@@ -13,6 +13,7 @@ import com.github.se.pooltrack.model.ResolverContext
 import io.mockk.every
 import io.mockk.mockk
 import java.io.File
+import java.io.FileNotFoundException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -57,6 +58,20 @@ class PdfThumbnailTest {
   @Test
   fun renderFirstPdfPage_returnsNull_whenFileCannotBeOpened() {
     every { resolver.openFileDescriptor(uri, "r") } returns null
+
+    assertNull(renderFirstPdfPage(context, uri))
+  }
+
+  @Test
+  fun renderFirstPdfPage_returnsNull_whenUriIsNotFound() {
+    every { resolver.openFileDescriptor(uri, "r") } throws FileNotFoundException("gone")
+
+    assertNull(renderFirstPdfPage(context, uri))
+  }
+
+  @Test
+  fun renderFirstPdfPage_returnsNull_whenUriPermissionIsRevoked() {
+    every { resolver.openFileDescriptor(uri, "r") } throws SecurityException("revoked")
 
     assertNull(renderFirstPdfPage(context, uri))
   }
