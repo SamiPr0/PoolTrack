@@ -1,6 +1,7 @@
 package com.github.se.pooltrack.model.entry
 
 import android.content.Context
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.github.se.pooltrack.model.backup.FirebaseMocks
@@ -9,11 +10,15 @@ import com.github.se.pooltrack.model.productionPreferencesDataStore
 import io.mockk.unmockkAll
 import io.mockk.verify
 import java.time.Instant
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -27,6 +32,8 @@ class EntryRepositoryLocalTest {
   private val middle = Entry(timestampEpochMilli = 2_000L, subscriptionId = null)
   private val newest = Entry(timestampEpochMilli = 3_000L, subscriptionId = "pass-b")
 
+  private val currentUid = MutableStateFlow<String?>("user-1")
+
   private lateinit var appContext: Context
   private lateinit var firebase: FirebaseMocks
   private lateinit var repository: EntryRepositoryLocal
@@ -36,7 +43,7 @@ class EntryRepositoryLocalTest {
     appContext = RuntimeEnvironment.getApplication()
     clearPreferencesDataStore(appContext, FILE_CLASS, PROPERTY)
     firebase = FirebaseMocks(uid = "user-1")
-    repository = EntryRepositoryLocal(appContext)
+    repository = EntryRepositoryLocal(appContext, currentUid)
   }
 
   @After
@@ -162,6 +169,23 @@ class EntryRepositoryLocalTest {
   }
 
   @Test
+  fun recordSwimDuration_onlyTouchesTheSignedInAccount() = runTest {
+    repository.addEntry(oldest)
+    currentUid.value = "user-2"
+    repository.addEntry(oldest)
+
+    repository.recordSwimDuration(oldest, 4_000L)
+
+    currentUid.value = "user-1"
+    assertEquals(listOf(oldest), repository.getEntries().first())
+    currentUid.value = "user-2"
+    assertEquals(
+        listOf(oldest.copy(swimDurationMillis = 4_000L)),
+        repository.getEntries().first(),
+    )
+  }
+
+  @Test
   fun recordSwimDuration_doesNothing_whenEntryWasDeleted() = runTest {
     repository.addEntry(oldest)
     repository.deleteEntry(oldest)
@@ -215,8 +239,73 @@ class EntryRepositoryLocalTest {
   }
 
   @Test
-  fun getEntries_migratesLegacyTimestamps_withoutSubscription() = runTest {
-    seedLegacyTimestamps("2026-09-01T10:00:00Z\n\n2026-09-02T11:30:00Z\n")
+  fun getEntries_onlyShowsTheSignedInAccountsEntries() = runTest {
+    repository.addEntry(oldest)
+
+    currentUid.value = "user-2"
+    assertEquals(emptyList<Entry>(), repository.getEntries().first())
+    repository.addEntry(newest)
+    assertEquals(listOf(newest), repository.getEntries().first())
+
+    currentUid.value = "user-1"
+    assertEquals(listOf(oldest), repository.getEntries().first())
+  }
+
+  @Test
+  fun deleteEntry_leavesOtherAccountsEntriesUntouched() = runTest {
+    repository.addEntry(oldest)
+    currentUid.value = "user-2"
+    repository.addEntry(oldest)
+
+    repository.deleteEntry(oldest)
+
+    assertEquals(emptyList<Entry>(), repository.getEntries().first())
+    currentUid.value = "user-1"
+    assertEquals(listOf(oldest), repository.getEntries().first())
+  }
+
+  @Test
+  fun getEntries_isEmpty_whenSignedOut() = runTest {
+    repository.addEntry(oldest)
+
+    currentUid.value = null
+
+    assertEquals(emptyList<Entry>(), repository.getEntries().first())
+  }
+
+  @Test
+  fun addEntry_fails_whenSignedOut() = runTest {
+    currentUid.value = null
+
+    val error = runCatching { repository.addEntry(oldest) }.exceptionOrNull()
+
+    assertTrue(error is IllegalStateException)
+  }
+
+  @Test
+  fun deleteEntry_fails_whenSignedOut() = runTest {
+    currentUid.value = null
+
+    val error = runCatching { repository.deleteEntry(oldest) }.exceptionOrNull()
+
+    assertTrue(error is IllegalStateException)
+  }
+
+  @Test
+  fun getEntries_claimsLegacyJsonEntries_forFirstAccountOnly() = runTest {
+    seedLegacy(LEGACY_JSON_KEY, Json.encodeToString(listOf(oldest, newest)))
+
+    assertEquals(listOf(newest, oldest), repository.getEntries().first())
+
+    currentUid.value = "user-2"
+    assertEquals(emptyList<Entry>(), repository.getEntries().first())
+    val prefs = productionPreferencesDataStore(appContext, FILE_CLASS, PROPERTY).data.first()
+    assertNull(prefs[LEGACY_JSON_KEY])
+  }
+
+  @Test
+  fun getEntries_claimsLegacyTimestamps_withoutSubscription() = runTest {
+    seedLegacy(LEGACY_TIMESTAMPS_KEY, "2026-09-01T10:00:00Z\n\n2026-09-02T11:30:00Z\n")
 
     assertEquals(
         listOf(
@@ -225,11 +314,13 @@ class EntryRepositoryLocalTest {
         ),
         repository.getEntries().first(),
     )
+    val prefs = productionPreferencesDataStore(appContext, FILE_CLASS, PROPERTY).data.first()
+    assertNull(prefs[LEGACY_TIMESTAMPS_KEY])
   }
 
   @Test
-  fun addEntry_keepsLegacyEntriesAndDropsLegacyKey_whenMigrating() = runTest {
-    seedLegacyTimestamps("2026-09-01T10:00:00Z")
+  fun addEntry_keepsLegacyEntries_whenClaimingThem() = runTest {
+    seedLegacy(LEGACY_TIMESTAMPS_KEY, "2026-09-01T10:00:00Z")
     val legacy = Entry(timestampEpochMilli = Instant.parse("2026-09-01T10:00:00Z").toEpochMilli())
 
     repository.addEntry(newest)
@@ -238,29 +329,38 @@ class EntryRepositoryLocalTest {
         listOf(legacy, newest).sortedByDescending { it.timestampEpochMilli },
         repository.getEntries().first(),
     )
-    val prefs = productionPreferencesDataStore(appContext, FILE_CLASS, PROPERTY).data.first()
-    assertNull(prefs[LEGACY_KEY])
   }
 
   @Test
-  fun deleteEntry_dropsLegacyKey_whenMigrating() = runTest {
-    seedLegacyTimestamps("2026-09-01T10:00:00Z")
+  fun deleteEntry_claimsLegacyEntriesBeforeDeleting() = runTest {
+    seedLegacy(LEGACY_TIMESTAMPS_KEY, "2026-09-01T10:00:00Z")
     val legacy = Entry(timestampEpochMilli = Instant.parse("2026-09-01T10:00:00Z").toEpochMilli())
 
     repository.deleteEntry(legacy)
 
     assertEquals(emptyList<Entry>(), repository.getEntries().first())
     val prefs = productionPreferencesDataStore(appContext, FILE_CLASS, PROPERTY).data.first()
-    assertNull(prefs[LEGACY_KEY])
+    assertNull(prefs[LEGACY_TIMESTAMPS_KEY])
   }
 
-  private suspend fun seedLegacyTimestamps(raw: String) {
-    productionPreferencesDataStore(appContext, FILE_CLASS, PROPERTY).edit { it[LEGACY_KEY] = raw }
+  @Test
+  fun getEntries_dropsLegacyEntries_whenAccountAlreadyHasItsOwn() = runTest {
+    repository.addEntry(newest)
+    seedLegacy(LEGACY_JSON_KEY, Json.encodeToString(listOf(oldest)))
+
+    assertEquals(listOf(newest), repository.getEntries().first())
+    val prefs = productionPreferencesDataStore(appContext, FILE_CLASS, PROPERTY).data.first()
+    assertNull(prefs[LEGACY_JSON_KEY])
+  }
+
+  private suspend fun seedLegacy(key: Preferences.Key<String>, raw: String) {
+    productionPreferencesDataStore(appContext, FILE_CLASS, PROPERTY).edit { it[key] = raw }
   }
 
   private companion object {
     const val FILE_CLASS = "com.github.se.pooltrack.model.entry.EntryRepositoryLocalKt"
     const val PROPERTY = "entryDataStore"
-    val LEGACY_KEY = stringPreferencesKey("entry_timestamps")
+    val LEGACY_JSON_KEY = stringPreferencesKey("entries_json")
+    val LEGACY_TIMESTAMPS_KEY = stringPreferencesKey("entry_timestamps")
   }
 }
