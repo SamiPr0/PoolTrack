@@ -44,6 +44,6 @@ fun isSwimPending(lastEntry: Entry?, now: Instant = Instant.now()): Boolean =
 /** Formats [duration] for display, e.g. `1h 12min` or `45min`. */
 fun formatSwimDuration(duration: Duration): String {
   val hours = duration.toHours()
-  val minutes = duration.toMinutesPart()
+  val minutes = duration.toMinutes() % 60
   return if (hours > 0) "${hours}h ${minutes}min" else "${minutes}min"
 }
