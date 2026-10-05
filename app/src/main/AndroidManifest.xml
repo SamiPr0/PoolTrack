@@ -4,10 +4,12 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- No Android cloud backup: the app's data and Firebase sign-in tokens would otherwise be
+         copied to whichever Google account the device backs up to, which is not necessarily the
+         one signed in to PoolTrack. Subscriptions and entries are backed up to Firestore instead.
+         A direct device-to-device transfer (Android 12+) still moves them to a new phone. -->
     <application
-        android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
