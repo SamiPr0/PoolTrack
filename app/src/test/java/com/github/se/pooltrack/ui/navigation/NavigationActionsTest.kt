@@ -5,9 +5,11 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.navigation.NavDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptions
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -26,6 +28,7 @@ class NavigationActionsTest {
 
   private lateinit var navController: NavHostController
   private lateinit var actions: NavigationActions
+  private var openedEntryTimestamp: Long? = null
 
   @Before
   fun setUp() {
@@ -37,6 +40,13 @@ class NavigationActionsTest {
         composable(Screen.Subscription.route) { Text("subscription") }
         composable(Screen.History.route) { Text("history") }
         composable(Screen.SubscriptionQuickView.route) { Text("quick view") }
+        composable(
+            Screen.EntryDetails.route,
+            arguments = listOf(navArgument(ENTRY_TIMESTAMP_ARG) { type = NavType.LongType }),
+        ) { backStackEntry ->
+          openedEntryTimestamp = backStackEntry.arguments?.getLong(ENTRY_TIMESTAMP_ARG)
+          Text("entry details")
+        }
       }
     }
     composeRule.waitForIdle()
@@ -132,6 +142,25 @@ class NavigationActionsTest {
     onUi { actions.navigateTo(Screen.SubscriptionQuickView) }
 
     assertEquals(before + 1, navController.currentBackStack.value.size)
+  }
+
+  @Test
+  fun screen_entryDetails_isANonTopLevelScreenWithATimestampArgument() {
+    assertEquals("entry_details/{entryTimestamp}", Screen.EntryDetails.route)
+    assertEquals("entry_details/42", Screen.EntryDetails.routeFor(42L))
+    assertEquals("Swim", Screen.EntryDetails.name)
+    assertEquals(false, Screen.EntryDetails.isTopLevelDestination)
+  }
+
+  @Test
+  fun navigateToEntryDetails_opensThatEntry_onTopOfTheCurrentScreen() {
+    onUi { actions.navigateTo(Screen.History) }
+
+    onUi { actions.navigateToEntryDetails(1_234L) }
+
+    assertEquals(Screen.EntryDetails.route, actions.currentRoute())
+    assertEquals(1_234L, openedEntryTimestamp)
+    assertEquals("history", navController.previousBackStackEntry?.destination?.route)
   }
 
   @Test
