@@ -1,0 +1,140 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// PoolTrack keeps its data on the device and only mirrors it to Firestore
+// as a per-user backup (model/backup/FirestoreBackup.kt). The app writes whole
+// documents with set() and deletes them; it never reads or queries them yet.
+// Optional values are sent as explicit `null` fields, not left out.
+//
+// Collection: users/{userId}/entries
+// Document ID: "<timestampEpochMilli>_<subscriptionId or 'none'>"
+// Fields:
+//   - timestampEpochMilli: int (required, > 0, not in the future) - when the
+//     scanner accepted the scan
+//   - subscriptionId: string | null (required key, <= 64 chars) - the
+//     subscription active at that time, if any
+//   - swimDurationMillis: int | null (optional key, 1..21600000 when set) -
+//     how long the swim lasted, once reported; 21600000 is 6 hours, the cap
+//     the app puts on a swim (MAX_SWIM_DURATION)
+//
+// Collection: users/{userId}/subscriptions
+// Document ID: the subscription's id (a UUID)
+// Fields:
+//   - id: string (required, == document ID, immutable)
+//   - displayName: string (required, 1..500 chars) - the PDF's file name
+//   - addedAtEpochMilli: int (required, > 0, not in the future, immutable)
+//   - expiresAtEpochMilli: int | null (required key, > 0 when set; may be in
+//     the past for an expired subscription)
+//   - maxEntries: int | null (required key, 1..100000 when set)
+//   - price: number | null (required key, 0..100000 when set)
+//
+// The users/{userId} document itself is never written, and nothing else is
+// stored. Everything not matched below is denied.
+//
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    // Check if the user is authenticated.
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if the signed-in user owns the data under users/{userId}.
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check that the document has exactly these fields, no more and no less.
+    function hasExactFields(data, fields) {
+      return data.keys().hasAll(fields) && data.keys().hasOnly(fields);
+    }
+
+    // An epoch-millisecond timestamp that is not in the future, with one day
+    // of slack for a device clock that is slightly ahead. No lower "recent"
+    // bound: writes made offline are sent later, when the device reconnects.
+    function isPastEpochMilli(value) {
+      return value is int && value > 0 &&
+        value <= request.time.toMillis() + 86400000;
+    }
+
+    // A string of 1..maxLen characters.
+    function isBoundedString(value, maxLen) {
+      return value is string && value.size() >= 1 && value.size() <= maxLen;
+    }
+
+    // Validate that the document hasn't changed in the given fields.
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators (used in both create and update)
+    // ===============================================================
+
+    function isValidEntry(entryId, data) {
+      return data.keys().hasAll(['timestampEpochMilli', 'subscriptionId']) &&
+        data.keys().hasOnly(['timestampEpochMilli', 'subscriptionId', 'swimDurationMillis']) &&
+        isPastEpochMilli(data.timestampEpochMilli) &&
+        (data.subscriptionId == null || isBoundedString(data.subscriptionId, 64)) &&
+        isValidSwimDuration(data) &&
+        // The ID is derived from the fields, so they can't drift apart.
+        entryId == string(data.timestampEpochMilli) + '_' +
+          (data.subscriptionId == null ? 'none' : data.subscriptionId);
+    }
+
+    // The swim duration is optional, and null until the swim has been reported.
+    function isValidSwimDuration(data) {
+      return !('swimDurationMillis' in data) || data.swimDurationMillis == null ||
+        (data.swimDurationMillis is int && data.swimDurationMillis > 0 &&
+          data.swimDurationMillis <= 21600000);
+    }
+
+    function isValidSubscription(subscriptionId, data) {
+      return hasExactFields(data, [
+          'id', 'displayName', 'addedAtEpochMilli', 'expiresAtEpochMilli',
+          'maxEntries', 'price']) &&
+        data.id == subscriptionId &&
+        isBoundedString(data.displayName, 500) &&
+        isPastEpochMilli(data.addedAtEpochMilli) &&
+        (data.expiresAtEpochMilli == null ||
+          (data.expiresAtEpochMilli is int && data.expiresAtEpochMilli > 0)) &&
+        (data.maxEntries == null ||
+          (data.maxEntries is int && data.maxEntries >= 1 && data.maxEntries <= 100000)) &&
+        (data.price == null ||
+          (data.price is number && data.price >= 0 && data.price <= 100000));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Only the owner can back up, restore or remove their own data.
+
+      match /entries/{entryId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidEntry(entryId, request.resource.data);
+        // Re-saving an existing entry (set() on the same ID) must keep it valid.
+        allow update: if isOwner(userId) && isValidEntry(entryId, request.resource.data);
+      }
+
+      match /subscriptions/{subscriptionId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+          isValidSubscription(subscriptionId, request.resource.data);
+        allow update: if isOwner(userId) &&
+          isValidSubscription(subscriptionId, request.resource.data) &&
+          areImmutableFieldsUnchanged(['id', 'addedAtEpochMilli']);
+      }
+    }
+  }
+}

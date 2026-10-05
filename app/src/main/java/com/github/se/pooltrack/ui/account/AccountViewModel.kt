@@ -3,7 +3,6 @@ package com.github.se.pooltrack.ui.account
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.se.pooltrack.BuildConfig
 import com.github.se.pooltrack.model.auth.AuthRepository
 import com.github.se.pooltrack.model.auth.AuthRepositoryProvider
 import com.github.se.pooltrack.model.auth.AuthUser
@@ -19,24 +18,13 @@ import kotlinx.coroutines.launch
  * signed in.
  *
  * @property authRepository The repository used to sign the user in and out.
- * @param signInAnonymouslyOnStart Whether to start an anonymous session right away. Only debug
- *   builds do, so local development doesn't require setting up a real Google account on an
- *   emulator/device. Release builds still hard-require real Google sign-in - see the gate in
- *   MainActivity.kt.
  */
 class AccountViewModel(
     private val authRepository: AuthRepository = AuthRepositoryProvider.repository,
-    signInAnonymouslyOnStart: Boolean = BuildConfig.DEBUG,
 ) : ViewModel() {
 
   val currentUser: StateFlow<AuthUser?> =
       authRepository.getCurrentUser().stateIn(viewModelScope, SharingStarted.Eagerly, null)
-
-  init {
-    if (signInAnonymouslyOnStart) {
-      viewModelScope.launch { authRepository.signInAnonymously() }
-    }
-  }
 
   /**
    * Starts the Google sign-in flow. [context] must be an Activity context, since it's used to

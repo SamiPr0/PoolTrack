@@ -134,6 +134,26 @@ class AuthRepositoryFirebaseTest {
     assertEquals(listOf<AuthUser?>(googleUser, null), emitted)
   }
 
+  // The app no longer starts anonymous sessions, but one saved by an older debug build must still
+  // be reported as anonymous, since that is what keeps it on the sign-in screen.
+  @Test
+  fun getCurrentUser_reportsRestoredAnonymousSession_asAnonymous() = runTest {
+    val listener = slot<FirebaseAuth.AuthStateListener>()
+    every { firebase.auth.addAuthStateListener(capture(listener)) } returns Unit
+    every { firebase.auth.removeAuthStateListener(any()) } returns Unit
+    val emitted = mutableListOf<AuthUser?>()
+
+    val job =
+        launch(UnconfinedTestDispatcher(testScheduler)) {
+          repository.getCurrentUser().toList(emitted)
+        }
+    val restored: FirebaseAuth = mockk { every { currentUser } returns firebaseUser(anonymousUser) }
+    listener.captured.onAuthStateChanged(restored)
+    job.cancelAndJoin()
+
+    assertEquals(listOf<AuthUser?>(anonymousUser), emitted)
+  }
+
   @Test
   fun getCurrentUser_removesListener_whenCollectionIsCancelled() = runTest {
     val listener = slot<FirebaseAuth.AuthStateListener>()
@@ -223,51 +243,6 @@ class AuthRepositoryFirebaseTest {
 
     assertEquals("bad token", result.exceptionOrNull()?.message)
     assertTrue(result.exceptionOrNull() is IllegalArgumentException)
-  }
-
-  @Test
-  fun signInAnonymously_returnsExistingUserWithoutSigningIn_whenAlreadySignedIn() = runTest {
-    every { firebase.auth.currentUser } returns firebaseUser(googleUser)
-
-    val result = repository.signInAnonymously()
-
-    assertEquals(Result.success(googleUser), result)
-    verify(exactly = 0) { firebase.auth.signInAnonymously() }
-  }
-
-  @Test
-  fun signInAnonymously_signsInAnonymously_whenNobodyIsSignedIn() = runTest {
-    every { firebase.auth.currentUser } returns null
-    every { firebase.auth.signInAnonymously() } returns
-        completedTask(authResult(firebaseUser(anonymousUser)))
-
-    val result = repository.signInAnonymously()
-
-    assertEquals(Result.success(anonymousUser), result)
-    verify(exactly = 1) { firebase.auth.signInAnonymously() }
-  }
-
-  @Test
-  fun signInAnonymously_fails_whenFirebaseReturnsNoUser() = runTest {
-    every { firebase.auth.currentUser } returns null
-    every { firebase.auth.signInAnonymously() } returns completedTask(authResult(user = null))
-
-    val result = repository.signInAnonymously()
-
-    assertEquals(
-        "Anonymous sign-in succeeded but returned no user",
-        result.exceptionOrNull()?.message,
-    )
-  }
-
-  @Test
-  fun signInAnonymously_fails_whenFirebaseSignInFails() = runTest {
-    every { firebase.auth.currentUser } returns null
-    every { firebase.auth.signInAnonymously() } returns failedTask(IllegalStateException("offline"))
-
-    val result = repository.signInAnonymously()
-
-    assertEquals("offline", result.exceptionOrNull()?.message)
   }
 
   @Test
