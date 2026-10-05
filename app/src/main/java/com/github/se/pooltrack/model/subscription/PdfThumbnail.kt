@@ -5,13 +5,21 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
+import java.io.FileNotFoundException
 
 /**
  * Renders the first page of the PDF at [uri] to a [Bitmap], or `null` if it can't be opened or has
  * no pages.
  */
 fun renderFirstPdfPage(context: Context, uri: Uri): Bitmap? {
-  val pfd = context.contentResolver.openFileDescriptor(uri, "r") ?: return null
+  val pfd =
+      try {
+        context.contentResolver.openFileDescriptor(uri, "r")
+      } catch (_: FileNotFoundException) {
+        null
+      } catch (_: SecurityException) {
+        null
+      } ?: return null
   pfd.use {
     PdfRenderer(it).use { renderer ->
       if (renderer.pageCount == 0) return null
