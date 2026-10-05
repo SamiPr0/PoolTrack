@@ -19,3 +19,16 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Credential Manager finds its Google Play services provider by reflection, so R8 can't see that
+# it's used. Without this, Google sign-in fails in release builds. See
+# https://developer.android.com/identity/sign-in/credential-manager#proguard
+-if class androidx.credentials.CredentialManager
+-keep class androidx.credentials.playservices.** {
+  *;
+}
+
+# Obfuscated stack traces stay readable with the mapping.txt R8 writes next to the APK, which is
+# kept out of the APK itself.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
