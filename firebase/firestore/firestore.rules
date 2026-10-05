@@ -16,6 +16,9 @@ rules_version = '2';
 //     scanner accepted the scan
 //   - subscriptionId: string | null (required key, <= 64 chars) - the
 //     subscription active at that time, if any
+//   - swimDurationMillis: int | null (optional key, 1..21600000 when set) -
+//     how long the swim lasted, once reported; 21600000 is 6 hours, the cap
+//     the app puts on a swim (MAX_SWIM_DURATION)
 //
 // Collection: users/{userId}/subscriptions
 // Document ID: the subscription's id (a UUID)
@@ -78,12 +81,21 @@ service cloud.firestore {
     // ===============================================================
 
     function isValidEntry(entryId, data) {
-      return hasExactFields(data, ['timestampEpochMilli', 'subscriptionId']) &&
+      return data.keys().hasAll(['timestampEpochMilli', 'subscriptionId']) &&
+        data.keys().hasOnly(['timestampEpochMilli', 'subscriptionId', 'swimDurationMillis']) &&
         isPastEpochMilli(data.timestampEpochMilli) &&
         (data.subscriptionId == null || isBoundedString(data.subscriptionId, 64)) &&
+        isValidSwimDuration(data) &&
         // The ID is derived from the fields, so they can't drift apart.
         entryId == string(data.timestampEpochMilli) + '_' +
           (data.subscriptionId == null ? 'none' : data.subscriptionId);
+    }
+
+    // The swim duration is optional, and null until the swim has been reported.
+    function isValidSwimDuration(data) {
+      return !('swimDurationMillis' in data) || data.swimDurationMillis == null ||
+        (data.swimDurationMillis is int && data.swimDurationMillis > 0 &&
+          data.swimDurationMillis <= 21600000);
     }
 
     function isValidSubscription(subscriptionId, data) {
