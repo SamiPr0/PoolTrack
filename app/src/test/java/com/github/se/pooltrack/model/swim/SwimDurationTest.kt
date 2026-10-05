@@ -4,7 +4,9 @@ import com.github.se.pooltrack.model.entry.Entry
 import java.time.Duration
 import java.time.Instant
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SwimDurationTest {
@@ -39,6 +41,24 @@ class SwimDurationTest {
     val reported = entry.copy(swimDurationMillis = 1L)
 
     assertNull(swimDurationToReport(reported, enteredAt.plus(Duration.ofHours(1))))
+  }
+
+  @Test
+  fun swimDurationToReport_isNull_whenTheEntryIsTooOld() {
+    assertNull(swimDurationToReport(entry, enteredAt.plus(MAX_SWIM_DURATION).plusSeconds(1)))
+  }
+
+  @Test
+  fun isSwimPending_isTrue_forAFreshUnreportedEntry() {
+    assertTrue(isSwimPending(entry, enteredAt))
+    assertTrue(isSwimPending(entry, enteredAt.plus(MAX_SWIM_DURATION)))
+  }
+
+  @Test
+  fun isSwimPending_isFalse_withoutEntryOrOnceReportedOrTooOld() {
+    assertFalse(isSwimPending(null, enteredAt))
+    assertFalse(isSwimPending(entry.copy(swimDurationMillis = 1L), enteredAt))
+    assertFalse(isSwimPending(entry, enteredAt.plus(MAX_SWIM_DURATION).plusSeconds(1)))
   }
 
   @Test
