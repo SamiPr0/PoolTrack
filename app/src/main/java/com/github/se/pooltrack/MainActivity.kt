@@ -16,6 +16,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
 import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
+import com.github.se.pooltrack.model.update.UpdateRepositoryProvider
 import com.github.se.pooltrack.ui.account.AccountViewModel
 import com.github.se.pooltrack.ui.account.SignInScreen
 import com.github.se.pooltrack.ui.history.HistoryScreen
@@ -25,6 +26,7 @@ import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.subscription.SubscriptionQuickViewScreen
 import com.github.se.pooltrack.ui.subscription.SubscriptionScreen
 import com.github.se.pooltrack.ui.theme.PoolTrackTheme
+import com.github.se.pooltrack.ui.update.UpdateDialog
 
 private val startDestination = Screen.Home.route
 
@@ -35,6 +37,7 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     EntryRepositoryProvider.init(this)
     SubscriptionRepositoryProvider.init(this)
+    UpdateRepositoryProvider.init(this)
 
     setContent { PoolTrackTheme { Surface(modifier = Modifier.fillMaxSize()) { PoolTrackApp() } } }
   }
@@ -43,10 +46,13 @@ class MainActivity : ComponentActivity() {
 /**
  * `PoolTrackApp` is the main composable function that sets up the whole app UI. Gated behind Google
  * sign-in - [SignInScreen] is shown instead until a real (non-anonymous) account is signed in -
- * since subscriptions and entries are only meaningful once backed up to one.
+ * since subscriptions and entries are only meaningful once backed up to one. [UpdateDialog] sits
+ * above both, so a new release is offered even before signing in.
  */
 @Composable
 fun PoolTrackApp(accountViewModel: AccountViewModel = viewModel()) {
+  UpdateDialog()
+
   val currentUser by accountViewModel.currentUser.collectAsState()
   val user = currentUser
 

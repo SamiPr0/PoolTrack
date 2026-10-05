@@ -9,6 +9,16 @@ plugins {
   jacoco
 }
 
+// The single place to bump the version. Android only installs an update whose versionCode is higher
+// than the installed one, and the in-app updater compares versionName with the GitHub release tag
+// (v<versionName>), so versionCode is derived from it: 1.2.3 -> 10203.
+val appVersionName = "1.1.0"
+
+fun versionCodeOf(versionName: String): Int {
+  val (major, minor, patch) = versionName.split('.').map(String::toInt)
+  return major * 10_000 + minor * 100 + patch
+}
+
 android {
   namespace = "com.github.se.pooltrack"
   compileSdk = 37
@@ -17,8 +27,8 @@ android {
     applicationId = "com.github.se.pooltrack"
     minSdk = 29
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0"
+    versionCode = versionCodeOf(appVersionName)
+    versionName = appVersionName
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     vectorDrawables { useSupportLibrary = true }
