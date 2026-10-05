@@ -6,6 +6,7 @@ plugins {
   alias(libs.plugins.kotlinCompose)
   alias(libs.plugins.kotlinSerialization)
   alias(libs.plugins.googleServices)
+  jacoco
 }
 
 android {
@@ -24,6 +25,7 @@ android {
   }
 
   buildTypes {
+    debug { enableUnitTestCoverage = true }
     release {
       isMinifyEnabled = false
       proguardFiles(
@@ -41,6 +43,9 @@ android {
     compose = true
     buildConfig = true
   }
+
+  // Robolectric needs the merged resources and manifest to run Compose UI tests on the JVM.
+  testOptions { unitTests { isIncludeAndroidResources = true } }
 }
 
 // With AGP 9+ we have to set the JVM target on a kotlin block outside the Android block.
@@ -84,7 +89,54 @@ dependencies {
   testImplementation(libs.robolectric)
   testImplementation(libs.mockk)
   testImplementation(libs.kotlinx.coroutines.test)
+  testImplementation(platform(libs.androidx.compose.bom))
+  testImplementation(libs.androidx.ui.test.junit4)
   androidTestImplementation(libs.androidx.junit)
   androidTestImplementation(libs.androidx.espresso.core)
   androidTestImplementation(libs.androidx.ui.test.junit4)
+}
+
+// Fails when line coverage of the unit tests is below 80%. Run it after `testDebugUnitTest`.
+// Compose singletons, R and BuildConfig are generated, so they are excluded.
+tasks.register<JacocoCoverageVerification>("coverageVerification") {
+  group = "verification"
+  description = "Verifies that unit tests cover at least 80% of the lines."
+  dependsOn("testDebugUnitTest")
+
+  executionData.setFrom(
+      layout.buildDirectory.file(
+          "outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"
+      )
+  )
+  classDirectories.setFrom(
+      fileTree(
+          layout.buildDirectory.dir(
+              "intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes"
+          )
+      ) {
+        exclude(
+            "**/R.class",
+            "**/R$*.class",
+            "**/BuildConfig.class",
+            "**/ComposableSingletons*.class",
+        )
+      }
+  )
+  violationRules {
+    rule {
+      limit {
+        counter = "LINE"
+        minimum = "0.80".toBigDecimal()
+      }
+    }
+  }
+}
+
+// Robolectric loads app classes through its own sandbox classloader; without this JaCoCo records
+// nothing for them, and Compose/Robolectric tests would show 0% coverage.
+tasks.withType<Test>().configureEach {
+  extensions.configure<JacocoTaskExtension> {
+    isIncludeNoLocationClasses = true
+    excludes = listOf("jdk.internal.*")
+  }
 }
