@@ -74,15 +74,22 @@ class EntryRepositoryLocal(
       claimLegacyEntries(prefs, uid)
       prefs[entriesKey(uid)] = Json.encodeToString(readEntries(prefs, uid) + entry)
     }
-    mirrorToFirestore(
-        collection = BACKUP_COLLECTION,
-        docId = entry.backupDocId(),
-        data =
-            mapOf(
-                "timestampEpochMilli" to entry.timestampEpochMilli,
-                "subscriptionId" to entry.subscriptionId,
-            ),
-    )
+    mirrorEntry(entry)
+  }
+
+  override suspend fun recordSwimDuration(entry: Entry, durationMillis: Long) {
+    val uid = requireUid()
+    var updated: Entry? = null
+    context.entryDataStore.edit { prefs ->
+      claimLegacyEntries(prefs, uid)
+      val existing = readEntries(prefs, uid)
+      if (entry !in existing) return@edit
+      val withDuration = entry.copy(swimDurationMillis = durationMillis)
+      updated = withDuration
+      prefs[entriesKey(uid)] =
+          Json.encodeToString(existing.map { if (it == entry) withDuration else it })
+    }
+    updated?.let { mirrorEntry(it) }
   }
 
   override suspend fun deleteEntry(entry: Entry) {
@@ -92,6 +99,19 @@ class EntryRepositoryLocal(
       prefs[entriesKey(uid)] = Json.encodeToString(readEntries(prefs, uid).filter { it != entry })
     }
     deleteFromFirestore(collection = BACKUP_COLLECTION, docId = entry.backupDocId())
+  }
+
+  private suspend fun mirrorEntry(entry: Entry) {
+    mirrorToFirestore(
+        collection = BACKUP_COLLECTION,
+        docId = entry.backupDocId(),
+        data =
+            mapOf(
+                "timestampEpochMilli" to entry.timestampEpochMilli,
+                "subscriptionId" to entry.subscriptionId,
+                "swimDurationMillis" to entry.swimDurationMillis,
+            ),
+    )
   }
 
   private suspend fun requireUid(): String =

@@ -28,4 +28,9 @@ class FakeEntryRepository(initialEntries: List<Entry> = emptyList()) : EntryRepo
   override suspend fun deleteEntry(entry: Entry) {
     entries.value = entries.value.filter { it != entry }
   }
+
+  override suspend fun recordSwimDuration(entry: Entry, durationMillis: Long) {
+    entries.value =
+        entries.value.map { if (it == entry) it.copy(swimDurationMillis = durationMillis) else it }
+  }
 }
