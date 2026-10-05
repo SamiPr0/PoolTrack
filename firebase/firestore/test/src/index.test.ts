@@ -154,6 +154,47 @@ describe('Firestore rules tests', async () => {
     });
   });
 
+  describe('Swim duration', () => {
+    // 6 hours, the cap the app puts on a swim (MAX_SWIM_DURATION).
+    const maxSwim = 6 * 3600 * 1000;
+    const withSwim = (swimDurationMillis: unknown) =>
+      setDoc(myEntry(untaggedEntryId), { ...untaggedEntry, swimDurationMillis });
+
+    test('Entries can be backed up before the swim is reported', async () => {
+      await assertSucceeds(withSwim(null));
+    });
+
+    test('Entries can carry a swim duration of up to 6 hours', async () => {
+      await assertSucceeds(withSwim(1));
+      await assertSucceeds(withSwim(45 * 60 * 1000));
+      await assertSucceeds(withSwim(maxSwim));
+    });
+
+    test('Swim durations must be positive and at most 6 hours', async () => {
+      await assertFails(withSwim(-1));
+      await assertFails(withSwim(0));
+      await assertFails(withSwim(maxSwim + 1));
+    });
+
+    test('Swim durations must be integers', async () => {
+      await assertFails(withSwim(1500.5));
+      await assertFails(withSwim('2700000'));
+      await assertFails(withSwim(true));
+    });
+
+    test('An existing entry can be re-saved with its swim duration', async () => {
+      await assertSucceeds(setDoc(myEntry(), { ...entry, swimDurationMillis: null }));
+      await assertSucceeds(setDoc(myEntry(), { ...entry, swimDurationMillis: 45 * 60 * 1000 }));
+      await assertSucceeds(updateDoc(myEntry(), { swimDurationMillis: 50 * 60 * 1000 }));
+    });
+
+    test('An existing entry cannot be updated with an invalid swim duration', async () => {
+      await assertFails(updateDoc(myEntry(), { swimDurationMillis: 0 }));
+      await assertFails(updateDoc(myEntry(), { swimDurationMillis: maxSwim + 1 }));
+      await assertFails(updateDoc(myEntry(), { swimDurationMillis: '2700000' }));
+    });
+  });
+
   describe('Subscription validation', () => {
     const newId = '9a9a9a9a-0000-4000-8000-000000000003';
     const valid = { ...subscription, id: newId };
