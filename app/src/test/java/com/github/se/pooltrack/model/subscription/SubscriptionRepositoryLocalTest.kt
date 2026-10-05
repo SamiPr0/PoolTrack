@@ -18,6 +18,7 @@ import io.mockk.mockk
 import io.mockk.unmockkAll
 import io.mockk.verify
 import java.util.UUID
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
@@ -37,6 +38,7 @@ import org.robolectric.RuntimeEnvironment
 class SubscriptionRepositoryLocalTest {
 
   private val pdfUri = "content://docs/pass.pdf"
+  private val currentUid = MutableStateFlow<String?>("user-1")
 
   private lateinit var appContext: Context
   private lateinit var resolver: ContentResolver
@@ -50,7 +52,7 @@ class SubscriptionRepositoryLocalTest {
     resolver = mockk(relaxed = true)
     answerDisplayName("pass.pdf")
     firebase = FirebaseMocks(uid = "user-1")
-    repository = SubscriptionRepositoryLocal(ResolverContext(appContext, resolver))
+    repository = SubscriptionRepositoryLocal(ResolverContext(appContext, resolver), currentUid)
   }
 
   @After
@@ -206,7 +208,10 @@ class SubscriptionRepositoryLocalTest {
   fun addSubscription_doesNotMirror_whenSignedOut() = runTest {
     val signedOut = FirebaseMocks(uid = null)
     val signedOutRepository =
-        SubscriptionRepositoryLocal(ResolverContext(RuntimeEnvironment.getApplication(), resolver))
+        SubscriptionRepositoryLocal(
+            ResolverContext(RuntimeEnvironment.getApplication(), resolver),
+            currentUid,
+        )
 
     val added = signedOutRepository.addSubscription(uri = pdfUri)
 
@@ -220,7 +225,7 @@ class SubscriptionRepositoryLocalTest {
     val newest = stored(id = "b", addedAt = 4_000L)
     val middle = stored(id = "c", addedAt = 3_000L)
     productionPreferencesDataStore(appContext, FILE_CLASS, PROPERTY).edit {
-      it[stringPreferencesKey("subscriptions_json")] =
+      it[stringPreferencesKey("subscriptions_json_user-1")] =
           Json.encodeToString(listOf(oldest, newest, middle))
     }
 
@@ -300,9 +305,122 @@ class SubscriptionRepositoryLocalTest {
     assertEquals(added, repository.getActiveSubscription().first())
   }
 
+  @Test
+  fun getSubscriptions_onlyShowsTheSignedInAccountsSubscriptions() = runTest {
+    val mine = repository.addSubscription(uri = pdfUri)
+
+    currentUid.value = "user-2"
+    assertEquals(emptyList<Subscription>(), repository.getSubscriptions().first())
+    assertNull(repository.getActiveSubscription().first())
+    val theirs = repository.addSubscription(uri = pdfUri)
+    assertEquals(listOf(theirs), repository.getSubscriptions().first())
+
+    currentUid.value = "user-1"
+    assertEquals(listOf(mine), repository.getSubscriptions().first())
+    assertEquals(mine, repository.getActiveSubscription().first())
+  }
+
+  @Test
+  fun setActiveSubscription_onlyAffectsTheSignedInAccount() = runTest {
+    val mine = repository.addSubscription(uri = pdfUri)
+    currentUid.value = "user-2"
+
+    repository.setActiveSubscription(mine.id)
+
+    currentUid.value = "user-1"
+    assertEquals(mine, repository.getActiveSubscription().first())
+  }
+
+  @Test
+  fun getSubscriptions_isEmpty_whenSignedOut() = runTest {
+    repository.addSubscription(uri = pdfUri)
+
+    currentUid.value = null
+
+    assertEquals(emptyList<Subscription>(), repository.getSubscriptions().first())
+    assertNull(repository.getActiveSubscription().first())
+  }
+
+  @Test
+  fun writes_fail_whenSignedOut() = runTest {
+    currentUid.value = null
+
+    assertTrue(
+        runCatching { repository.addSubscription(uri = pdfUri) }.exceptionOrNull()
+            is IllegalStateException
+    )
+    assertTrue(
+        runCatching { repository.setActiveSubscription("a") }.exceptionOrNull()
+            is IllegalStateException
+    )
+    assertTrue(
+        runCatching { repository.deleteSubscription("a") }.exceptionOrNull()
+            is IllegalStateException
+    )
+    verify(exactly = 0) { resolver.takePersistableUriPermission(any(), any()) }
+  }
+
+  @Test
+  fun getSubscriptions_claimsLegacySubscriptions_forFirstAccountOnly() = runTest {
+    val legacy = stored(id = "legacy", addedAt = 2_000L)
+    seedLegacy(Json.encodeToString(listOf(legacy)), activeId = "legacy")
+
+    assertEquals(listOf(legacy), repository.getSubscriptions().first())
+    assertEquals(legacy, repository.getActiveSubscription().first())
+
+    currentUid.value = "user-2"
+    assertEquals(emptyList<Subscription>(), repository.getSubscriptions().first())
+    val prefs = productionPreferencesDataStore(appContext, FILE_CLASS, PROPERTY).data.first()
+    assertNull(prefs[LEGACY_SUBSCRIPTIONS_KEY])
+    assertNull(prefs[LEGACY_ACTIVE_ID_KEY])
+  }
+
+  @Test
+  fun addSubscription_keepsLegacySubscriptions_whenClaimingThem() = runTest {
+    val legacy = stored(id = "legacy", addedAt = 2_000L)
+    seedLegacy(Json.encodeToString(listOf(legacy)), activeId = null)
+
+    val added = repository.addSubscription(uri = pdfUri)
+
+    assertEquals(listOf(added, legacy), repository.getSubscriptions().first())
+  }
+
+  @Test
+  fun setActiveSubscription_dropsLegacyData_whenAccountAlreadyHasItsOwn() = runTest {
+    val mine = repository.addSubscription(uri = pdfUri)
+    seedLegacy(Json.encodeToString(listOf(stored(id = "legacy", addedAt = 1L))), "legacy")
+
+    repository.setActiveSubscription(mine.id)
+
+    assertEquals(listOf(mine), repository.getSubscriptions().first())
+    assertEquals(mine, repository.getActiveSubscription().first())
+    val prefs = productionPreferencesDataStore(appContext, FILE_CLASS, PROPERTY).data.first()
+    assertNull(prefs[LEGACY_SUBSCRIPTIONS_KEY])
+  }
+
+  @Test
+  fun deleteSubscription_claimsLegacySubscriptionsBeforeDeleting() = runTest {
+    val legacy = stored(id = "legacy", addedAt = 2_000L)
+    seedLegacy(Json.encodeToString(listOf(legacy)), activeId = "legacy")
+
+    repository.deleteSubscription("legacy")
+
+    assertEquals(emptyList<Subscription>(), repository.getSubscriptions().first())
+    assertNull(repository.getActiveSubscription().first())
+  }
+
+  private suspend fun seedLegacy(subscriptionsJson: String, activeId: String?) {
+    productionPreferencesDataStore(appContext, FILE_CLASS, PROPERTY).edit { prefs ->
+      prefs[LEGACY_SUBSCRIPTIONS_KEY] = subscriptionsJson
+      activeId?.let { prefs[LEGACY_ACTIVE_ID_KEY] = it }
+    }
+  }
+
   private companion object {
     const val FILE_CLASS =
         "com.github.se.pooltrack.model.subscription.SubscriptionRepositoryLocalKt"
     const val PROPERTY = "subscriptionDataStore"
+    val LEGACY_SUBSCRIPTIONS_KEY = stringPreferencesKey("subscriptions_json")
+    val LEGACY_ACTIVE_ID_KEY = stringPreferencesKey("active_subscription_id")
   }
 }
