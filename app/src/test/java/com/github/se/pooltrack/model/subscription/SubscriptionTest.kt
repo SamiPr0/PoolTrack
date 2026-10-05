@@ -2,6 +2,7 @@ package com.github.se.pooltrack.model.subscription
 
 import java.time.Instant
 import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -87,5 +88,19 @@ class SubscriptionTest {
   @Test
   fun daysUntilExpiration_isNull_whenNoExpirationDate() {
     assertNull(subscription().daysUntilExpiration(now, ZoneOffset.UTC))
+  }
+
+  @Test
+  fun daysUntilExpiration_isNull_whenNoExpirationDateAndDefaultsAreUsed() {
+    assertNull(subscription().daysUntilExpiration())
+  }
+
+  @Test
+  fun daysUntilExpiration_isNegative_whenExpiredLongAgoAndDefaultsAreUsed() {
+    val expiresAt = Instant.now().minus(30, ChronoUnit.DAYS)
+
+    val days = subscription(expiresAt = expiresAt).daysUntilExpiration()
+
+    assertTrue(days != null && days <= -29)
   }
 }

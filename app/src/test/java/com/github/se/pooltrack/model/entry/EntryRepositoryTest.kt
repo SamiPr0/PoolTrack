@@ -2,6 +2,7 @@ package com.github.se.pooltrack.model.entry
 
 import com.github.se.pooltrack.utils.FakeEntryRepository
 import java.time.Instant
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -43,5 +44,21 @@ class EntryRepositoryTest {
     repository.deleteEntry(latest)
 
     assertEquals(Instant.ofEpochMilli(1_000L), repository.getLastEntryTimestamp().first())
+  }
+
+  @Test
+  fun getLastEntryTimestamp_isTheMostRecentEntry_whenCalledThroughLegacyDefaultImpls() = runTest {
+    // Kotlin keeps a static `DefaultImpls` copy of every interface default for consumers
+    // compiled without Java default methods; call it the way such a consumer would.
+    val repository = FakeEntryRepository(listOf(Entry(1_000L), Entry(3_000L)))
+    val defaultImpls = Class.forName("${EntryRepository::class.java.name}\$DefaultImpls")
+
+    @Suppress("UNCHECKED_CAST")
+    val flow =
+        defaultImpls
+            .getMethod("getLastEntryTimestamp", EntryRepository::class.java)
+            .invoke(null, repository) as Flow<Instant?>
+
+    assertEquals(Instant.ofEpochMilli(3_000L), flow.first())
   }
 }
