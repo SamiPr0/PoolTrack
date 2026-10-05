@@ -176,6 +176,39 @@ class HistoryScreenRobolectricTest {
   }
 
   @Test
+  fun historyScreen_showsSwimDurationNextToTime_whenRecorded() {
+    val reported = entryAt(today, hour = 8).copy(swimDurationMillis = 4_320_000L)
+    val unreported = entryAt(today.minusDays(1), hour = 9)
+    show(FakeEntryRepository(listOf(reported, unreported)))
+
+    composeTestRule.onNodeWithText("${timeLabel(reported)} · 1h 12min").assertIsDisplayed()
+    composeTestRule.onNodeWithText(timeLabel(unreported)).assertIsDisplayed()
+  }
+
+  @Test
+  fun historyScreen_opensEntryDetails_whenEntryTapped() {
+    val entry = entryAt(today)
+    val repository = FakeEntryRepository(listOf(entry))
+    val navigationActions = mockk<NavigationActions>(relaxed = true)
+    show(repository, navigationActions)
+
+    composeTestRule.onNodeWithText(timeLabel(entry)).performClick()
+
+    verify(exactly = 1) { navigationActions.navigateToEntryDetails(entry.timestampEpochMilli) }
+    assertEquals(listOf(entry), repository.storedEntries)
+  }
+
+  @Test
+  fun historyScreen_ignoresEntryTap_whenNoNavigationActions() {
+    val entry = entryAt(today)
+    show(FakeEntryRepository(listOf(entry)))
+
+    composeTestRule.onNodeWithText(timeLabel(entry)).performClick()
+
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(1)
+  }
+
+  @Test
   fun historyScreen_navigatesToTappedTab_whenBottomTabSelected() {
     val navigationActions = mockk<NavigationActions>(relaxed = true)
     show(FakeEntryRepository(), navigationActions)
