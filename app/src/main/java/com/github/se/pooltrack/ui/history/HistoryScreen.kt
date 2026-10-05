@@ -37,11 +37,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.model.entry.timestamp
+import com.github.se.pooltrack.model.swim.formatSwimDuration
 import com.github.se.pooltrack.ui.navigation.BottomNavigationMenu
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
+import java.time.Duration
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -167,6 +169,7 @@ fun HistoryScreen(
           items(entriesForDay, key = { it.timestamp.toEpochMilli() }) { entry ->
             EntryRow(
                 entry = entry,
+                onClick = { navigationActions?.navigateToEntryDetails(entry.timestampEpochMilli) },
                 onDelete = { entryPendingDeletion = entry },
                 modifier = Modifier.padding(vertical = 4.dp),
             )
@@ -214,9 +217,24 @@ private fun dayLabel(day: LocalDate, today: LocalDate): String =
       }
     }
 
+/** The entry time, followed by the swim duration once it was recorded: "18:42 · 52min". */
+private fun entryRowLabel(entry: Entry): String {
+  val time = entryTimeFormatter().format(entry.timestamp)
+  val duration = entry.swimDurationMillis ?: return time
+  return "$time · ${formatSwimDuration(Duration.ofMillis(duration))}"
+}
+
 @Composable
-private fun EntryRow(entry: Entry, onDelete: () -> Unit, modifier: Modifier = Modifier) {
-  Card(modifier = modifier.fillMaxWidth().testTag(HistoryScreenTestTags.ENTRY_ITEM)) {
+private fun EntryRow(
+    entry: Entry,
+    onClick: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+  Card(
+      onClick = onClick,
+      modifier = modifier.fillMaxWidth().testTag(HistoryScreenTestTags.ENTRY_ITEM),
+  ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -229,7 +247,7 @@ private fun EntryRow(entry: Entry, onDelete: () -> Unit, modifier: Modifier = Mo
             tint = MaterialTheme.colorScheme.primary,
         )
         Text(
-            text = entryTimeFormatter().format(entry.timestamp),
+            text = entryRowLabel(entry),
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(vertical = 12.dp, horizontal = 12.dp),
         )

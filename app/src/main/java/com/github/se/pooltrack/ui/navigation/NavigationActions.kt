@@ -42,7 +42,20 @@ sealed class Screen(
           route = "subscription_quick_view",
           name = "Subscription",
       )
+
+  /** Everything about one confirmed entry, opened by tapping it in [History]. */
+  object EntryDetails :
+      Screen(
+          route = "entry_details/{$ENTRY_TIMESTAMP_ARG}",
+          name = "Swim",
+      ) {
+    /** The route of the details of the entry confirmed at [timestampEpochMilli]. */
+    fun routeFor(timestampEpochMilli: Long): String = "entry_details/$timestampEpochMilli"
+  }
 }
+
+/** The [Screen.EntryDetails] route argument: the entry's `timestampEpochMilli`. */
+const val ENTRY_TIMESTAMP_ARG = "entryTimestamp"
 
 open class NavigationActions(
     private val navController: NavHostController,
@@ -63,6 +76,14 @@ open class NavigationActions(
       }
       restoreState = true
     }
+  }
+
+  /**
+   * Opens the details of the entry confirmed at [timestampEpochMilli], on top of the current
+   * screen.
+   */
+  open fun navigateToEntryDetails(timestampEpochMilli: Long) {
+    navController.navigate(Screen.EntryDetails.routeFor(timestampEpochMilli))
   }
 
   /** Navigate back to the previous screen. */

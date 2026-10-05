@@ -19,17 +19,21 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
 import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
 import com.github.se.pooltrack.model.swim.isSwimPending
 import com.github.se.pooltrack.swim.SwimTrackingService
 import com.github.se.pooltrack.ui.account.AccountViewModel
 import com.github.se.pooltrack.ui.account.SignInScreen
+import com.github.se.pooltrack.ui.entry.EntryDetailsScreen
 import com.github.se.pooltrack.ui.history.HistoryScreen
 import com.github.se.pooltrack.ui.home.HomeScreen
+import com.github.se.pooltrack.ui.navigation.ENTRY_TIMESTAMP_ARG
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.subscription.SubscriptionQuickViewScreen
@@ -109,5 +113,14 @@ fun PoolTrackApp(accountViewModel: AccountViewModel = viewModel()) {
       SubscriptionQuickViewScreen(navigationActions = navigationActions)
     }
     composable(Screen.History.route) { HistoryScreen(navigationActions = navigationActions) }
+    composable(
+        Screen.EntryDetails.route,
+        arguments = listOf(navArgument(ENTRY_TIMESTAMP_ARG) { type = NavType.LongType }),
+    ) { backStackEntry ->
+      EntryDetailsScreen(
+          timestampEpochMilli = backStackEntry.arguments?.getLong(ENTRY_TIMESTAMP_ARG) ?: 0L,
+          navigationActions = navigationActions,
+      )
+    }
   }
 }
