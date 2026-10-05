@@ -96,7 +96,7 @@ dependencies {
   androidTestImplementation(libs.androidx.ui.test.junit4)
 }
 
-// Fails when line coverage of the unit tests is below 80%. Run it after `testDebugUnitTest`.
+// Fails when line coverage of the unit tests is below 80%. Part of `check`.
 // Compose singletons, R and BuildConfig are generated, so they are excluded.
 tasks.register<JacocoCoverageVerification>("coverageVerification") {
   group = "verification"
@@ -140,3 +140,5 @@ tasks.withType<Test>().configureEach {
     excludes = listOf("jdk.internal.*")
   }
 }
+
+tasks.named("check") { dependsOn("coverageVerification") }
