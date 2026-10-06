@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
+import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.NavigationTestTags
@@ -304,5 +305,41 @@ class HistoryScreenRobolectricTest {
     composeTestRule.onNodeWithTag(AddPastEntrySheetTestTags.SHEET).assertIsDisplayed()
     composeTestRule.onNodeWithTag(AddPastEntrySheetTestTags.ERROR).assertIsDisplayed()
     assertEquals(1, repository.storedEntries.size)
+  }
+
+  private val expiredPass =
+      Subscription(
+          id = "pass",
+          uri = "content://pass",
+          displayName = "pass",
+          addedAtEpochMilli = System.currentTimeMillis(),
+          expiresAtEpochMilli = Instant.now().minusSeconds(86_400).toEpochMilli(),
+      )
+
+  @Test
+  fun historyScreen_offersToLinkUnlinkedEntries_andLinksThemWithUndo() {
+    val unlinked = Entry(entryAt(today.minusDays(30)).timestampEpochMilli, subscriptionId = null)
+    val repository = FakeEntryRepository(listOf(unlinked))
+    val viewModel = HistoryViewModel(repository, FakeSubscriptionRepository(listOf(expiredPass)))
+    composeTestRule.setContent { HistoryScreen(viewModel) }
+
+    composeTestRule.onNodeWithTag(HistoryScreenTestTags.LINK_BANNER).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(HistoryScreenTestTags.LINK_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    assertEquals("pass", repository.storedEntries.single().subscriptionId)
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.LINK_BANNER).assertCountEquals(0)
+    composeTestRule.onNodeWithText("1 entry linked").assertIsDisplayed()
+
+    composeTestRule.onNodeWithText(HistoryScreenTestTags.UNDO_ADD_ACTION).performClick()
+    composeTestRule.waitForIdle()
+    assertEquals(null, repository.storedEntries.single().subscriptionId)
+  }
+
+  @Test
+  fun historyScreen_hidesTheLinkBanner_whenNothingCanBeLinked() {
+    show(FakeEntryRepository(listOf(Entry(entryAt(today).timestampEpochMilli))))
+
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.LINK_BANNER).assertCountEquals(0)
   }
 }

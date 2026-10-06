@@ -70,6 +70,8 @@ object HistoryScreenTestTags {
   const val CANCEL_DELETE_BUTTON = "HistoryScreenCancelDeleteButton"
   const val ADD_PAST_ENTRY_BUTTON = "HistoryScreenAddPastEntryButton"
   const val UNDO_ADD_ACTION = "Undo"
+  const val LINK_BANNER = "HistoryScreenLinkBanner"
+  const val LINK_BUTTON = "HistoryScreenLinkButton"
 }
 
 private val ZONE = ZoneId.systemDefault()
@@ -103,6 +105,7 @@ fun HistoryScreen(
   val addResult by viewModel.addPastEntryResult.collectAsState()
   val snackbarHostState = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
+  val linkSuggestions by viewModel.linkSuggestions.collectAsState()
 
   // On success the sheet closes and an Undo snackbar appears. The snackbar is launched in its own
   // scope: clearing the result below would otherwise cancel this effect, and the snackbar with it.
@@ -225,6 +228,30 @@ fun HistoryScreen(
                   .testTag(HistoryScreenTestTags.ENTRY_LIST),
           contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
       ) {
+        if (linkSuggestions.isNotEmpty()) {
+          item(key = "link-banner") {
+            LinkBanner(
+                count = linkSuggestions.size,
+                onLink = {
+                  val links = linkSuggestions
+                  viewModel.onLinkEntries(links)
+                  scope.launch {
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                    val outcome =
+                        snackbarHostState.showSnackbar(
+                            message =
+                                if (links.size == 1) "1 entry linked"
+                                else "${links.size} entries linked",
+                            actionLabel = HistoryScreenTestTags.UNDO_ADD_ACTION,
+                            withDismissAction = true,
+                        )
+                    if (outcome == SnackbarResult.ActionPerformed) viewModel.onUnlinkEntries(links)
+                  }
+                },
+                modifier = Modifier.padding(vertical = 4.dp),
+            )
+          }
+        }
         entriesByDay.forEach { (day, entriesForDay) ->
           item(key = day.toEpochDay()) {
             DayHeader(label = dayLabel(day, today), entryCount = entriesForDay.size)
@@ -238,6 +265,32 @@ fun HistoryScreen(
             )
           }
         }
+      }
+    }
+  }
+}
+
+/** Offers to attach entries that belong to no subscription to the one that covers them. */
+@Composable
+private fun LinkBanner(count: Int, onLink: () -> Unit, modifier: Modifier = Modifier) {
+  Card(modifier = modifier.fillMaxWidth().testTag(HistoryScreenTestTags.LINK_BANNER)) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+      Text(
+          text =
+              if (count == 1) "1 entry isn't linked to a subscription"
+              else "$count entries aren't linked to a subscription",
+          style = MaterialTheme.typography.bodyMedium,
+          modifier = Modifier.weight(1f).padding(vertical = 12.dp),
+      )
+      TextButton(
+          onClick = onLink,
+          modifier = Modifier.testTag(HistoryScreenTestTags.LINK_BUTTON),
+      ) {
+        Text("Link")
       }
     }
   }

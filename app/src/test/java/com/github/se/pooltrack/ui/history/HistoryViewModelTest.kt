@@ -95,10 +95,10 @@ class HistoryViewModelTest {
   }
 
   @Test
-  fun onAddPastEntry_leavesSubscriptionEmpty_whenNoneWasValidThen() {
-    val later = subscription("later", "2026-01-01T00:00:00Z", null)
+  fun onAddPastEntry_leavesSubscriptionEmpty_whenEveryoneExpiredBeforeThen() {
+    val expired = subscription("expired", "2024-01-01T00:00:00Z", "2025-01-01T00:00:00Z")
     val repository = FakeEntryRepository()
-    val viewModel = HistoryViewModel(repository, FakeSubscriptionRepository(listOf(later)))
+    val viewModel = HistoryViewModel(repository, FakeSubscriptionRepository(listOf(expired)))
 
     viewModel.onAddPastEntry(past, now)
 
@@ -150,5 +150,80 @@ class HistoryViewModelTest {
     val second = subscription("second", "2025-06-01T00:00:00Z", null)
 
     assertEquals("second", subscriptionIdAt(past, listOf(first, second)))
+  }
+
+  @Test
+  fun onAddPastEntry_linksASubscriptionAddedToTheAppAfterTheEntry() {
+    // Subscriptions are "added" when put in the app, not when bought, so that date says nothing.
+    val addedToday = subscription("pass", "2026-10-06T10:00:00Z", "2026-09-14T08:39:00Z")
+    val repository = FakeEntryRepository()
+    val viewModel = HistoryViewModel(repository, FakeSubscriptionRepository(listOf(addedToday)))
+
+    viewModel.onAddPastEntry(past, now)
+
+    assertEquals("pass", repository.storedEntries.single().subscriptionId)
+  }
+
+  @Test
+  fun subscriptionIdAt_prefersTheOneExpiringSoonest_overOneThatReplacedIt() {
+    val old = subscription("old", "2026-10-01T00:00:00Z", "2026-09-14T00:00:00Z")
+    val replacement = subscription("new", "2026-10-02T00:00:00Z", "2027-09-14T00:00:00Z")
+
+    assertEquals("old", subscriptionIdAt(past, listOf(replacement, old)))
+  }
+
+  @Test
+  fun subscriptionIdAt_prefersADatedSubscription_overOneWithoutExpiry() {
+    val dated = subscription("dated", "2026-10-01T00:00:00Z", "2026-09-14T00:00:00Z")
+    val open = subscription("open", "2026-10-02T00:00:00Z", null)
+
+    assertEquals("dated", subscriptionIdAt(past, listOf(open, dated)))
+  }
+
+  private val unlinked = Entry(timestampEpochMilli = past.toEpochMilli(), subscriptionId = null)
+  private val expiredPass = subscription("pass", "2026-10-06T10:00:00Z", "2026-09-14T08:39:00Z")
+
+  @Test
+  fun linkSuggestions_listsUnlinkedEntriesThatASubscriptionCovers() {
+    val linked =
+        Entry(timestampEpochMilli = past.plusSeconds(60).toEpochMilli(), subscriptionId = "pass")
+    val viewModel =
+        HistoryViewModel(
+            FakeEntryRepository(listOf(unlinked, linked)),
+            FakeSubscriptionRepository(listOf(expiredPass)),
+        )
+
+    assertEquals(listOf(EntryLink(unlinked, "pass")), viewModel.linkSuggestions.value)
+  }
+
+  @Test
+  fun linkSuggestions_isEmpty_whenNoSubscriptionCoversTheEntry() {
+    val viewModel =
+        HistoryViewModel(FakeEntryRepository(listOf(unlinked)), FakeSubscriptionRepository())
+
+    assertEquals(emptyList<EntryLink>(), viewModel.linkSuggestions.value)
+  }
+
+  @Test
+  fun onLinkEntries_attachesTheEntriesToTheirSubscription_andClearsTheSuggestions() {
+    val repository = FakeEntryRepository(listOf(unlinked))
+    val viewModel = HistoryViewModel(repository, FakeSubscriptionRepository(listOf(expiredPass)))
+
+    viewModel.onLinkEntries(viewModel.linkSuggestions.value)
+
+    assertEquals(listOf(unlinked.copy(subscriptionId = "pass")), repository.storedEntries)
+    assertEquals(emptyList<EntryLink>(), viewModel.linkSuggestions.value)
+  }
+
+  @Test
+  fun onUnlinkEntries_takesTheLinkBack() {
+    val repository = FakeEntryRepository(listOf(unlinked))
+    val viewModel = HistoryViewModel(repository, FakeSubscriptionRepository(listOf(expiredPass)))
+    val links = viewModel.linkSuggestions.value
+    viewModel.onLinkEntries(links)
+
+    viewModel.onUnlinkEntries(links)
+
+    assertEquals(listOf(unlinked), repository.storedEntries)
   }
 }
