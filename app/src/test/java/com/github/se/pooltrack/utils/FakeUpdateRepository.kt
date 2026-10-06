@@ -29,7 +29,12 @@ class FakeUpdateRepository(
   /** The APKs [install] was called with, in order. */
   val installedApks = mutableListOf<File>()
 
+  /** How many times [checkForUpdate] was called. */
+  var checkCount = 0
+    private set
+
   override suspend fun checkForUpdate(currentVersion: String): AppUpdate? {
+    checkCount++
     checkedVersion = currentVersion
     return update
   }

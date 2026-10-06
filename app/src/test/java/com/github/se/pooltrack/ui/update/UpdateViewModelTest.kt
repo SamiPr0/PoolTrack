@@ -203,26 +203,71 @@ class UpdateViewModelTest {
   }
 
   @Test
-  fun onDismiss_hidesThePrompt() {
-    val viewModel = viewModel(FakeUpdateRepository(update = UPDATE))
-
-    viewModel.onDismiss()
-
-    assertEquals(UpdateUiState.None, viewModel.state.value)
-  }
-
-  @Test
-  fun onDismiss_cancelsTheDownloadInProgress() {
+  fun onCancelDownload_stopsTheDownload_butStillRequiresTheUpdate() {
     val downloads = MutableSharedFlow<DownloadStatus>(extraBufferCapacity = 8)
     val repository = FakeUpdateRepository(update = UPDATE, downloadFlow = downloads)
     val viewModel = viewModel(repository)
     viewModel.onUpdateClick()
     assertEquals(1, downloads.subscriptionCount.value)
 
-    viewModel.onDismiss()
+    viewModel.onCancelDownload()
 
     assertEquals(0, downloads.subscriptionCount.value)
-    assertEquals(UpdateUiState.None, viewModel.state.value)
+    assertEquals(UpdateUiState.Available(UPDATE), viewModel.state.value)
     assertNull(repository.installedApks.firstOrNull())
+  }
+
+  @Test
+  fun onCancelDownload_doesNothing_whenNotDownloading() {
+    val viewModel = viewModel(FakeUpdateRepository(update = UPDATE))
+
+    viewModel.onCancelDownload()
+
+    assertEquals(UpdateUiState.Available(UPDATE), viewModel.state.value)
+  }
+
+  @Test
+  fun onResume_checksAgain_onceTheIntervalHasPassed() {
+    var now = 0L
+    val repository = FakeUpdateRepository(update = null)
+    val viewModel = UpdateViewModel(repository, "1.1.0", now = { now })
+    assertEquals(1, repository.checkCount)
+
+    now = RECHECK_INTERVAL_MILLIS - 1
+    viewModel.onResume()
+    assertEquals(1, repository.checkCount)
+
+    repository.update = UPDATE
+    now = RECHECK_INTERVAL_MILLIS
+    viewModel.onResume()
+
+    assertEquals(2, repository.checkCount)
+    assertEquals(UpdateUiState.Available(UPDATE), viewModel.state.value)
+  }
+
+  @Test
+  fun onResume_doesNotCheckAgain_whileAnUpdateIsRequired() {
+    var now = 0L
+    val repository = FakeUpdateRepository(update = UPDATE)
+    val viewModel = UpdateViewModel(repository, "1.1.0", now = { now })
+
+    now = RECHECK_INTERVAL_MILLIS * 2
+    viewModel.onResume()
+
+    assertEquals(1, repository.checkCount)
+    assertEquals(UpdateUiState.Available(UPDATE), viewModel.state.value)
+  }
+
+  @Test
+  fun onResume_staysUsable_whenTheRecheckFindsNothing() {
+    var now = 0L
+    val repository = FakeUpdateRepository(update = null)
+    val viewModel = UpdateViewModel(repository, "1.1.0", now = { now })
+
+    now = RECHECK_INTERVAL_MILLIS
+    viewModel.onResume()
+
+    assertEquals(2, repository.checkCount)
+    assertEquals(UpdateUiState.None, viewModel.state.value)
   }
 }
