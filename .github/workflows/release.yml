@@ -69,6 +69,16 @@ jobs:
           chmod +x ./gradlew
           ./gradlew assembleRelease
 
+      # Google sign-in reads this string by name, which the resource shrinker can't see. Without
+      # it the app says "Google sign-in isn't set up yet", so never publish an APK that lacks it.
+      - name: Check the APK can sign in with Google
+        run: |
+          AAPT2="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2"
+          if ! "$AAPT2" dump resources app/build/outputs/apk/release/app-release.apk | grep -q "string/default_web_client_id"; then
+            echo "::error::The release APK has no default_web_client_id, so Google sign-in would fail."
+            exit 1
+          fi
+
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
