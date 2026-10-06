@@ -18,6 +18,18 @@ interface EntryRepository {
   suspend fun addEntry(entry: Entry)
 
   /**
+   * Changes which subscription a recorded entry belongs to. Does nothing if [entry] is no longer
+   * recorded.
+   *
+   * @param entry The entry to change.
+   * @param subscriptionId The subscription it belongs to, or `null` for none.
+   */
+  suspend fun setSubscription(entry: Entry, subscriptionId: String?) {
+    deleteEntry(entry)
+    addEntry(entry.copy(subscriptionId = subscriptionId))
+  }
+
+  /**
    * Removes a recorded entry, e.g. to undo a misclick.
    *
    * @param entry The entry to remove.
