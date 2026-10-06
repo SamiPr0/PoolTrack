@@ -12,10 +12,12 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
+import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.NavigationTestTags
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.utils.FakeEntryRepository
+import com.github.se.pooltrack.utils.FakeSubscriptionRepository
 import com.github.se.pooltrack.utils.MainDispatcherRule
 import io.mockk.mockk
 import io.mockk.verify
@@ -48,7 +50,7 @@ class HistoryScreenRobolectricTest {
       )
 
   private fun show(repository: FakeEntryRepository, navigationActions: NavigationActions? = null) {
-    val viewModel = HistoryViewModel(repository)
+    val viewModel = HistoryViewModel(repository, FakeSubscriptionRepository())
     composeTestRule.setContent { HistoryScreen(viewModel, navigationActions) }
   }
 
@@ -233,14 +235,74 @@ class HistoryScreenRobolectricTest {
   fun historyViewModel_readsProviderRepository_whenCreatedWithDefaults() {
     val entry = entryAt(today)
     EntryRepositoryProvider.repository = FakeEntryRepository(listOf(entry))
+    SubscriptionRepositoryProvider.repository = FakeSubscriptionRepository()
     try {
       assertEquals(listOf(entry), HistoryViewModel().entries.value)
     } finally {
-      // The provider is a lateinit singleton: un-initialise it so later tests are unaffected.
-      EntryRepositoryProvider::class.java.getDeclaredField("repository").apply {
-        isAccessible = true
-        set(EntryRepositoryProvider, null)
+      // The providers are lateinit singletons: un-initialise them so later tests are unaffected.
+      listOf(EntryRepositoryProvider, SubscriptionRepositoryProvider).forEach { provider ->
+        provider::class.java.getDeclaredField("repository").apply {
+          isAccessible = true
+          set(provider, null)
+        }
       }
     }
+  }
+
+  private fun addYesterdayAtNoon() {
+    composeTestRule.onNodeWithTag(HistoryScreenTestTags.ADD_PAST_ENTRY_BUTTON).performClick()
+    composeTestRule.onNodeWithTag(AddPastEntrySheetTestTags.YESTERDAY_CHIP).performClick()
+    composeTestRule.onNodeWithTag(AddPastEntrySheetTestTags.ADD_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+  }
+
+  @Test
+  fun historyScreen_opensTheAddSheet_whenTheAddButtonIsTapped() {
+    show(FakeEntryRepository())
+
+    composeTestRule.onNodeWithTag(HistoryScreenTestTags.ADD_PAST_ENTRY_BUTTON).performClick()
+
+    composeTestRule.onNodeWithTag(AddPastEntrySheetTestTags.SHEET).assertIsDisplayed()
+  }
+
+  @Test
+  fun historyScreen_addsAPastEntryAndClosesTheSheet_withAnUndoSnackbar() {
+    val repository = FakeEntryRepository()
+    show(repository)
+
+    addYesterdayAtNoon()
+
+    val expected = today.minusDays(1).atTime(12, 0).atZone(zone).toInstant().toEpochMilli()
+    assertEquals(listOf(expected), repository.storedEntries.map { it.timestampEpochMilli })
+    composeTestRule.onAllNodesWithTag(AddPastEntrySheetTestTags.SHEET).assertCountEquals(0)
+    composeTestRule.onNodeWithText("Entry added").assertIsDisplayed()
+  }
+
+  @Test
+  fun historyScreen_removesTheEntry_whenUndoIsTapped() {
+    val repository = FakeEntryRepository()
+    show(repository)
+    addYesterdayAtNoon()
+
+    composeTestRule.onNodeWithText(HistoryScreenTestTags.UNDO_ADD_ACTION).performClick()
+    composeTestRule.waitForIdle()
+
+    assertEquals(emptyList<Entry>(), repository.storedEntries)
+  }
+
+  @Test
+  fun historyScreen_showsAnInlineError_whenTheEntryAlreadyExists() {
+    val repository = FakeEntryRepository()
+    show(repository)
+    addYesterdayAtNoon()
+
+    // The sheet remembers the day and time just added, so adding again hits the same instant.
+    composeTestRule.onNodeWithTag(HistoryScreenTestTags.ADD_PAST_ENTRY_BUTTON).performClick()
+    composeTestRule.onNodeWithTag(AddPastEntrySheetTestTags.ADD_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(AddPastEntrySheetTestTags.SHEET).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(AddPastEntrySheetTestTags.ERROR).assertIsDisplayed()
+    assertEquals(1, repository.storedEntries.size)
   }
 }

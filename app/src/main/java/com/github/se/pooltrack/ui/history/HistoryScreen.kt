@@ -11,23 +11,30 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,11 +52,13 @@ import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import java.time.Duration
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
 import java.time.format.FormatStyle
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 object HistoryScreenTestTags {
   const val EMPTY_MESSAGE = "HistoryScreenEmptyMessage"
@@ -59,6 +68,8 @@ object HistoryScreenTestTags {
   const val DELETE_BUTTON = "HistoryScreenDeleteButton"
   const val CONFIRM_DELETE_BUTTON = "HistoryScreenConfirmDeleteButton"
   const val CANCEL_DELETE_BUTTON = "HistoryScreenCancelDeleteButton"
+  const val ADD_PAST_ENTRY_BUTTON = "HistoryScreenAddPastEntryButton"
+  const val UNDO_ADD_ACTION = "Undo"
 }
 
 private val ZONE = ZoneId.systemDefault()
@@ -85,6 +96,49 @@ fun HistoryScreen(
 ) {
   val entries by viewModel.entries.collectAsState()
   var entryPendingDeletion by remember { mutableStateOf<Entry?>(null) }
+  var showAddSheet by remember { mutableStateOf(false) }
+  // Remembered across openings, so adding several entries from the same day takes one tap each.
+  var lastAddedDate by remember { mutableStateOf(LocalDate.now(ZONE)) }
+  var lastAddedTime by remember { mutableStateOf(LocalTime.of(12, 0)) }
+  val addResult by viewModel.addPastEntryResult.collectAsState()
+  val snackbarHostState = remember { SnackbarHostState() }
+  val scope = rememberCoroutineScope()
+
+  // On success the sheet closes and an Undo snackbar appears. The snackbar is launched in its own
+  // scope: clearing the result below would otherwise cancel this effect, and the snackbar with it.
+  LaunchedEffect(addResult) {
+    val added = addResult as? AddPastEntryResult.Added ?: return@LaunchedEffect
+    showAddSheet = false
+    viewModel.onAddPastEntryResultHandled()
+    scope.launch {
+      snackbarHostState.currentSnackbarData?.dismiss()
+      val outcome =
+          snackbarHostState.showSnackbar(
+              message = "Entry added",
+              actionLabel = HistoryScreenTestTags.UNDO_ADD_ACTION,
+              withDismissAction = true,
+          )
+      if (outcome == SnackbarResult.ActionPerformed) viewModel.onDeleteEntry(added.entry)
+    }
+  }
+
+  if (showAddSheet) {
+    AddPastEntrySheet(
+        initialDate = lastAddedDate,
+        initialTime = lastAddedTime,
+        error = (addResult as? AddPastEntryResult.Refused)?.error,
+        onInputChanged = viewModel::onAddPastEntryResultHandled,
+        onAdd = { date, time ->
+          lastAddedDate = date
+          lastAddedTime = time
+          viewModel.onAddPastEntry(date.atTime(time).atZone(ZONE).toInstant())
+        },
+        onDismiss = {
+          showAddSheet = false
+          viewModel.onAddPastEntryResultHandled()
+        },
+    )
+  }
 
   entryPendingDeletion?.let { entry ->
     AlertDialog(
@@ -120,6 +174,15 @@ fun HistoryScreen(
 
   Scaffold(
       topBar = { TopNavigationMenu(Screen.History) },
+      snackbarHost = { SnackbarHost(snackbarHostState) },
+      floatingActionButton = {
+        ExtendedFloatingActionButton(
+            onClick = { showAddSheet = true },
+            icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+            text = { Text("Add past entry") },
+            modifier = Modifier.testTag(HistoryScreenTestTags.ADD_PAST_ENTRY_BUTTON),
+        )
+      },
       bottomBar = {
         BottomNavigationMenu(
             selectedTab = Tab.History,
@@ -160,7 +223,7 @@ fun HistoryScreen(
               Modifier.fillMaxSize()
                   .padding(paddingValues)
                   .testTag(HistoryScreenTestTags.ENTRY_LIST),
-          contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+          contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
       ) {
         entriesByDay.forEach { (day, entriesForDay) ->
           item(key = day.toEpochDay()) {
