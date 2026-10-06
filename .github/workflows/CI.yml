@@ -29,6 +29,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      # A tag can be moved to different code; a commit SHA cannot. The release job holds the signing
+      # key, so every action in every workflow must stay pinned.
+      - name: Check actions are pinned to commit SHAs
+        run: |
+          if grep -rnE '^\s*(-\s*)?uses:' .github/workflows | grep -vE '@[0-9a-f]{40}( |$)'; then
+            echo "::error::Pin the actions above to a full commit SHA, with the tag as a comment."
+            exit 1
+          fi
+
       - name: Setup JDK
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
