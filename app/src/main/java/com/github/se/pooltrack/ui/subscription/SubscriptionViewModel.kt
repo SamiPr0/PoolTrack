@@ -8,6 +8,7 @@ import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
 import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.SubscriptionRepository
 import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
+import com.github.se.pooltrack.model.subscription.sortedByExpirationDescending
 import java.time.Instant
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,9 +30,11 @@ class SubscriptionViewModel(
     private val entryRepository: EntryRepository = EntryRepositoryProvider.repository,
 ) : ViewModel() {
 
+  /** The subscriptions, farthest expiration first (see [sortedByExpirationDescending]). */
   val subscriptions: StateFlow<List<Subscription>> =
       subscriptionRepository
           .getSubscriptions()
+          .map { it.sortedByExpirationDescending() }
           .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
   val activeSubscription: StateFlow<Subscription?> =
