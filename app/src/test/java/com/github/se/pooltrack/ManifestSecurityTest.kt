@@ -5,10 +5,13 @@ import android.content.pm.ComponentInfo
 import android.content.pm.PackageManager
 import androidx.core.content.FileProvider
 import java.io.File
+import java.lang.reflect.Modifier
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeFalse
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -19,6 +22,23 @@ import org.robolectric.RuntimeEnvironment
 class ManifestSecurityTest {
 
   private val context = RuntimeEnvironment.getApplication()
+
+  // FileProvider caches each authority's folder mapping in a static map for the whole JVM, while
+  // Robolectric gives every test a fresh data folder. A mapping cached by an earlier test points at
+  // that test's folder and makes later FileProvider calls fail, so it's cleared on both sides.
+  @Before
+  @After
+  fun clearFileProviderCache() {
+    val caches =
+        FileProvider::class.java.declaredFields.filter {
+          Modifier.isStatic(it.modifiers) && Map::class.java.isAssignableFrom(it.type)
+        }
+    check(caches.isNotEmpty()) { "FileProvider no longer has a static cache to clear" }
+    caches.forEach { field ->
+      field.isAccessible = true
+      (field.get(null) as MutableMap<*, *>).clear()
+    }
+  }
 
   @Test
   fun application_disallowsCloudBackup() {
