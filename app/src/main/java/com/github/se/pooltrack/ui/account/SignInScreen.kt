@@ -75,6 +75,7 @@ fun SignInScreen(viewModel: AccountViewModel = viewModel()) {
       ) {
         Text("Sign in with Google")
       }
+      AppVersionText(modifier = Modifier.padding(top = 32.dp))
     }
   }
 }
