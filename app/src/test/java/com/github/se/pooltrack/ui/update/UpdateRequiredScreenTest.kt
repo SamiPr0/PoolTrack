@@ -20,14 +20,14 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
-class UpdateDialogTest {
+class UpdateRequiredScreenTest {
 
   @get:Rule(order = 0) val mainDispatcherRule = MainDispatcherRule()
   @get:Rule(order = 1) val composeTestRule = createComposeRule()
 
   private lateinit var originalLocale: Locale
   private var confirmed = 0
-  private var dismissed = 0
+  private var cancelled = 0
 
   @Before
   fun setUp() {
@@ -42,7 +42,7 @@ class UpdateDialogTest {
 
   private fun show(state: UpdateUiState) {
     composeTestRule.setContent {
-      UpdateDialogContent(state, onConfirm = { confirmed++ }, onDismiss = { dismissed++ })
+      UpdateRequiredContent(state, onConfirm = { confirmed++ }, onCancelDownload = { cancelled++ })
     }
   }
 
@@ -51,130 +51,138 @@ class UpdateDialogTest {
   }
 
   @Test
-  fun dialog_showsNothing_whenThereIsNoUpdate() {
+  fun screen_showsNothing_whenThereIsNoUpdate() {
     show(UpdateUiState.None)
 
-    assertTagIsGone(UpdateDialogTestTags.DIALOG_TITLE)
+    assertTagIsGone(UpdateRequiredScreenTestTags.SCREEN)
   }
 
   @Test
-  fun dialog_offersTheUpdate_withItsVersionSizeAndNotes() {
+  fun screen_requiresTheUpdate_withItsVersionSizeAndNotes() {
     show(UpdateUiState.Available(UPDATE))
 
     composeTestRule
-        .onNodeWithTag(UpdateDialogTestTags.DIALOG_TITLE)
-        .assertTextEquals("Update available")
+        .onNodeWithTag(UpdateRequiredScreenTestTags.TITLE)
+        .assertTextEquals("Update required")
     composeTestRule
-        .onNodeWithTag(UpdateDialogTestTags.VERSION)
+        .onNodeWithTag(UpdateRequiredScreenTestTags.MESSAGE)
+        .assertTextEquals("Install the new version to keep using PoolTrack.")
+    composeTestRule
+        .onNodeWithTag(UpdateRequiredScreenTestTags.VERSION)
         .assertTextEquals("Version 1.2.0 (12.3 MB)")
-    composeTestRule.onNodeWithTag(UpdateDialogTestTags.NOTES).assertTextEquals("• Faster start")
+    composeTestRule
+        .onNodeWithTag(UpdateRequiredScreenTestTags.NOTES)
+        .assertTextEquals("• Faster start")
     composeTestRule.onNodeWithText("Update").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Later").assertIsDisplayed()
   }
 
   @Test
   fun dialog_hidesTheSizeAndNotes_whenTheReleaseHasNone() {
     show(UpdateUiState.Available(UPDATE.copy(sizeBytes = 0, notes = "")))
 
-    composeTestRule.onNodeWithTag(UpdateDialogTestTags.VERSION).assertTextEquals("Version 1.2.0")
-    assertTagIsGone(UpdateDialogTestTags.NOTES)
+    composeTestRule
+        .onNodeWithTag(UpdateRequiredScreenTestTags.VERSION)
+        .assertTextEquals("Version 1.2.0")
+    assertTagIsGone(UpdateRequiredScreenTestTags.NOTES)
   }
 
   @Test
-  fun dialog_callsBack_whenUpdateOrLaterIsTapped() {
+  fun screen_offersNoWayToSkipTheUpdate() {
     show(UpdateUiState.Available(UPDATE))
 
-    composeTestRule.onNodeWithTag(UpdateDialogTestTags.CONFIRM_BUTTON).performClick()
+    composeTestRule.onNodeWithTag(UpdateRequiredScreenTestTags.CONFIRM_BUTTON).performClick()
     assertEquals(1, confirmed)
-    assertEquals(0, dismissed)
-
-    composeTestRule.onNodeWithTag(UpdateDialogTestTags.DISMISS_BUTTON).performClick()
-    assertEquals(1, dismissed)
+    assertTagIsGone(UpdateRequiredScreenTestTags.CANCEL_BUTTON)
+    composeTestRule.onNodeWithText("Later").assertDoesNotExist()
   }
 
   @Test
-  fun dialog_showsTheDownloadPercentage_andOnlyOffersCancel() {
+  fun screen_showsTheDownloadPercentage_andOnlyOffersCancel() {
     show(UpdateUiState.Downloading(UPDATE, 0.42f))
 
     composeTestRule
-        .onNodeWithTag(UpdateDialogTestTags.DIALOG_TITLE)
+        .onNodeWithTag(UpdateRequiredScreenTestTags.TITLE)
         .assertTextEquals("Downloading update")
-    composeTestRule.onNodeWithTag(UpdateDialogTestTags.PROGRESS).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(UpdateRequiredScreenTestTags.PROGRESS).assertIsDisplayed()
     composeTestRule.onNodeWithText("42%").assertIsDisplayed()
-    assertTagIsGone(UpdateDialogTestTags.CONFIRM_BUTTON)
+    assertTagIsGone(UpdateRequiredScreenTestTags.CONFIRM_BUTTON)
 
-    composeTestRule.onNodeWithTag(UpdateDialogTestTags.DISMISS_BUTTON).assertTextEquals("Cancel")
-    composeTestRule.onNodeWithTag(UpdateDialogTestTags.DISMISS_BUTTON).performClick()
-    assertEquals(1, dismissed)
+    composeTestRule
+        .onNodeWithTag(UpdateRequiredScreenTestTags.CANCEL_BUTTON)
+        .assertTextEquals("Cancel")
+    composeTestRule.onNodeWithTag(UpdateRequiredScreenTestTags.CANCEL_BUTTON).performClick()
+    assertEquals(1, cancelled)
   }
 
   @Test
-  fun dialog_showsAnIndeterminateBar_untilTheSizeIsKnown() {
+  fun screen_showsAnIndeterminateBar_untilTheSizeIsKnown() {
     show(UpdateUiState.Downloading(UPDATE, null))
 
-    composeTestRule.onNodeWithTag(UpdateDialogTestTags.PROGRESS).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(UpdateRequiredScreenTestTags.PROGRESS).assertIsDisplayed()
     composeTestRule.onNodeWithText("Starting download…").assertIsDisplayed()
   }
 
   @Test
-  fun dialog_tellsTheAppWillClose_whenReadyToInstall() {
+  fun screen_tellsTheAppWillClose_whenReadyToInstall() {
     show(UpdateUiState.ReadyToInstall(UPDATE, APK))
 
     composeTestRule
-        .onNodeWithTag(UpdateDialogTestTags.DIALOG_TITLE)
+        .onNodeWithTag(UpdateRequiredScreenTestTags.TITLE)
         .assertTextEquals("Ready to install")
     composeTestRule
-        .onNodeWithTag(UpdateDialogTestTags.MESSAGE)
+        .onNodeWithTag(UpdateRequiredScreenTestTags.MESSAGE)
         .assertTextEquals("PoolTrack will close to finish the update. Open it again afterwards.")
-    composeTestRule.onNodeWithTag(UpdateDialogTestTags.CONFIRM_BUTTON).assertTextEquals("Install")
+    composeTestRule
+        .onNodeWithTag(UpdateRequiredScreenTestTags.CONFIRM_BUTTON)
+        .assertTextEquals("Install")
   }
 
   @Test
-  fun dialog_explainsHowToAllowInstalls_whenPermissionIsNeeded() {
+  fun screen_explainsHowToAllowInstalls_whenPermissionIsNeeded() {
     show(UpdateUiState.ReadyToInstall(UPDATE, APK, needsPermission = true))
 
     composeTestRule
-        .onNodeWithTag(UpdateDialogTestTags.MESSAGE)
+        .onNodeWithTag(UpdateRequiredScreenTestTags.MESSAGE)
         .assertTextEquals(
             "Allow PoolTrack to install apps in the settings that just opened, then come back here."
         )
   }
 
   @Test
-  fun dialog_showsTheError_andOffersARetry() {
+  fun screen_showsTheError_andOnlyOffersARetry() {
     show(UpdateUiState.Failed(UPDATE, "Checksum mismatch"))
 
     composeTestRule
-        .onNodeWithTag(UpdateDialogTestTags.DIALOG_TITLE)
+        .onNodeWithTag(UpdateRequiredScreenTestTags.TITLE)
         .assertTextEquals("Update failed")
     composeTestRule
-        .onNodeWithTag(UpdateDialogTestTags.MESSAGE)
+        .onNodeWithTag(UpdateRequiredScreenTestTags.MESSAGE)
         .assertTextEquals("Checksum mismatch")
-    composeTestRule.onNodeWithTag(UpdateDialogTestTags.CONFIRM_BUTTON).assertTextEquals("Retry")
-    composeTestRule.onNodeWithTag(UpdateDialogTestTags.DISMISS_BUTTON).assertTextEquals("Close")
+    composeTestRule
+        .onNodeWithTag(UpdateRequiredScreenTestTags.CONFIRM_BUTTON)
+        .assertTextEquals("Retry")
+    assertTagIsGone(UpdateRequiredScreenTestTags.CANCEL_BUTTON)
   }
 
   @Test
-  fun updateDialog_walksThroughDownloadAndInstall_withViewModel() {
+  fun updateRequiredScreen_walksThroughDownloadAndInstall_withViewModel() {
     val repository = FakeUpdateRepository(update = UPDATE)
     val viewModel = UpdateViewModel(repository, "1.1.0")
-    composeTestRule.setContent { UpdateDialog(viewModel) }
+    composeTestRule.setContent { UpdateRequiredScreen(viewModel) }
 
     composeTestRule
-        .onNodeWithTag(UpdateDialogTestTags.DIALOG_TITLE)
-        .assertTextEquals("Update available")
+        .onNodeWithTag(UpdateRequiredScreenTestTags.TITLE)
+        .assertTextEquals("Update required")
 
-    composeTestRule.onNodeWithTag(UpdateDialogTestTags.CONFIRM_BUTTON).performClick()
+    composeTestRule.onNodeWithTag(UpdateRequiredScreenTestTags.CONFIRM_BUTTON).performClick()
     assertEquals(listOf(APK), repository.installedApks)
     composeTestRule
-        .onNodeWithTag(UpdateDialogTestTags.DIALOG_TITLE)
+        .onNodeWithTag(UpdateRequiredScreenTestTags.TITLE)
         .assertTextEquals("Ready to install")
 
-    composeTestRule.onNodeWithTag(UpdateDialogTestTags.CONFIRM_BUTTON).performClick()
+    composeTestRule.onNodeWithTag(UpdateRequiredScreenTestTags.CONFIRM_BUTTON).performClick()
     assertEquals(listOf(APK, APK), repository.installedApks)
-
-    composeTestRule.onNodeWithTag(UpdateDialogTestTags.DISMISS_BUTTON).performClick()
-    assertTagIsGone(UpdateDialogTestTags.DIALOG_TITLE)
+    composeTestRule.onNodeWithTag(UpdateRequiredScreenTestTags.SCREEN).assertIsDisplayed()
   }
 
   @Test

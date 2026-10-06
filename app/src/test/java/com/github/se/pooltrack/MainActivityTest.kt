@@ -14,7 +14,7 @@ import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
 import com.github.se.pooltrack.model.update.UpdateRepositoryProvider
 import com.github.se.pooltrack.ui.account.SignInScreenTestTags
 import com.github.se.pooltrack.ui.navigation.NavigationTestTags
-import com.github.se.pooltrack.ui.update.UpdateDialogTestTags
+import com.github.se.pooltrack.ui.update.UpdateRequiredScreenTestTags
 import com.github.se.pooltrack.utils.FakeAuthRepository
 import com.github.se.pooltrack.utils.FakeAuthRepository.Companion.GOOGLE_USER
 import com.github.se.pooltrack.utils.FakeEntryRepository
@@ -72,24 +72,39 @@ class MainActivityTest {
   }
 
   @Test
-  fun onCreate_offersTheUpdate_whenANewReleaseExists() {
+  fun onCreate_blocksTheApp_untilANewReleaseIsInstalled() {
     UpdateRepositoryProvider.repository = FakeUpdateRepository(update = FakeUpdateRepository.UPDATE)
     AuthRepositoryProvider.repository = FakeAuthRepository(initialUser = GOOGLE_USER)
 
     ActivityScenario.launch(MainActivity::class.java).use {
       composeRule
-          .onNodeWithTag(UpdateDialogTestTags.DIALOG_TITLE)
-          .assertTextEquals("Update available")
+          .onNodeWithTag(UpdateRequiredScreenTestTags.TITLE)
+          .assertTextEquals("Update required")
+      composeRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertDoesNotExist()
+      composeRule.onNodeWithTag(NavigationTestTags.TOP_BAR_TITLE).assertDoesNotExist()
     }
   }
 
   @Test
-  fun onCreate_offersTheUpdate_beforeSigningIn() {
+  fun onCreate_requiresTheUpdate_beforeSigningIn() {
     UpdateRepositoryProvider.repository = FakeUpdateRepository(update = FakeUpdateRepository.UPDATE)
     AuthRepositoryProvider.repository = FakeAuthRepository(initialUser = null)
 
     ActivityScenario.launch(MainActivity::class.java).use {
-      composeRule.onNodeWithTag(UpdateDialogTestTags.DIALOG_TITLE).assertIsDisplayed()
+      composeRule.onNodeWithTag(UpdateRequiredScreenTestTags.SCREEN).assertIsDisplayed()
+      composeRule.onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON).assertDoesNotExist()
+    }
+  }
+
+  @Test
+  fun onCreate_keepsTheAppUsable_whenNoUpdateIsKnown() {
+    // An offline check reports no update, so the pass stays reachable at the pool entrance.
+    UpdateRepositoryProvider.repository = FakeUpdateRepository(update = null)
+    AuthRepositoryProvider.repository = FakeAuthRepository(initialUser = GOOGLE_USER)
+
+    ActivityScenario.launch(MainActivity::class.java).use {
+      composeRule.onNodeWithTag(UpdateRequiredScreenTestTags.SCREEN).assertDoesNotExist()
+      composeRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertIsDisplayed()
     }
   }
 

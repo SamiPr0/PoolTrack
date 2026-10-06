@@ -18,7 +18,10 @@ import kotlinx.coroutines.launch
 
 /** What the update prompt currently shows. */
 sealed interface UpdateUiState {
-  /** Nothing to show: the app is up to date, the check failed, or the user dismissed the prompt. */
+  /**
+   * The app can be used: it is up to date, or the check could not reach GitHub (e.g. offline at the
+   * pool), in which case the pass must stay reachable.
+   */
   data object None : UpdateUiState
 
   data class Available(val update: AppUpdate) : UpdateUiState
@@ -39,28 +42,35 @@ sealed interface UpdateUiState {
   data class Failed(val update: AppUpdate, val message: String) : UpdateUiState
 }
 
+/** How often the app looks for a new release again when it comes back to the foreground. */
+internal const val RECHECK_INTERVAL_MILLIS = 15 * 60 * 1000L
+
 /**
- * ViewModel behind the update prompt. It checks for a new release once, when it is created, then
- * walks the user through downloading and installing it: the installer opens by itself as soon as
- * the download is done, so updating takes a single tap.
+ * ViewModel behind the mandatory update. It checks for a new release when it is created, and again
+ * when the app comes back to the foreground (at most every [RECHECK_INTERVAL_MILLIS]). Any state
+ * but [UpdateUiState.None] means the app must not be used until the update is installed, so there
+ * is no way to dismiss it: it walks the user through downloading and installing instead, and the
+ * installer opens by itself as soon as the download is done.
  *
  * @property repository Where releases are found, downloaded and installed.
  * @property currentVersion The version of the running app.
+ * @property now The current time in epoch milliseconds, used to space out the checks.
  */
 class UpdateViewModel(
     private val repository: UpdateRepository = UpdateRepositoryProvider.repository,
     private val currentVersion: String = BuildConfig.VERSION_NAME,
+    private val now: () -> Long = System::currentTimeMillis,
 ) : ViewModel() {
 
   private val _state = MutableStateFlow<UpdateUiState>(UpdateUiState.None)
   val state: StateFlow<UpdateUiState> = _state.asStateFlow()
 
   private var downloadJob: Job? = null
+  private var checkJob: Job? = null
+  private var lastCheckMillis = 0L
 
   init {
-    viewModelScope.launch {
-      repository.checkForUpdate(currentVersion)?.let { _state.value = UpdateUiState.Available(it) }
-    }
+    checkForUpdate()
   }
 
   /** Starts downloading the update, or retries after a failed download. */
@@ -82,18 +92,35 @@ class UpdateViewModel(
 
   /**
    * To be called whenever the app comes back to the foreground. If the user was sent to the
-   * settings to allow installs and did so, the installation carries on without another tap.
+   * settings to allow installs and did so, the installation carries on without another tap. While
+   * the app is usable, it looks for a new release again if the last check is old enough.
    */
   fun onResume() {
-    val current = _state.value as? UpdateUiState.ReadyToInstall ?: return
-    if (current.needsPermission && repository.canInstall()) install(current.update, current.apk)
+    when (val current = _state.value) {
+      is UpdateUiState.ReadyToInstall ->
+          if (current.needsPermission && repository.canInstall()) {
+            install(current.update, current.apk)
+          }
+      UpdateUiState.None -> if (now() - lastCheckMillis >= RECHECK_INTERVAL_MILLIS) checkForUpdate()
+      else -> Unit
+    }
   }
 
-  /** Hides the prompt, cancelling the download if there is one. It reappears on the next launch. */
-  fun onDismiss() {
+  /** Stops the download in progress. The update is still required, so it is offered again. */
+  fun onCancelDownload() {
+    val current = _state.value as? UpdateUiState.Downloading ?: return
     downloadJob?.cancel()
     downloadJob = null
-    _state.value = UpdateUiState.None
+    _state.value = UpdateUiState.Available(current.update)
+  }
+
+  private fun checkForUpdate() {
+    if (checkJob?.isActive == true) return
+    lastCheckMillis = now()
+    checkJob = viewModelScope.launch {
+      val update = repository.checkForUpdate(currentVersion) ?: return@launch
+      if (_state.value == UpdateUiState.None) _state.value = UpdateUiState.Available(update)
+    }
   }
 
   private fun download(update: AppUpdate) {

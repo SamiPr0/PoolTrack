@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -40,7 +41,9 @@ import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.subscription.SubscriptionQuickViewScreen
 import com.github.se.pooltrack.ui.subscription.SubscriptionScreen
 import com.github.se.pooltrack.ui.theme.PoolTrackTheme
-import com.github.se.pooltrack.ui.update.UpdateDialog
+import com.github.se.pooltrack.ui.update.UpdateRequiredScreen
+import com.github.se.pooltrack.ui.update.UpdateUiState
+import com.github.se.pooltrack.ui.update.UpdateViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -92,12 +95,22 @@ class MainActivity : ComponentActivity() {
 /**
  * `PoolTrackApp` is the main composable function that sets up the whole app UI. Gated behind Google
  * sign-in - [SignInScreen] is shown instead until a real (non-anonymous) account is signed in -
- * since subscriptions and entries are only meaningful once backed up to one. [UpdateDialog] sits
- * above both, so a new release is offered even before signing in.
+ * since subscriptions and entries are only meaningful once backed up to one. A newer release takes
+ * precedence over both: [UpdateRequiredScreen] replaces the whole app until it is installed. If the
+ * check can't reach GitHub (e.g. offline at the pool), the app stays usable so the pass can still
+ * be shown.
  */
 @Composable
-fun PoolTrackApp(accountViewModel: AccountViewModel = viewModel()) {
-  UpdateDialog()
+fun PoolTrackApp(
+    accountViewModel: AccountViewModel = viewModel(),
+    updateViewModel: UpdateViewModel = viewModel(),
+) {
+  LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { updateViewModel.onResume() }
+  val updateState by updateViewModel.state.collectAsState()
+  if (updateState !is UpdateUiState.None) {
+    UpdateRequiredScreen(updateViewModel)
+    return
+  }
 
   val currentUser by accountViewModel.currentUser.collectAsState()
   val user = currentUser
