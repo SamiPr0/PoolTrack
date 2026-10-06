@@ -58,6 +58,28 @@ class FakeSubscriptionRepository(
     return subscription
   }
 
+  override suspend fun updateSubscription(
+      id: String,
+      displayName: String,
+      expiresAtEpochMilli: Long?,
+      maxEntries: Int?,
+      price: Double?,
+  ) {
+    subscriptions.value =
+        subscriptions.value.map {
+          if (it.id == id) {
+            it.copy(
+                displayName = displayName,
+                expiresAtEpochMilli = expiresAtEpochMilli,
+                maxEntries = maxEntries,
+                price = price,
+            )
+          } else {
+            it
+          }
+        }
+  }
+
   override suspend fun setActiveSubscription(id: String) {
     activeId.value = id
   }

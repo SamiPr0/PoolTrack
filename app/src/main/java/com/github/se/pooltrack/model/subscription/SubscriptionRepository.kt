@@ -30,6 +30,26 @@ interface SubscriptionRepository {
   ): Subscription
 
   /**
+   * Replaces the editable details of the subscription with [id]. Its id, PDF and added date never
+   * change, and entries already recorded against it are left alone. Does nothing if [id] is
+   * unknown.
+   *
+   * @param id The identifier of the subscription to update.
+   * @param displayName The new human-readable label.
+   * @param expiresAtEpochMilli When it expires, as epoch milliseconds, or `null` for no date-based
+   *   expiration.
+   * @param maxEntries The number of entries it's good for, or `null` for no entry-count limit.
+   * @param price How much it cost, or `null` if not recorded.
+   */
+  suspend fun updateSubscription(
+      id: String,
+      displayName: String,
+      expiresAtEpochMilli: Long?,
+      maxEntries: Int?,
+      price: Double?,
+  )
+
+  /**
    * Marks the subscription with [id] as the active one, deactivating any other.
    *
    * @param id The identifier of the subscription to activate.

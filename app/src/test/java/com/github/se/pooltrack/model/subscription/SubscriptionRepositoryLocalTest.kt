@@ -263,6 +263,85 @@ class SubscriptionRepositoryLocalTest {
   }
 
   @Test
+  fun updateSubscription_changesOnlyEditableFields_andKeepsActiveness() = runTest {
+    val first = repository.addSubscription(uri = pdfUri, expiresAtEpochMilli = 9_000L)
+    val second = repository.addSubscription(uri = pdfUri)
+
+    repository.updateSubscription(
+        id = first.id,
+        displayName = "Renamed",
+        expiresAtEpochMilli = null,
+        maxEntries = 5,
+        price = 12.5,
+    )
+
+    val expected =
+        first.copy(
+            displayName = "Renamed",
+            expiresAtEpochMilli = null,
+            maxEntries = 5,
+            price = 12.5,
+        )
+    assertEquals(listOf(second, expected), repository.getSubscriptions().first())
+    assertEquals(second, repository.getActiveSubscription().first())
+  }
+
+  @Test
+  fun updateSubscription_updatesActiveSubscription_whenEditingTheActiveOne() = runTest {
+    val only = repository.addSubscription(uri = pdfUri)
+
+    repository.updateSubscription(only.id, "New name", 7_000L, null, null)
+
+    assertEquals(
+        only.copy(displayName = "New name", expiresAtEpochMilli = 7_000L),
+        repository.getActiveSubscription().first(),
+    )
+  }
+
+  @Test
+  fun updateSubscription_mirrorsUpdatedFieldsToFirestore() = runTest {
+    val added = repository.addSubscription(uri = pdfUri)
+    firebase.clearRecordedCalls()
+
+    repository.updateSubscription(added.id, "Renamed", null, 10, 60.0)
+
+    verify(exactly = 1) { firebase.targetCollection.document(added.id) }
+    verify(exactly = 1) {
+      firebase.targetDocument.set(
+          mapOf(
+              "id" to added.id,
+              "displayName" to "Renamed",
+              "addedAtEpochMilli" to added.addedAtEpochMilli,
+              "expiresAtEpochMilli" to null,
+              "maxEntries" to 10,
+              "price" to 60.0,
+          )
+      )
+    }
+  }
+
+  @Test
+  fun updateSubscription_isANoOp_whenIdIsUnknown() = runTest {
+    val added = repository.addSubscription(uri = pdfUri)
+    firebase.clearRecordedCalls()
+
+    repository.updateSubscription("unknown", "X", null, null, null)
+
+    assertEquals(listOf(added), repository.getSubscriptions().first())
+    verify(exactly = 0) { firebase.targetCollection.document(any()) }
+  }
+
+  @Test
+  fun updateSubscription_stillStoresLocally_whenMirroringFails() = runTest {
+    val added = repository.addSubscription(uri = pdfUri)
+    firebase.failWrites()
+
+    repository.updateSubscription(added.id, "Renamed", null, null, null)
+
+    assertEquals("Renamed", repository.getSubscriptions().first().single().displayName)
+  }
+
+  @Test
   fun deleteSubscription_removesOnlyThatSubscription() = runTest {
     val first = repository.addSubscription(uri = pdfUri)
     val second = repository.addSubscription(uri = pdfUri)
@@ -351,6 +430,10 @@ class SubscriptionRepositoryLocalTest {
     )
     assertTrue(
         runCatching { repository.setActiveSubscription("a") }.exceptionOrNull()
+            is IllegalStateException
+    )
+    assertTrue(
+        runCatching { repository.updateSubscription("a", "n", null, null, null) }.exceptionOrNull()
             is IllegalStateException
     )
     assertTrue(

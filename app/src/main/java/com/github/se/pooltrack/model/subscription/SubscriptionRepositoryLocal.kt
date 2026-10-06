@@ -106,6 +106,43 @@ class SubscriptionRepositoryLocal(
           Json.encodeToString(readSubscriptions(prefs, uid) + subscription)
       prefs[activeIdKey(uid)] = subscription.id
     }
+    mirrorSubscription(subscription)
+    return subscription
+  }
+
+  override suspend fun updateSubscription(
+      id: String,
+      displayName: String,
+      expiresAtEpochMilli: Long?,
+      maxEntries: Int?,
+      price: Double?,
+  ) {
+    val uid = requireUid()
+    var updated: Subscription? = null
+    context.subscriptionDataStore.edit { prefs ->
+      claimLegacySubscriptions(prefs, uid)
+      prefs[subscriptionsKey(uid)] =
+          Json.encodeToString(
+              readSubscriptions(prefs, uid).map { existing ->
+                if (existing.id != id) {
+                  existing
+                } else {
+                  existing
+                      .copy(
+                          displayName = displayName,
+                          expiresAtEpochMilli = expiresAtEpochMilli,
+                          maxEntries = maxEntries,
+                          price = price,
+                      )
+                      .also { updated = it }
+                }
+              }
+          )
+    }
+    updated?.let { mirrorSubscription(it) }
+  }
+
+  private suspend fun mirrorSubscription(subscription: Subscription) {
     mirrorToFirestore(
         collection = BACKUP_COLLECTION,
         docId = subscription.id,
@@ -119,7 +156,6 @@ class SubscriptionRepositoryLocal(
                 "price" to subscription.price,
             ),
     )
-    return subscription
   }
 
   override suspend fun setActiveSubscription(id: String) {
