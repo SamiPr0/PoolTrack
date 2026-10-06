@@ -1,43 +1,79 @@
 name: Release
 
-# Publishes a signed APK as a GitHub release when a version tag is pushed. The app's in-app
-# updater reads the latest release, so pushing a tag is all it takes to roll out an update:
-#   1. bump appVersionName in app/build.gradle.kts and merge it,
-#   2. git tag v<that version> && git push origin v<that version>
+# Publishes a signed APK as a GitHub release whenever main gets a new app version. To release,
+# bump appVersionName in app/build.gradle.kts in a PR and merge it: once CI passes on main, this
+# workflow tags the merge commit v<version> and publishes the APK. The app's in-app updater reads
+# the latest release, so phones are then required to update. Merges that keep the version publish
+# nothing. "Run workflow" retries the current main by hand, e.g. after a failed release.
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+# Two releases must never run at once, or both could publish the same version.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
     name: Build and publish the APK
     runs-on: ubuntu-latest
+    # Only after CI passed on a push to main in this repository: never for pull requests, which
+    # include fork branches that happen to be named main.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
 
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
-      - name: Check the tag matches the app version
+      - name: Decide whether this version needs a release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           VERSION=$(sed -n 's/^val appVersionName = "\(.*\)"$/\1/p' app/build.gradle.kts)
-          if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match appVersionName $VERSION in app/build.gradle.kts."
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not read appVersionName from app/build.gradle.kts."
             exit 1
           fi
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            echo "v$VERSION is already released; nothing to do."
+            echo "SKIP=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          # Publishing an older version would make it the "latest" release and break updates.
+          LATEST=$(gh release view --json tagName --jq .tagName 2> /dev/null | sed 's/^v//')
+          if [ -n "$LATEST" ] && [ "$(printf '%s\n%s\n' "$LATEST" "$VERSION" | sort -V | tail -1)" != "$VERSION" ]; then
+            echo "::error::appVersionName $VERSION is older than the latest release $LATEST."
+            exit 1
+          fi
+          echo "Releasing v$VERSION (latest is ${LATEST:-none})."
 
       - name: Setup JDK
+        if: env.SKIP != 'true'
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: "temurin"
           java-version: "17"
 
       - name: Retrieve gradle cache
+        if: env.SKIP != 'true'
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
@@ -46,6 +82,7 @@ jobs:
           key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
 
       - name: Decode secrets
+        if: env.SKIP != 'true'
         env:
           GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
           RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE }}
@@ -60,6 +97,7 @@ jobs:
           echo "$RELEASE_KEYSTORE" | base64 --decode > "$RUNNER_TEMP/release.jks"
 
       - name: Build the signed release APK
+        if: env.SKIP != 'true'
         env:
           RELEASE_KEYSTORE_FILE: ${{ runner.temp }}/release.jks
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
@@ -72,6 +110,7 @@ jobs:
       # Google sign-in reads this string by name, which the resource shrinker can't see. Without
       # it the app says "Google sign-in isn't set up yet", so never publish an APK that lacks it.
       - name: Check the APK can sign in with Google
+        if: env.SKIP != 'true'
         run: |
           AAPT2="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2"
           if ! "$AAPT2" dump resources app/build/outputs/apk/release/app-release.apk | grep -q "string/default_web_client_id"; then
@@ -80,9 +119,10 @@ jobs:
           fi
 
       - name: Publish the release
+        if: env.SKIP != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           APK="PoolTrack-$VERSION.apk"
           cp app/build/outputs/apk/release/app-release.apk "$APK"
-          gh release create "$GITHUB_REF_NAME" "$APK" --title "PoolTrack $VERSION" --generate-notes
+          gh release create "v$VERSION" "$APK" --target "$SHA" --title "PoolTrack $VERSION" --generate-notes
