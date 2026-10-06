@@ -27,12 +27,12 @@ data class GithubAsset(
 /**
  * Turns this release into an [AppUpdate], or `null` if it cannot be installed: a draft or
  * pre-release, no `.apk` asset, or an APK that is not hosted under [trustedUrlPrefix]. The prefix
- * check keeps the app from downloading a file from an unexpected host.
+ * check keeps the app from downloading a file from an unexpected host or repository.
  */
 fun GithubRelease.toAppUpdate(trustedUrlPrefix: String): AppUpdate? {
   if (draft || prerelease) return null
   val apk = assets.firstOrNull { it.name.endsWith(".apk", ignoreCase = true) } ?: return null
-  if (!apk.downloadUrl.startsWith(trustedUrlPrefix)) return null
+  if (!isTrustedDownloadUrl(apk.downloadUrl, trustedUrlPrefix)) return null
   return AppUpdate(
       version = tagName.trim().removePrefix("v"),
       notes = body.orEmpty().trim(),
@@ -44,4 +44,20 @@ fun GithubRelease.toAppUpdate(trustedUrlPrefix: String): AppUpdate? {
               ?.removePrefix(SHA256_PREFIX)
               ?.lowercase(),
   )
+}
+
+// Characters a server may decode or resolve into a path outside the prefix: encoded dots, slashes
+// and backslashes, plain backslashes, and a query or fragment that could hide them.
+private val UNSAFE_URL_PARTS = listOf("%2e", "%2f", "%5c", "\\", "?", "#")
+
+/**
+ * Whether [url] points under [trustedUrlPrefix] and stays there. A plain prefix check is not
+ * enough: `<prefix>../../other/repo/...` starts with the prefix but resolves to another repository.
+ */
+internal fun isTrustedDownloadUrl(url: String, trustedUrlPrefix: String): Boolean {
+  if (!url.startsWith(trustedUrlPrefix)) return false
+  val rest = url.substring(trustedUrlPrefix.length)
+  if (rest.split('/').any { it == "." || it == ".." }) return false
+  val lowercase = rest.lowercase()
+  return UNSAFE_URL_PARTS.none { it in lowercase }
 }

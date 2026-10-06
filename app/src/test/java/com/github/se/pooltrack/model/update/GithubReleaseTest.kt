@@ -2,7 +2,9 @@ package com.github.se.pooltrack.model.update
 
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GithubReleaseTest {
@@ -76,6 +78,42 @@ class GithubReleaseTest {
     val foreign = apk.copy(downloadUrl = "https://evil.example.com/PoolTrack.apk")
 
     assertNull(release.copy(assets = listOf(foreign)).toAppUpdate(prefix))
+  }
+
+  @Test
+  fun toAppUpdate_isNull_whenTheApkUrlEscapesTheTrustedPrefix() {
+    val escaping =
+        listOf(
+            "${prefix}../../../attacker/repo/releases/download/v9/evil.apk",
+            "${prefix}v1.2.0/../../../../attacker/evil.apk",
+            "${prefix}./v1.2.0/PoolTrack.apk",
+            "${prefix}%2e%2e/%2E%2E/attacker/evil.apk",
+            "${prefix}v1.2.0%2f..%2fevil.apk",
+            "${prefix}v1.2.0\\..\\evil.apk",
+            "${prefix}v1.2.0/PoolTrack.apk?redirect=https://evil.example.com",
+            "${prefix}v1.2.0/PoolTrack.apk#../../evil",
+        )
+
+    for (url in escaping) {
+      val asset = apk.copy(downloadUrl = url)
+      assertNull(url, release.copy(assets = listOf(asset)).toAppUpdate(prefix))
+    }
+  }
+
+  @Test
+  fun isTrustedDownloadUrl_acceptsARegularReleaseAsset() {
+    assertTrue(isTrustedDownloadUrl("${prefix}v1.2.0/PoolTrack-1.2.0.apk", prefix))
+  }
+
+  @Test
+  fun isTrustedDownloadUrl_rejectsAnotherRepositoryWithTheSamePrefixText() {
+    // "PoolTrack-fork" starts with "PoolTrack", so the prefix must end at a path boundary.
+    assertFalse(
+        isTrustedDownloadUrl(
+            "https://github.com/SamiPr0/PoolTrack-fork/releases/download/v1/evil.apk",
+            prefix,
+        )
+    )
   }
 
   @Test
