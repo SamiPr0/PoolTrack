@@ -1,10 +1,12 @@
 package com.github.se.pooltrack.ui.account
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.github.se.pooltrack.BuildConfig
 import com.github.se.pooltrack.utils.FakeAuthRepository
 import com.github.se.pooltrack.utils.FakeAuthRepository.Companion.GOOGLE_USER
 import com.github.se.pooltrack.utils.MainDispatcherRule
@@ -37,6 +39,15 @@ class SignInScreenTest {
         .assertIsDisplayed()
     composeRule.onNodeWithText("Sign in with Google").assertIsDisplayed()
     composeRule.onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON).assertIsDisplayed()
+  }
+
+  @Test
+  fun signInScreen_showsTheInstalledVersion() {
+    show(FakeAuthRepository())
+
+    composeRule
+        .onNodeWithTag(AppVersionTextTestTags.VERSION)
+        .assertTextEquals("Version ${BuildConfig.VERSION_NAME}")
   }
 
   @Test

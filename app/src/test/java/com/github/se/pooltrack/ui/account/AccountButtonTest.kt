@@ -2,12 +2,14 @@ package com.github.se.pooltrack.ui.account
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.github.se.pooltrack.BuildConfig
 import com.github.se.pooltrack.model.auth.AuthUser
 import com.github.se.pooltrack.utils.FakeAuthRepository
 import com.github.se.pooltrack.utils.FakeAuthRepository.Companion.ANONYMOUS_USER
@@ -72,6 +74,17 @@ class AccountButtonTest {
         .assertIsDisplayed()
     composeRule.onNodeWithText("Sign out").assertIsDisplayed()
     composeRule.onNodeWithText("Close").assertIsDisplayed()
+  }
+
+  @Test
+  fun accountButton_dialogShowsTheInstalledVersion() {
+    show(FakeAuthRepository(initialUser = GOOGLE_USER))
+
+    composeRule.onNodeWithTag(AccountButtonTestTags.BUTTON).performClick()
+
+    composeRule
+        .onNodeWithTag(AppVersionTextTestTags.VERSION)
+        .assertTextEquals("Version ${BuildConfig.VERSION_NAME}")
   }
 
   @Test

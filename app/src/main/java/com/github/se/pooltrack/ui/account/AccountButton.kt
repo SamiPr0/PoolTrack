@@ -1,5 +1,7 @@
 package com.github.se.pooltrack.ui.account
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
@@ -17,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 object AccountButtonTestTags {
@@ -59,10 +62,13 @@ fun RowScope.AccountButton(onError: (String) -> Unit, viewModel: AccountViewMode
         modifier = Modifier.testTag(AccountButtonTestTags.SIGN_OUT_DIALOG),
         title = { Text("Signed in") },
         text = {
-          Text(
-              "Signed in as ${user.displayName ?: user.email ?: "your Google account"}. " +
-                  "Subscriptions and entries are backed up to the cloud."
-          )
+          Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(
+                "Signed in as ${user.displayName ?: user.email ?: "your Google account"}. " +
+                    "Subscriptions and entries are backed up to the cloud."
+            )
+            AppVersionText()
+          }
         },
         confirmButton = {
           TextButton(
