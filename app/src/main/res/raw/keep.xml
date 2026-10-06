@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- AuthRepositoryFirebase reads default_web_client_id by name (Resources.getIdentifier), which the
+     release build's resource shrinker can't see, so it removed the string and Google sign-in failed
+     with "Google sign-in isn't set up yet". -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@string/default_web_client_id" />
