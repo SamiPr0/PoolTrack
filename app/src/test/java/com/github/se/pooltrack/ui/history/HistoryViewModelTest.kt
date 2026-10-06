@@ -1,10 +1,14 @@
 package com.github.se.pooltrack.ui.history
 
 import com.github.se.pooltrack.model.entry.Entry
+import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.utils.FakeEntryRepository
+import com.github.se.pooltrack.utils.FakeSubscriptionRepository
 import com.github.se.pooltrack.utils.MainDispatcherRule
+import java.time.Instant
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 
@@ -17,14 +21,18 @@ class HistoryViewModelTest {
 
   @Test
   fun entries_isEmpty_whenNoEntriesRecorded() {
-    val viewModel = HistoryViewModel(FakeEntryRepository())
+    val viewModel = HistoryViewModel(FakeEntryRepository(), FakeSubscriptionRepository())
 
     assertEquals(emptyList<Entry>(), viewModel.entries.value)
   }
 
   @Test
   fun entries_listsEveryEntryMostRecentFirst_whenEntriesRecorded() {
-    val viewModel = HistoryViewModel(FakeEntryRepository(listOf(older, newer)))
+    val viewModel =
+        HistoryViewModel(
+            FakeEntryRepository(listOf(older, newer)),
+            FakeSubscriptionRepository(),
+        )
 
     assertEquals(listOf(newer, older), viewModel.entries.value)
   }
@@ -32,7 +40,7 @@ class HistoryViewModelTest {
   @Test
   fun entries_updates_whenRepositoryRecordsAnEntry() = runTest {
     val repository = FakeEntryRepository(listOf(older))
-    val viewModel = HistoryViewModel(repository)
+    val viewModel = HistoryViewModel(repository, FakeSubscriptionRepository())
 
     repository.addEntry(newer)
 
@@ -42,11 +50,105 @@ class HistoryViewModelTest {
   @Test
   fun onDeleteEntry_removesOnlyThatEntry() {
     val repository = FakeEntryRepository(listOf(older, newer))
-    val viewModel = HistoryViewModel(repository)
+    val viewModel = HistoryViewModel(repository, FakeSubscriptionRepository())
 
     viewModel.onDeleteEntry(newer)
 
     assertEquals(listOf(older), repository.storedEntries)
     assertEquals(listOf(older), viewModel.entries.value)
+  }
+
+  private val now = Instant.parse("2026-10-06T12:00:00Z")
+  private val past = Instant.parse("2025-09-15T15:49:34Z")
+
+  private fun subscription(id: String, addedAt: String, expiresAt: String?) =
+      Subscription(
+          id = id,
+          uri = "content://$id",
+          displayName = id,
+          addedAtEpochMilli = Instant.parse(addedAt).toEpochMilli(),
+          expiresAtEpochMilli = expiresAt?.let { Instant.parse(it).toEpochMilli() },
+      )
+
+  @Test
+  fun onAddPastEntry_recordsTheEntry_andReportsItAsAdded() {
+    val repository = FakeEntryRepository()
+    val viewModel = HistoryViewModel(repository, FakeSubscriptionRepository())
+
+    viewModel.onAddPastEntry(past, now)
+
+    val expected = Entry(timestampEpochMilli = past.toEpochMilli(), subscriptionId = null)
+    assertEquals(listOf(expected), repository.storedEntries)
+    assertEquals(AddPastEntryResult.Added(expected), viewModel.addPastEntryResult.value)
+  }
+
+  @Test
+  fun onAddPastEntry_linksTheSubscriptionValidAtThatTime() {
+    val expired = subscription("old", "2024-09-01T00:00:00Z", "2025-08-31T00:00:00Z")
+    val valid = subscription("pass", "2025-09-14T08:39:00Z", "2026-09-14T08:39:00Z")
+    val repository = FakeEntryRepository()
+    val viewModel = HistoryViewModel(repository, FakeSubscriptionRepository(listOf(expired, valid)))
+
+    viewModel.onAddPastEntry(past, now)
+
+    assertEquals("pass", repository.storedEntries.single().subscriptionId)
+  }
+
+  @Test
+  fun onAddPastEntry_leavesSubscriptionEmpty_whenNoneWasValidThen() {
+    val later = subscription("later", "2026-01-01T00:00:00Z", null)
+    val repository = FakeEntryRepository()
+    val viewModel = HistoryViewModel(repository, FakeSubscriptionRepository(listOf(later)))
+
+    viewModel.onAddPastEntry(past, now)
+
+    assertNull(repository.storedEntries.single().subscriptionId)
+  }
+
+  @Test
+  fun onAddPastEntry_refusesAFutureTime_andRecordsNothing() {
+    val repository = FakeEntryRepository()
+    val viewModel = HistoryViewModel(repository, FakeSubscriptionRepository())
+
+    viewModel.onAddPastEntry(now.plusSeconds(60), now)
+
+    assertEquals(emptyList<Entry>(), repository.storedEntries)
+    assertEquals(
+        AddPastEntryResult.Refused(AddPastEntryError.InTheFuture),
+        viewModel.addPastEntryResult.value,
+    )
+  }
+
+  @Test
+  fun onAddPastEntry_refusesADuplicateTimestamp() {
+    val existing = Entry(timestampEpochMilli = past.toEpochMilli(), subscriptionId = "pass")
+    val repository = FakeEntryRepository(listOf(existing))
+    val viewModel = HistoryViewModel(repository, FakeSubscriptionRepository())
+
+    viewModel.onAddPastEntry(past, now)
+
+    assertEquals(listOf(existing), repository.storedEntries)
+    assertEquals(
+        AddPastEntryResult.Refused(AddPastEntryError.AlreadyRecorded),
+        viewModel.addPastEntryResult.value,
+    )
+  }
+
+  @Test
+  fun onAddPastEntryResultHandled_clearsTheResult() {
+    val viewModel = HistoryViewModel(FakeEntryRepository(), FakeSubscriptionRepository())
+    viewModel.onAddPastEntry(past, now)
+
+    viewModel.onAddPastEntryResultHandled()
+
+    assertNull(viewModel.addPastEntryResult.value)
+  }
+
+  @Test
+  fun subscriptionIdAt_prefersTheMostRecentlyAdded_whenSeveralWereValid() {
+    val first = subscription("first", "2025-01-01T00:00:00Z", null)
+    val second = subscription("second", "2025-06-01T00:00:00Z", null)
+
+    assertEquals("second", subscriptionIdAt(past, listOf(first, second)))
   }
 }
