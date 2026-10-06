@@ -1,18 +1,16 @@
 # Releasing
 
-Pushing a version tag builds a signed APK and publishes it as a GitHub release. The in-app updater reads the latest release, so users are offered the update the next time they open PoolTrack.
+Releases are automatic. When `main` gets a new app version, the [Release workflow](../.github/workflows/release.yml) builds a signed APK and publishes it as a GitHub release. The in-app updater reads the latest release, and updates are mandatory: users must install it the next time they open PoolTrack.
 
 ## Publish a release
 
-1. Bump `appVersionName` in `app/build.gradle.kts` (e.g. `1.2.0`) and merge it to `main`. `versionCode` is derived from it.
-2. Tag the merge commit and push the tag:
+Bump `appVersionName` in `app/build.gradle.kts` (e.g. `1.2.0` → `1.3.0`) in a pull request and merge it. `versionCode` is derived from it. That's all. Once CI passes on `main`, the Release workflow:
 
-   ```bash
-   git tag v1.2.0
-   git push origin v1.2.0
-   ```
+1. skips if `v<version>` is already released, so merges that keep the version publish nothing;
+2. refuses a version older than the latest release, which would break updates;
+3. builds and signs the APK, checks it can sign in with Google, then tags the merge commit `v<version>` and publishes the release.
 
-The [Release workflow](../.github/workflows/release.yml) fails if the tag does not match `appVersionName`. The release notes are generated from the merged pull requests, and are what users read in the update prompt.
+The release notes are generated from the merged pull requests, and are what users read on the update screen. If a release fails, fix the cause and use **Actions → Release → Run workflow** to retry the current `main`.
 
 ## Signing key
 
