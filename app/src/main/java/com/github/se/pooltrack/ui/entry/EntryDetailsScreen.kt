@@ -223,9 +223,11 @@ private fun DetailsCard(details: EntryDetails) {
   }
 }
 
-/** "Pool 10x · entry 4 of 10", "Yearly pass · entry 4", or "None". */
+/** "Pool 10x · entry 4 of 10", "Yearly pass · entry 4", "Deleted subscription" or "None". */
 private fun subscriptionLabel(details: EntryDetails): String {
-  val subscription = details.subscription ?: return "None"
+  val subscription =
+      details.subscription
+          ?: return if (details.subscriptionDeleted) "Deleted subscription" else "None"
   val number = details.entryNumberOnSubscription
   val position = subscription.maxEntries?.let { "entry $number of $it" } ?: "entry $number"
   return "${subscription.displayName} · $position"
