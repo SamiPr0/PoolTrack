@@ -188,6 +188,8 @@ private fun PassDisplayAndAccept(
   val transform by zoomViewModel.transform.collectAsState()
   var viewport by remember { mutableStateOf(Size.Zero) }
   SideEffect { zoomViewModel.onPassShown(uri) }
+  // Don't leave the last gesture waiting on the save delay when the screen goes away.
+  DisposableEffect(zoomViewModel) { onDispose { zoomViewModel.persistNow() } }
 
   LaunchedEffect(uri) {
     pageBitmap = withContext(Dispatchers.IO) { renderFirstPdfPage(context, Uri.parse(uri)) }
@@ -206,7 +208,10 @@ private fun PassDisplayAndAccept(
             Modifier.weight(1f)
                 .fillMaxWidth()
                 .clipToBounds()
-                .onSizeChanged { viewport = Size(it.width.toFloat(), it.height.toFloat()) }
+                .onSizeChanged {
+                  viewport = Size(it.width.toFloat(), it.height.toFloat())
+                  zoomViewModel.onViewportChanged(viewport)
+                }
                 .pointerInput(Unit) {
                   detectTransformGestures { centroid, pan, zoom, _ ->
                     val center = Offset(size.width / 2f, size.height / 2f)
