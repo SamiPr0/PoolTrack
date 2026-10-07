@@ -8,8 +8,6 @@ import android.content.Context
 import android.content.Intent
 import com.github.se.pooltrack.MainActivity
 import com.github.se.pooltrack.R
-import com.github.se.pooltrack.model.swim.formatSwimDuration
-import java.time.Duration
 
 /** Builds and posts the notifications of swim tracking. */
 object SwimNotifications {
@@ -48,21 +46,27 @@ object SwimNotifications {
           .setContentIntent(openAppIntent(context))
           .build()
 
-  /** Posts the "you swam ..." notification. Silently dropped if notifications are not allowed. */
-  fun postReport(context: Context, duration: Duration) {
+  /**
+   * Posts the "log how far you swam" reminder; tapping it opens the app, which then shows the
+   * distance screen. Silently dropped if notifications are not allowed.
+   */
+  fun postLogReminder(context: Context) {
     val notification =
         Notification.Builder(context, REPORT_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_swim_notification)
             .setContentTitle(context.getString(R.string.swim_report_title))
-            .setContentText(
-                context.getString(R.string.swim_report_text, formatSwimDuration(duration))
-            )
+            .setContentText(context.getString(R.string.swim_report_text))
             .setAutoCancel(true)
             .setContentIntent(openAppIntent(context))
             .build()
     context
         .getSystemService(NotificationManager::class.java)
         .notify(REPORT_NOTIFICATION_ID, notification)
+  }
+
+  /** Removes the reminder once it is no longer needed, e.g. the distance was logged in the app. */
+  fun cancelLogReminder(context: Context) {
+    context.getSystemService(NotificationManager::class.java).cancel(REPORT_NOTIFICATION_ID)
   }
 
   private fun openAppIntent(context: Context): PendingIntent =

@@ -28,10 +28,10 @@ class SwimTrackingServiceTest {
   private val context: Context = ApplicationProvider.getApplicationContext()
   private val notificationManager = context.getSystemService(NotificationManager::class.java)
 
-  private fun entryEnteredAgo(duration: Duration, swimDurationMillis: Long? = null) =
+  private fun entryEnteredAgo(duration: Duration, awaitingDistance: Boolean = true) =
       Entry(
           timestampEpochMilli = Instant.now().minus(duration).toEpochMilli(),
-          swimDurationMillis = swimDurationMillis,
+          awaitingDistance = awaitingDistance,
       )
 
   private fun startService(
@@ -62,53 +62,66 @@ class SwimTrackingServiceTest {
   }
 
   @Test
-  fun unlock_afterTheMinimum_postsTheReportRecordsItAndStops() {
+  fun unlock_afterTheCancelWindow_postsTheLogReminderOnceAndStops() {
     val (controller, repository) = startService(entryEnteredAgo(Duration.ofMinutes(72)))
 
     unlockPhone()
 
-    val report =
+    val reminder =
         shadowOf(notificationManager).getNotification(SwimNotifications.REPORT_NOTIFICATION_ID)
-    assertNotNull(report)
-    assertTrue(
-        report.extras
-            .getCharSequence(Notification.EXTRA_TEXT)
-            .toString()
-            .startsWith("You swam 1h 1")
+    assertNotNull(reminder)
+    assertEquals(
+        "Log how far you swam",
+        reminder.extras.getCharSequence(Notification.EXTRA_TITLE).toString(),
     )
-    assertNotNull(repository.storedEntries.single().swimDurationMillis)
+    assertNotNull(reminder.contentIntent)
+    // The swim is no longer timed: nothing but the reminder happens.
+    assertNull(repository.storedEntries.single().swimDurationMillis)
+    assertTrue(repository.storedEntries.single().awaitingDistance)
     assertTrue(shadowOf(controller.get()).isStoppedBySelf)
   }
 
   @Test
-  fun unlock_beforeTheMinimum_staysSilentAndKeepsRunning() {
-    val (controller, repository) = startService(entryEnteredAgo(Duration.ofMinutes(2)))
+  fun unlock_insideTheCancelWindow_staysSilentAndKeepsRunning() {
+    val (controller, _) = startService(entryEnteredAgo(Duration.ofMinutes(2)))
 
     unlockPhone()
 
     assertNull(
         shadowOf(notificationManager).getNotification(SwimNotifications.REPORT_NOTIFICATION_ID)
     )
-    assertNull(repository.storedEntries.single().swimDurationMillis)
     assertTrue(!shadowOf(controller.get()).isStoppedBySelf)
   }
 
   @Test
-  fun start_stopsAtOnce_whenThereIsNothingToReport() {
+  fun start_stopsAtOnce_whenThereIsNothingToLog() {
     val (controller, _) =
-        startService(entryEnteredAgo(Duration.ofMinutes(30), swimDurationMillis = 1L))
+        startService(entryEnteredAgo(Duration.ofMinutes(30), awaitingDistance = false))
 
     assertTrue(shadowOf(controller.get()).isStoppedBySelf)
   }
 
   @Test
   fun destroy_unregistersTheReceiver() {
-    val (controller, repository) = startService(entryEnteredAgo(Duration.ofMinutes(72)))
+    val (controller, _) = startService(entryEnteredAgo(Duration.ofMinutes(72)))
 
     controller.destroy()
     unlockPhone()
 
-    assertNull(repository.storedEntries.single().swimDurationMillis)
+    assertNull(
+        shadowOf(notificationManager).getNotification(SwimNotifications.REPORT_NOTIFICATION_ID)
+    )
+  }
+
+  @Test
+  fun loggingTheDistance_stopsTheServiceAtOnce() {
+    val entry = entryEnteredAgo(Duration.ofMinutes(2))
+    val (controller, repository) = startService(entry)
+
+    runBlocking { repository.recordSwimDistance(entry, 900) }
+    shadowOf(android.os.Looper.getMainLooper()).idle()
+
+    assertTrue(shadowOf(controller.get()).isStoppedBySelf)
   }
 
   @Test
@@ -136,6 +149,6 @@ class SwimTrackingServiceTest {
     assertNull(
         shadowOf(notificationManager).getNotification(SwimNotifications.REPORT_NOTIFICATION_ID)
     )
-    assertNull(repository.storedEntries.single().swimDurationMillis)
+    assertEquals(listOf(older), repository.storedEntries)
   }
 }

@@ -15,136 +15,157 @@ import org.junit.Test
 class SwimReporterTest {
 
   private val enteredAt = Instant.parse("2026-10-05T10:00:00Z")
-  private val entry = Entry(timestampEpochMilli = enteredAt.toEpochMilli(), subscriptionId = "a")
-  private val reported = mutableListOf<Duration>()
+  private val entry =
+      Entry(
+          timestampEpochMilli = enteredAt.toEpochMilli(),
+          subscriptionId = "a",
+          awaitingDistance = true,
+      )
+  private val afterWindow = enteredAt.plus(Duration.ofMinutes(30))
+  private var reminders = 0
 
-  private fun reporter(repository: FakeEntryRepository) =
-      SwimReporter(repository) { reported += it }
+  private fun reporter(repository: FakeEntryRepository) = SwimReporter(repository) { reminders++ }
 
   @Test
-  fun onPhoneUnlocked_reportsAndRecordsTheDuration() = runTest {
+  fun onPhoneUnlocked_remindsInsteadOfRecordingADuration() = runTest {
     val repository = FakeEntryRepository(listOf(entry))
 
-    val result = reporter(repository).onPhoneUnlocked(enteredAt.plus(Duration.ofMinutes(72)))
+    val result = reporter(repository).onPhoneUnlocked(afterWindow)
 
     assertTrue(result)
-    assertEquals(listOf(Duration.ofMinutes(72)), reported)
-    assertEquals(
-        listOf(entry.copy(swimDurationMillis = Duration.ofMinutes(72).toMillis())),
-        repository.storedEntries,
-    )
-  }
-
-  @Test
-  fun onPhoneUnlocked_reportsOnlyOncePerSwim() = runTest {
-    val repository = FakeEntryRepository(listOf(entry))
-    val reporter = reporter(repository)
-
-    reporter.onPhoneUnlocked(enteredAt.plus(Duration.ofMinutes(72)))
-    val second = reporter.onPhoneUnlocked(enteredAt.plus(Duration.ofMinutes(80)))
-
-    assertFalse(second)
-    assertEquals(1, reported.size)
-  }
-
-  @Test
-  fun onPhoneUnlocked_doesNothing_beforeTheMinimumDuration() = runTest {
-    val repository = FakeEntryRepository(listOf(entry))
-
-    val result = reporter(repository).onPhoneUnlocked(enteredAt.plus(Duration.ofMinutes(3)))
-
-    assertFalse(result)
-    assertTrue(reported.isEmpty())
+    assertEquals(1, reminders)
     assertEquals(listOf(entry), repository.storedEntries)
   }
 
   @Test
+  fun onPhoneUnlocked_remindsOnlyOnce() = runTest {
+    val reporter = reporter(FakeEntryRepository(listOf(entry)))
+
+    reporter.onPhoneUnlocked(afterWindow)
+    val second = reporter.onPhoneUnlocked(afterWindow.plusSeconds(60))
+
+    assertFalse(second)
+    assertEquals(1, reminders)
+  }
+
+  @Test
+  fun onPhoneUnlocked_doesNothing_insideTheCancelWindow() = runTest {
+    val reporter = reporter(FakeEntryRepository(listOf(entry)))
+
+    val result = reporter.onPhoneUnlocked(enteredAt.plus(Duration.ofMinutes(9)))
+
+    assertFalse(result)
+    assertEquals(0, reminders)
+  }
+
+  @Test
+  fun onPhoneUnlocked_stillRemindsOnAnEntryManyHoursOld() = runTest {
+    val reporter = reporter(FakeEntryRepository(listOf(entry)))
+
+    assertTrue(reporter.onPhoneUnlocked(enteredAt.plus(Duration.ofHours(20))))
+  }
+
+  @Test
   fun onPhoneUnlocked_doesNothing_withoutEntries() = runTest {
-    assertFalse(reporter(FakeEntryRepository()).onPhoneUnlocked(enteredAt))
-    assertTrue(reported.isEmpty())
+    assertFalse(reporter(FakeEntryRepository()).onPhoneUnlocked(afterWindow))
+    assertEquals(0, reminders)
   }
 
   @Test
-  fun onPhoneUnlocked_usesTheMostRecentEntry() = runTest {
-    val older = entry.copy(timestampEpochMilli = enteredAt.minus(Duration.ofDays(2)).toEpochMilli())
-    val repository = FakeEntryRepository(listOf(older, entry))
-
-    reporter(repository).onPhoneUnlocked(enteredAt.plus(Duration.ofMinutes(30)))
-
-    assertEquals(listOf(Duration.ofMinutes(30)), reported)
+  fun onPhoneUnlocked_doesNothing_forAnEntryNotAwaitingADistance() = runTest {
+    val entries =
+        listOf(
+            entry.copy(awaitingDistance = false), // added by hand, imported or from before
+            entry.copy(awaitingDistance = false, swimDistanceMeters = 500),
+        )
+    for (stored in entries) {
+      assertFalse(reporter(FakeEntryRepository(listOf(stored))).onPhoneUnlocked(afterWindow))
+    }
+    assertEquals(0, reminders)
   }
 
   @Test
-  fun hasPendingSwim_reflectsTheMostRecentEntry() = runTest {
-    assertFalse(reporter(FakeEntryRepository()).hasPendingSwim(enteredAt))
+  fun onPhoneUnlocked_afterTheDistanceWasLogged_doesNothing() = runTest {
     val repository = FakeEntryRepository(listOf(entry))
     val reporter = reporter(repository)
-    assertTrue(reporter.hasPendingSwim(enteredAt))
+    reporter.startTracking()
 
-    reporter.onPhoneUnlocked(enteredAt.plus(Duration.ofMinutes(30)))
+    repository.recordSwimDistance(entry, 900)
 
-    assertFalse(reporter.hasPendingSwim(enteredAt.plus(Duration.ofMinutes(31))))
+    assertFalse(reporter.onPhoneUnlocked(afterWindow))
+    assertEquals(0, reminders)
   }
 
   @Test
-  fun onPhoneUnlocked_afterTheEntryWasRemoved_reportsNothing() = runTest {
+  fun onPhoneUnlocked_afterTheEntryWasCancelled_remindsAboutNothing() = runTest {
     val repository = FakeEntryRepository(listOf(entry))
     val reporter = reporter(repository)
-    reporter.startTracking(enteredAt)
+    reporter.startTracking()
 
     repository.deleteEntry(entry)
-    val result = reporter.onPhoneUnlocked(enteredAt.plus(Duration.ofMinutes(30)))
 
-    assertFalse(result)
-    assertTrue(reported.isEmpty())
+    assertFalse(reporter.onPhoneUnlocked(afterWindow))
+    assertEquals(0, reminders)
   }
 
   @Test
-  fun onPhoneUnlocked_neverFallsBackToAnOlderUnreportedEntry() = runTest {
+  fun onPhoneUnlocked_neverFallsBackToAnOlderPendingEntry() = runTest {
     val older =
         entry.copy(timestampEpochMilli = enteredAt.minus(Duration.ofHours(1)).toEpochMilli())
-    val newer = entry.copy(timestampEpochMilli = enteredAt.toEpochMilli(), subscriptionId = "b")
+    val newer = entry.copy(subscriptionId = "b")
     val repository = FakeEntryRepository(listOf(older, newer))
     val reporter = reporter(repository)
-    reporter.startTracking(enteredAt)
+    reporter.startTracking()
 
     repository.deleteEntry(newer)
-    val result = reporter.onPhoneUnlocked(enteredAt.plus(Duration.ofMinutes(30)))
 
-    assertFalse(result)
-    assertTrue(reported.isEmpty())
+    assertFalse(reporter.onPhoneUnlocked(afterWindow))
+    assertEquals(0, reminders)
     assertEquals(listOf(older), repository.storedEntries)
   }
 
   @Test
-  fun startTracking_isFalse_whenTheLatestSwimIsAlreadyReportedOrTooOld() = runTest {
-    val reportedEntry = entry.copy(swimDurationMillis = 1L)
-    assertFalse(reporter(FakeEntryRepository(listOf(reportedEntry))).startTracking(enteredAt))
+  fun startTracking_isTrue_onlyWhenTheLatestEntryAwaitsADistance() = runTest {
+    assertTrue(reporter(FakeEntryRepository(listOf(entry))).startTracking())
+    assertFalse(reporter(FakeEntryRepository()).startTracking())
     assertFalse(
-        reporter(FakeEntryRepository(listOf(entry)))
-            .startTracking(enteredAt.plus(Duration.ofDays(1)))
+        reporter(FakeEntryRepository(listOf(entry.copy(awaitingDistance = false)))).startTracking()
     )
   }
 
   @Test
-  fun hasPendingSwim_isFalse_onceTheTrackedEntryIsRemoved() = runTest {
-    val repository = FakeEntryRepository(listOf(entry))
-    val reporter = reporter(repository)
-    reporter.startTracking(enteredAt)
+  fun hasPendingSwim_isFalse_onceReminded() = runTest {
+    val reporter = reporter(FakeEntryRepository(listOf(entry)))
+    assertTrue(reporter.hasPendingSwim())
 
-    repository.deleteEntry(entry)
+    reporter.onPhoneUnlocked(afterWindow)
 
-    assertFalse(reporter.hasPendingSwim(enteredAt))
+    assertFalse(reporter.hasPendingSwim())
   }
 
   @Test
-  fun awaitTrackedEntryRemoved_returnsOnceTheEntryIsDeleted() = runTest {
+  fun hasPendingSwim_isFalse_onceTheDistanceIsLoggedOrTheEntryCancelled() = runTest {
+    val logged = FakeEntryRepository(listOf(entry))
+    val loggedReporter = reporter(logged)
+    loggedReporter.startTracking()
+    logged.recordSwimDistance(entry, 600)
+    assertFalse(loggedReporter.hasPendingSwim())
+
+    val cancelled = FakeEntryRepository(listOf(entry))
+    val cancelledReporter = reporter(cancelled)
+    cancelledReporter.startTracking()
+    cancelled.deleteEntry(entry)
+    assertFalse(cancelledReporter.hasPendingSwim())
+  }
+
+  @Test
+  fun awaitTrackedEntryResolved_returnsOnceTheEntryIsDeleted() = runTest {
     val repository = FakeEntryRepository(listOf(entry))
     val reporter = reporter(repository)
-    reporter.startTracking(enteredAt)
+    reporter.startTracking()
     var returned = false
     val job = launch {
-      reporter.awaitTrackedEntryRemoved()
+      reporter.awaitTrackedEntryResolved()
       returned = true
     }
     runCurrent()
@@ -155,5 +176,30 @@ class SwimReporterTest {
 
     assertTrue(returned)
     job.cancel()
+  }
+
+  @Test
+  fun awaitTrackedEntryResolved_returnsOnceTheDistanceIsLogged() = runTest {
+    val repository = FakeEntryRepository(listOf(entry))
+    val reporter = reporter(repository)
+    reporter.startTracking()
+    var returned = false
+    val job = launch {
+      reporter.awaitTrackedEntryResolved()
+      returned = true
+    }
+    runCurrent()
+    assertFalse(returned)
+
+    repository.recordSwimDistance(entry, 700)
+    runCurrent()
+
+    assertTrue(returned)
+    job.cancel()
+  }
+
+  @Test
+  fun awaitTrackedEntryResolved_returnsAtOnce_whenNothingIsTracked() = runTest {
+    reporter(FakeEntryRepository()).awaitTrackedEntryResolved()
   }
 }
