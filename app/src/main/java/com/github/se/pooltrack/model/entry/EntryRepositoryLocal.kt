@@ -96,7 +96,8 @@ class EntryRepositoryLocal(
     val uid = requireUid()
     context.entryDataStore.edit { prefs ->
       claimLegacyEntries(prefs, uid)
-      prefs[entriesKey(uid)] = Json.encodeToString(readEntries(prefs, uid).filter { it != entry })
+      prefs[entriesKey(uid)] =
+          Json.encodeToString(readEntries(prefs, uid).filterNot { it.isSameEntryAs(entry) })
     }
     deleteFromFirestore(collection = BACKUP_COLLECTION, docId = entry.backupDocId())
   }

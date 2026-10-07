@@ -32,6 +32,17 @@ class EntryRepositoryTest {
   }
 
   @Test
+  fun deleteEntry_matchesTimestampAndSubscription_ignoringSwimDuration() = runTest {
+    val stored = Entry(timestampEpochMilli = 1_000L, subscriptionId = "a", swimDurationMillis = 5L)
+    val other = Entry(timestampEpochMilli = 1_000L, subscriptionId = "b")
+    val repository = FakeEntryRepository(listOf(stored, other))
+
+    repository.deleteEntry(stored.copy(swimDurationMillis = null))
+
+    assertEquals(listOf(other), repository.storedEntries)
+  }
+
+  @Test
   fun getLastEntryTimestamp_isNull_whenNoEntriesRecorded() = runTest {
     assertNull(FakeEntryRepository().getLastEntryTimestamp().first())
   }

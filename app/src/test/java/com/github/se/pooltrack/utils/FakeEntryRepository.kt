@@ -2,6 +2,7 @@ package com.github.se.pooltrack.utils
 
 import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.model.entry.EntryRepository
+import com.github.se.pooltrack.model.entry.isSameEntryAs
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -26,7 +27,7 @@ class FakeEntryRepository(initialEntries: List<Entry> = emptyList()) : EntryRepo
   }
 
   override suspend fun deleteEntry(entry: Entry) {
-    entries.value = entries.value.filter { it != entry }
+    entries.value = entries.value.filterNot { it.isSameEntryAs(entry) }
   }
 
   override suspend fun recordSwimDuration(entry: Entry, durationMillis: Long) {

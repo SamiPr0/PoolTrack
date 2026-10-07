@@ -218,6 +218,16 @@ class EntryRepositoryLocalTest {
   }
 
   @Test
+  fun deleteEntry_removesTheEntry_evenFromAStaleSnapshotWithoutSwimDuration() = runTest {
+    repository.addEntry(oldest)
+    repository.recordSwimDuration(oldest, 60_000L)
+
+    repository.deleteEntry(oldest)
+
+    assertEquals(emptyList<Entry>(), repository.getEntries().first())
+  }
+
+  @Test
   fun deleteEntry_removesMirroredDocument_whenSignedIn() = runTest {
     repository.addEntry(oldest)
     firebase.clearRecordedCalls()
