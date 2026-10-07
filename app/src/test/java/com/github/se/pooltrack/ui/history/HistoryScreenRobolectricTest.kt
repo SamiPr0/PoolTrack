@@ -14,6 +14,8 @@ import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
 import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
+import com.github.se.pooltrack.ui.history.heatmap.ContributionHeatmapTestTags
+import com.github.se.pooltrack.ui.history.heatmap.HistoryOverviewTestTags
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.NavigationTestTags
 import com.github.se.pooltrack.ui.navigation.Screen
@@ -34,7 +36,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+// A tall screen: the heatmap card sits above the list and would push the rows out of view.
+@Config(qualifiers = "w360dp-h1200dp")
 @RunWith(RobolectricTestRunner::class)
 class HistoryScreenRobolectricTest {
 
@@ -353,5 +358,60 @@ class HistoryScreenRobolectricTest {
     show(FakeEntryRepository(listOf(Entry(entryAt(today).timestampEpochMilli))))
 
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.LINK_BANNER).assertCountEquals(0)
+  }
+
+  @Test
+  fun historyScreen_showsTheHeatmapOverview_whenEntriesExist() {
+    show(FakeEntryRepository(listOf(entryAt(today), entryAt(today.minusDays(2)))))
+
+    composeTestRule.onNodeWithTag(HistoryOverviewTestTags.CARD).assertIsDisplayed()
+    composeTestRule.onNodeWithText("2 visits in the last year").assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ContributionHeatmapTestTags.cell(today)).assertExists()
+  }
+
+  @Test
+  fun historyScreen_hidesTheHeatmapOverview_whenThereAreNoEntries() {
+    show(FakeEntryRepository())
+
+    composeTestRule.onAllNodesWithTag(HistoryOverviewTestTags.CARD).assertCountEquals(0)
+  }
+
+  @Test
+  fun historyScreen_filtersTheListToATappedDay_andClearsIt() {
+    val older = today.minusDays(3)
+    show(FakeEntryRepository(listOf(entryAt(today), entryAt(older))))
+
+    composeTestRule.onNodeWithTag(ContributionHeatmapTestTags.cell(older)).performClick()
+
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(1)
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.DAY_HEADER).assertCountEquals(1)
+
+    composeTestRule.onNodeWithTag(HistoryOverviewTestTags.CLEAR_FILTER).performClick()
+
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(2)
+  }
+
+  @Test
+  fun historyScreen_tappingTheSelectedDayAgain_showsEveryDay() {
+    show(FakeEntryRepository(listOf(entryAt(today), entryAt(today.minusDays(3)))))
+    val cell = composeTestRule.onNodeWithTag(ContributionHeatmapTestTags.cell(today))
+
+    cell.performClick()
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(1)
+    cell.performClick()
+
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(2)
+  }
+
+  @Test
+  fun historyScreen_saysSoWhenTheTappedDayHasNoEntries() {
+    show(FakeEntryRepository(listOf(entryAt(today.minusDays(5)))))
+
+    composeTestRule
+        .onNodeWithTag(ContributionHeatmapTestTags.cell(today.minusDays(1)))
+        .performClick()
+
+    composeTestRule.onNodeWithTag(HistoryScreenTestTags.NO_ENTRIES_THAT_DAY).assertIsDisplayed()
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(0)
   }
 }

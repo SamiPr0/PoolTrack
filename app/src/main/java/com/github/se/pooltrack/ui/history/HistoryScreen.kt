@@ -46,6 +46,8 @@ import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.model.entry.timestamp
 import com.github.se.pooltrack.model.swim.formatSwimDistance
 import com.github.se.pooltrack.model.swim.formatSwimDuration
+import com.github.se.pooltrack.ui.history.heatmap.HistoryOverview
+import com.github.se.pooltrack.ui.history.heatmap.buildHeatmap
 import com.github.se.pooltrack.ui.navigation.BottomNavigationMenu
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
@@ -58,6 +60,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
 import java.time.format.FormatStyle
+import java.time.temporal.WeekFields
 import java.util.Locale
 import kotlinx.coroutines.launch
 
@@ -73,6 +76,7 @@ object HistoryScreenTestTags {
   const val UNDO_ADD_ACTION = "Undo"
   const val LINK_BANNER = "HistoryScreenLinkBanner"
   const val LINK_BUTTON = "HistoryScreenLinkButton"
+  const val NO_ENTRIES_THAT_DAY = "HistoryScreenNoEntriesThatDay"
 }
 
 private val ZONE = ZoneId.systemDefault()
@@ -100,6 +104,7 @@ fun HistoryScreen(
   val entries by viewModel.entries.collectAsState()
   var entryPendingDeletion by remember { mutableStateOf<Entry?>(null) }
   var showAddSheet by remember { mutableStateOf(false) }
+  var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
   // Remembered across openings, so adding several entries from the same day takes one tap each.
   var lastAddedDate by remember { mutableStateOf(LocalDate.now(ZONE)) }
   var lastAddedTime by remember { mutableStateOf(LocalTime.of(12, 0)) }
@@ -220,7 +225,17 @@ fun HistoryScreen(
       }
     } else {
       val today = LocalDate.now(ZONE)
-      val entriesByDay = entries.groupBy { it.timestamp.atZone(ZONE).toLocalDate() }
+      val allEntriesByDay = entries.groupBy { it.timestamp.atZone(ZONE).toLocalDate() }
+      val heatmap =
+          remember(entries, today) {
+            buildHeatmap(
+                countsByDay = allEntriesByDay.mapValues { it.value.size },
+                today = today,
+                firstDayOfWeek = WeekFields.of(Locale.getDefault()).firstDayOfWeek,
+            )
+          }
+      val entriesByDay =
+          selectedDate?.let { day -> allEntriesByDay.filterKeys { it == day } } ?: allEntriesByDay
 
       LazyColumn(
           modifier =
@@ -229,6 +244,28 @@ fun HistoryScreen(
                   .testTag(HistoryScreenTestTags.ENTRY_LIST),
           contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
       ) {
+        item(key = "overview") {
+          HistoryOverview(
+              heatmap = heatmap,
+              selectedDate = selectedDate,
+              onDayClick = { day -> selectedDate = if (day == selectedDate) null else day },
+              onClearSelection = { selectedDate = null },
+              selectedLabel = { dayLabel(it, today) },
+              modifier = Modifier.padding(vertical = 4.dp),
+          )
+        }
+        if (selectedDate != null && entriesByDay.isEmpty()) {
+          item(key = "no-entries-that-day") {
+            Text(
+                text = "No entries on this day.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier =
+                    Modifier.padding(vertical = 16.dp)
+                        .testTag(HistoryScreenTestTags.NO_ENTRIES_THAT_DAY),
+            )
+          }
+        }
         if (linkSuggestions.isNotEmpty()) {
           item(key = "link-banner") {
             LinkBanner(
