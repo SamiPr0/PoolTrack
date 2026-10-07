@@ -33,6 +33,16 @@ class SubscriptionViewModelTest {
   }
 
   @Test
+  fun subscriptions_areSortedByExpirationFarthestFirst() {
+    val soon = older.copy(id = "soon", expiresAtEpochMilli = 100L)
+    val far = newer.copy(id = "far", expiresAtEpochMilli = 200L)
+    val viewModel =
+        SubscriptionViewModel(FakeSubscriptionRepository(listOf(far, soon)), FakeEntryRepository())
+
+    assertEquals(listOf(far, soon), viewModel.subscriptions.value)
+  }
+
+  @Test
   fun activeSubscription_isTheActiveOne_whenOneIsActive() {
     val viewModel =
         SubscriptionViewModel(
