@@ -92,6 +92,22 @@ class EntryRepositoryLocal(
     updated?.let { mirrorEntry(it) }
   }
 
+  override suspend fun recordSwimDistance(entry: Entry, meters: Int) {
+    val uid = requireUid()
+    var updated: Entry? = null
+    context.entryDataStore.edit { prefs ->
+      claimLegacyEntries(prefs, uid)
+      val existing = readEntries(prefs, uid)
+      // Matched like deleteEntry, so a snapshot taken before the entry changed still finds it.
+      val stored = existing.firstOrNull { it.isSameEntryAs(entry) } ?: return@edit
+      val withDistance = stored.copy(swimDistanceMeters = meters, awaitingDistance = false)
+      updated = withDistance
+      prefs[entriesKey(uid)] =
+          Json.encodeToString(existing.map { if (it === stored) withDistance else it })
+    }
+    updated?.let { mirrorEntry(it) }
+  }
+
   override suspend fun deleteEntry(entry: Entry) {
     val uid = requireUid()
     context.entryDataStore.edit { prefs ->
@@ -111,6 +127,8 @@ class EntryRepositoryLocal(
                 "timestampEpochMilli" to entry.timestampEpochMilli,
                 "subscriptionId" to entry.subscriptionId,
                 "swimDurationMillis" to entry.swimDurationMillis,
+                "swimDistanceMeters" to entry.swimDistanceMeters,
+                "awaitingDistance" to entry.awaitingDistance,
             ),
     )
   }

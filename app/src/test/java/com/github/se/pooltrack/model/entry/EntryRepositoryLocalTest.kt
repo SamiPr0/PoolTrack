@@ -17,6 +17,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -98,6 +99,8 @@ class EntryRepositoryLocalTest {
               "timestampEpochMilli" to 1_000L,
               "subscriptionId" to "pass-a",
               "swimDurationMillis" to null,
+              "swimDistanceMeters" to null,
+              "awaitingDistance" to false,
           )
       )
     }
@@ -114,6 +117,8 @@ class EntryRepositoryLocalTest {
               "timestampEpochMilli" to 2_000L,
               "subscriptionId" to null,
               "swimDurationMillis" to null,
+              "swimDistanceMeters" to null,
+              "awaitingDistance" to false,
           )
       )
     }
@@ -163,6 +168,8 @@ class EntryRepositoryLocalTest {
               "timestampEpochMilli" to 1_000L,
               "subscriptionId" to "pass-a",
               "swimDurationMillis" to 4_000L,
+              "swimDistanceMeters" to null,
+              "awaitingDistance" to false,
           )
       )
     }
@@ -225,6 +232,88 @@ class EntryRepositoryLocalTest {
     repository.deleteEntry(oldest)
 
     assertEquals(emptyList<Entry>(), repository.getEntries().first())
+  }
+
+  @Test
+  fun recordSwimDistance_storesDistanceAndClearsTheMarker_onThatEntryOnly() = runTest {
+    val waiting = newest.copy(awaitingDistance = true)
+    repository.addEntry(oldest)
+    repository.addEntry(waiting)
+
+    repository.recordSwimDistance(waiting, 1_200)
+
+    assertEquals(
+        listOf(newest.copy(swimDistanceMeters = 1_200, awaitingDistance = false), oldest),
+        repository.getEntries().first(),
+    )
+  }
+
+  @Test
+  fun recordSwimDistance_findsTheEntry_fromAStaleSnapshot() = runTest {
+    val stored = oldest.copy(swimDurationMillis = 5L, awaitingDistance = true)
+    repository.addEntry(stored)
+
+    repository.recordSwimDistance(oldest, 50)
+
+    assertEquals(
+        listOf(stored.copy(swimDistanceMeters = 50, awaitingDistance = false)),
+        repository.getEntries().first(),
+    )
+  }
+
+  @Test
+  fun recordSwimDistance_mirrorsUpdatedEntryToFirestore() = runTest {
+    repository.addEntry(oldest.copy(awaitingDistance = true))
+
+    repository.recordSwimDistance(oldest, 800)
+
+    verify(exactly = 1) {
+      firebase.targetDocument.set(
+          mapOf(
+              "timestampEpochMilli" to 1_000L,
+              "subscriptionId" to "pass-a",
+              "swimDurationMillis" to null,
+              "swimDistanceMeters" to 800,
+              "awaitingDistance" to false,
+          )
+      )
+    }
+  }
+
+  @Test
+  fun recordSwimDistance_doesNothing_whenEntryWasCancelled() = runTest {
+    repository.addEntry(oldest)
+    repository.deleteEntry(oldest)
+
+    repository.recordSwimDistance(oldest, 800)
+
+    assertEquals(emptyList<Entry>(), repository.getEntries().first())
+  }
+
+  @Test
+  fun getEntries_defaultsTheNewFields_forEntriesStoredBeforeTheyExisted() = runTest {
+    productionPreferencesDataStore(appContext, FILE_CLASS, PROPERTY).edit {
+      it[stringPreferencesKey("entries_json_user-1")] =
+          """[{"timestampEpochMilli":1000,"subscriptionId":"pass-a","swimDurationMillis":7}]"""
+    }
+
+    val entry = repository.getEntries().first().single()
+
+    assertEquals(oldest.copy(swimDurationMillis = 7L), entry)
+    assertNull(entry.swimDistanceMeters)
+    assertFalse(entry.awaitingDistance)
+  }
+
+  @Test
+  fun getEntries_keepsTheAwaitingMarkerAndDistance_acrossStorage() = runTest {
+    val waiting = oldest.copy(awaitingDistance = true)
+    repository.addEntry(waiting)
+    repository.addEntry(newest.copy(swimDistanceMeters = 1_500))
+
+    assertEquals(
+        listOf(newest.copy(swimDistanceMeters = 1_500), waiting),
+        repository.getEntries().first(),
+    )
   }
 
   @Test

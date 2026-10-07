@@ -37,13 +37,23 @@ interface EntryRepository {
   suspend fun deleteEntry(entry: Entry)
 
   /**
-   * Stores how long the swim of an already recorded entry lasted. Does nothing if [entry] is no
-   * longer recorded (e.g. it was deleted in the meantime).
+   * Stores how long the swim of an already recorded entry lasted (no longer used by the app, which
+   * asks for a distance instead). Does nothing if [entry] is no longer recorded (e.g. it was
+   * deleted in the meantime).
    *
    * @param entry The entry the swim belongs to.
    * @param durationMillis The swim duration, in milliseconds.
    */
   suspend fun recordSwimDuration(entry: Entry, durationMillis: Long)
+
+  /**
+   * Stores how far the swim of an already recorded entry was, and marks the entry as no longer
+   * awaiting it. Does nothing if [entry] is no longer recorded (e.g. it was cancelled).
+   *
+   * @param entry The entry the swim belongs to.
+   * @param meters The distance swum, in metres.
+   */
+  suspend fun recordSwimDistance(entry: Entry, meters: Int)
 
   /**
    * Emits the timestamp of the most recent entry, or `null` if there is none. This is the single
