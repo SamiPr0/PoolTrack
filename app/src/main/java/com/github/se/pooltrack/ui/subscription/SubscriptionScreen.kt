@@ -24,13 +24,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -82,6 +85,7 @@ import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
+import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 import java.time.Period
@@ -101,6 +105,8 @@ object SubscriptionScreenTestTags {
   const val THUMBNAIL = "SubscriptionScreenThumbnail"
   const val ACTIVE_BADGE = "SubscriptionScreenActiveBadge"
   const val SET_ACTIVE_BUTTON = "SubscriptionScreenSetActiveButton"
+  const val EDIT_BUTTON = "SubscriptionScreenEditButton"
+  const val EDIT_NAME_FIELD = "SubscriptionScreenEditNameField"
   const val DELETE_BUTTON = "SubscriptionScreenDeleteButton"
   const val CONFIRM_DELETE_BUTTON = "SubscriptionScreenConfirmDeleteButton"
   const val CANCEL_DELETE_BUTTON = "SubscriptionScreenCancelDeleteButton"
@@ -113,6 +119,7 @@ object SubscriptionScreenTestTags {
   const val EXPIRATION_ENTRIES_FIELD = "SubscriptionScreenExpirationEntriesField"
   const val EXPIRATION_PURCHASE_DATE_BUTTON = "SubscriptionScreenExpirationPurchaseDateButton"
   const val EXPIRATION_PRICE_FIELD = "SubscriptionScreenExpirationPriceField"
+  const val EXPIRATION_KEEP_BUTTON = "SubscriptionScreenExpirationKeepButton"
   const val EXPIRATION_CONFIRM_BUTTON = "SubscriptionScreenExpirationConfirmButton"
 }
 
@@ -195,6 +202,7 @@ fun SubscriptionScreen(
   val entryCountsBySubscriptionId by viewModel.entryCountsBySubscriptionId.collectAsState()
   var selectedSubscription by remember { mutableStateOf<Subscription?>(null) }
   var subscriptionPendingDeletion by remember { mutableStateOf<Subscription?>(null) }
+  var subscriptionBeingEdited by remember { mutableStateOf<Subscription?>(null) }
   var pickedPdfUri by remember { mutableStateOf<Uri?>(null) }
 
   val pickPdfLauncher =
@@ -208,12 +216,29 @@ fun SubscriptionScreen(
       }
 
   pickedPdfUri?.let { uri ->
-    AddSubscriptionExpirationDialog(
-        onConfirm = { expiresAtEpochMilli, maxEntries, price ->
+    SubscriptionDetailsDialog(
+        onConfirm = { _, expiresAtEpochMilli, maxEntries, price ->
           viewModel.onSubscriptionPicked(uri.toString(), expiresAtEpochMilli, maxEntries, price)
           pickedPdfUri = null
         },
         onDismiss = { pickedPdfUri = null },
+    )
+  }
+
+  subscriptionBeingEdited?.let { subscription ->
+    SubscriptionDetailsDialog(
+        initial = subscription,
+        onConfirm = { name, expiresAtEpochMilli, maxEntries, price ->
+          viewModel.onEditSubscription(
+              subscription.id,
+              name,
+              expiresAtEpochMilli,
+              maxEntries,
+              price,
+          )
+          subscriptionBeingEdited = null
+        },
+        onDismiss = { subscriptionBeingEdited = null },
     )
   }
 
@@ -225,6 +250,10 @@ fun SubscriptionScreen(
         onSetActive = {
           viewModel.onSetActive(subscription.id)
           selectedSubscription = null
+        },
+        onEdit = {
+          selectedSubscription = null
+          subscriptionBeingEdited = subscription
         },
         onDelete = {
           selectedSubscription = null
@@ -419,13 +448,14 @@ private fun SubscriptionRow(
   }
 }
 
-/** Details for one subscription, plus its "set active" / "delete" actions. */
+/** Details for one subscription, plus its "set active" / "edit" / "delete" actions. */
 @Composable
 private fun SubscriptionDetailDialog(
     subscription: Subscription,
     isActive: Boolean,
     usedCount: Int,
     onSetActive: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -444,6 +474,12 @@ private fun SubscriptionDetailDialog(
               fontWeight = FontWeight.Bold,
               modifier = Modifier.weight(1f),
           )
+          IconButton(
+              onClick = onEdit,
+              modifier = Modifier.size(32.dp).testTag(SubscriptionScreenTestTags.EDIT_BUTTON),
+          ) {
+            Icon(Icons.Filled.Edit, contentDescription = "Edit subscription")
+          }
           IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
             Icon(Icons.Filled.Close, contentDescription = "Close")
           }
@@ -536,36 +572,65 @@ private fun SubscriptionDetailDialog(
 }
 
 /**
- * Shown right after picking a subscription PDF, before it's actually added, so its expiration - a
- * date (via quick presets) or an entry-count limit - and its price are captured from the start
- * rather than missing entirely.
+ * Captures a subscription's expiration - a date (via quick presets) or an entry-count limit - and
+ * its price. Shown right after picking a PDF, before it's actually added (when [initial] is
+ * `null`), and reused to edit an existing subscription, in which case it is pre-filled from
+ * [initial] and also offers its name. [onConfirm] receives the edited name (blank when adding).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddSubscriptionExpirationDialog(
-    onConfirm: (expiresAtEpochMilli: Long?, maxEntries: Int?, price: Double?) -> Unit,
+private fun SubscriptionDetailsDialog(
+    onConfirm: (name: String, expiresAtEpochMilli: Long?, maxEntries: Int?, price: Double?) -> Unit,
     onDismiss: () -> Unit,
+    initial: Subscription? = null,
 ) {
-  var mode by remember { mutableStateOf(ExpirationMode.NONE) }
+  val isEditing = initial != null
+  var nameText by remember { mutableStateOf(initial?.displayName ?: "") }
+  var mode by remember {
+    mutableStateOf(
+        when {
+          initial?.expiresAtEpochMilli != null -> ExpirationMode.DATE
+          initial?.maxEntries != null -> ExpirationMode.ENTRIES
+          else -> ExpirationMode.NONE
+        }
+    )
+  }
+  // While editing, no preset picked means "keep the date it already has".
+  val keptExpiry = initial?.expiresAtEpochMilli
   var selectedPreset by remember { mutableStateOf<DatePreset?>(null) }
   var purchaseDate by remember { mutableStateOf(LocalDate.now()) }
   var showPurchaseDatePicker by remember { mutableStateOf(false) }
-  var entriesText by remember { mutableStateOf("") }
-  var priceText by remember { mutableStateOf("") }
+  var entriesText by remember { mutableStateOf(initial?.maxEntries?.toString() ?: "") }
+  var priceText by remember {
+    mutableStateOf(
+        initial?.price?.let { BigDecimal.valueOf(it).stripTrailingZeros().toPlainString() } ?: ""
+    )
+  }
 
   val canConfirm =
       when (mode) {
         ExpirationMode.NONE -> true
-        ExpirationMode.DATE -> selectedPreset != null
+        ExpirationMode.DATE -> selectedPreset != null || keptExpiry != null
         ExpirationMode.ENTRIES -> (entriesText.toIntOrNull() ?: 0) > 0
-      }
+      } && (!isEditing || nameText.isNotBlank())
 
   AlertDialog(
       onDismissRequest = onDismiss,
       modifier = Modifier.testTag(SubscriptionScreenTestTags.EXPIRATION_DIALOG),
-      title = { Text("Subscription details") },
+      title = { Text(if (isEditing) "Edit subscription" else "Subscription details") },
       text = {
-        Column {
+        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+          if (isEditing) {
+            OutlinedTextField(
+                value = nameText,
+                onValueChange = { nameText = it },
+                label = { Text("Name") },
+                singleLine = true,
+                modifier =
+                    Modifier.fillMaxWidth().testTag(SubscriptionScreenTestTags.EDIT_NAME_FIELD),
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+          }
           Text(
               text = "When does it expire? (optional)",
               style = MaterialTheme.typography.labelLarge,
@@ -604,6 +669,18 @@ private fun AddSubscriptionExpirationDialog(
           when (mode) {
             ExpirationMode.DATE ->
                 Column {
+                  if (keptExpiry != null) {
+                    ChoiceButton(
+                        label =
+                            "Keep ${addedDateFormatter().format(Instant.ofEpochMilli(keptExpiry))}",
+                        selected = selectedPreset == null,
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .testTag(SubscriptionScreenTestTags.EXPIRATION_KEEP_BUTTON),
+                        onClick = { selectedPreset = null },
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                  }
                   Row(
                       modifier = Modifier.fillMaxWidth(),
                       horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -668,18 +745,18 @@ private fun AddSubscriptionExpirationDialog(
             onClick = {
               val expiresAtEpochMilli =
                   if (mode == ExpirationMode.DATE) {
-                    selectedPreset?.expiresAtEpochMilli(purchasedOn = purchaseDate)
+                    selectedPreset?.expiresAtEpochMilli(purchasedOn = purchaseDate) ?: keptExpiry
                   } else {
                     null
                   }
               val maxEntries =
                   if (mode == ExpirationMode.ENTRIES) entriesText.toIntOrNull() else null
-              onConfirm(expiresAtEpochMilli, maxEntries, priceText.toDoubleOrNull())
+              onConfirm(nameText, expiresAtEpochMilli, maxEntries, priceText.toDoubleOrNull())
             },
             enabled = canConfirm,
             modifier = Modifier.testTag(SubscriptionScreenTestTags.EXPIRATION_CONFIRM_BUTTON),
         ) {
-          Text("Add")
+          Text(if (isEditing) "Save" else "Add")
         }
       },
       dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
