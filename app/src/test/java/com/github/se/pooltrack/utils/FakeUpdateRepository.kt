@@ -5,6 +5,7 @@ import com.github.se.pooltrack.model.update.DownloadStatus
 import com.github.se.pooltrack.model.update.InstallResult
 import com.github.se.pooltrack.model.update.UpdateRepository
 import java.io.File
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
@@ -17,6 +18,8 @@ class FakeUpdateRepository(
     var downloadFlow: Flow<DownloadStatus> = flowOf(DownloadStatus.Finished(APK)),
     var installResult: InstallResult = InstallResult.STARTED,
     var canInstallResult: Boolean = true,
+    /** When set, [checkForUpdate] suspends until it completes, to simulate a slow network. */
+    var checkGate: CompletableDeferred<Unit>? = null,
 ) : UpdateRepository {
 
   /** The `currentVersion` passed to the last [checkForUpdate], or `null` if never called. */
@@ -36,6 +39,7 @@ class FakeUpdateRepository(
   override suspend fun checkForUpdate(currentVersion: String): AppUpdate? {
     checkCount++
     checkedVersion = currentVersion
+    checkGate?.await()
     return update
   }
 

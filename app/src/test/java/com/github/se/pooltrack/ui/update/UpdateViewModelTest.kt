@@ -7,6 +7,7 @@ import com.github.se.pooltrack.utils.FakeUpdateRepository.Companion.APK
 import com.github.se.pooltrack.utils.FakeUpdateRepository.Companion.UPDATE
 import com.github.se.pooltrack.utils.MainDispatcherRule
 import java.io.IOException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flow
 import org.junit.Assert.assertEquals
@@ -227,47 +228,42 @@ class UpdateViewModelTest {
   }
 
   @Test
-  fun onResume_checksAgain_onceTheIntervalHasPassed() {
+  fun onResume_neverChecksAgain_soARunningSessionIsNotInterrupted() {
     var now = 0L
     val repository = FakeUpdateRepository(update = null)
     val viewModel = UpdateViewModel(repository, "1.1.0", now = { now })
-    assertEquals(1, repository.checkCount)
-
-    now = RECHECK_INTERVAL_MILLIS - 1
-    viewModel.onResume()
-    assertEquals(1, repository.checkCount)
 
     repository.update = UPDATE
-    now = RECHECK_INTERVAL_MILLIS
-    viewModel.onResume()
-
-    assertEquals(2, repository.checkCount)
-    assertEquals(UpdateUiState.Available(UPDATE), viewModel.state.value)
-  }
-
-  @Test
-  fun onResume_doesNotCheckAgain_whileAnUpdateIsRequired() {
-    var now = 0L
-    val repository = FakeUpdateRepository(update = UPDATE)
-    val viewModel = UpdateViewModel(repository, "1.1.0", now = { now })
-
-    now = RECHECK_INTERVAL_MILLIS * 2
+    now = 24 * 60 * 60 * 1000L
     viewModel.onResume()
 
     assertEquals(1, repository.checkCount)
-    assertEquals(UpdateUiState.Available(UPDATE), viewModel.state.value)
+    assertEquals(UpdateUiState.None, viewModel.state.value)
   }
 
   @Test
-  fun onResume_staysUsable_whenTheRecheckFindsNothing() {
+  fun init_dropsAnAnswerThatArrivesTooLate_untilTheNextLaunch() {
     var now = 0L
-    val repository = FakeUpdateRepository(update = null)
+    val gate = CompletableDeferred<Unit>()
+    val repository = FakeUpdateRepository(update = UPDATE, checkGate = gate)
     val viewModel = UpdateViewModel(repository, "1.1.0", now = { now })
 
-    now = RECHECK_INTERVAL_MILLIS
-    viewModel.onResume()
+    now = STARTUP_CHECK_WINDOW_MILLIS + 1
+    gate.complete(Unit)
 
-    assertEquals(2, repository.checkCount)
     assertEquals(UpdateUiState.None, viewModel.state.value)
+  }
+
+  @Test
+  fun init_acceptsAnAnswerWithinTheStartupWindow() {
+    var now = 0L
+    val gate = CompletableDeferred<Unit>()
+    val repository = FakeUpdateRepository(update = UPDATE, checkGate = gate)
+    val viewModel = UpdateViewModel(repository, "1.1.0", now = { now })
+
+    now = STARTUP_CHECK_WINDOW_MILLIS
+    gate.complete(Unit)
+
+    assertEquals(UpdateUiState.Available(UPDATE), viewModel.state.value)
   }
 }

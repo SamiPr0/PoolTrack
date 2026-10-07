@@ -42,19 +42,29 @@ sealed interface UpdateUiState {
   data class Failed(val update: AppUpdate, val message: String) : UpdateUiState
 }
 
-/** How often the app looks for a new release again when it comes back to the foreground. */
-internal const val RECHECK_INTERVAL_MILLIS = 15 * 60 * 1000L
+/**
+ * How long after the app starts a found update may still take over the screen. A slower answer is
+ * dropped: by then the user may be showing their pass at the pool entrance, which an update prompt
+ * must never interrupt. The update is simply offered again on the next launch.
+ */
+internal const val STARTUP_CHECK_WINDOW_MILLIS = 10_000L
 
 /**
- * ViewModel behind the mandatory update. It checks for a new release when it is created, and again
- * when the app comes back to the foreground (at most every [RECHECK_INTERVAL_MILLIS]). Any state
- * but [UpdateUiState.None] means the app must not be used until the update is installed, so there
- * is no way to dismiss it: it walks the user through downloading and installing instead, and the
- * installer opens by itself as soon as the download is done.
+ * ViewModel behind the mandatory update. It checks for a new release once, when it is created, i.e.
+ * when the app starts, and never again during the session, so a running session (viewing the
+ * subscription PDF, a swim being tracked) is not interrupted: a release published meanwhile is
+ * picked up on the next launch. Any state but [UpdateUiState.None] means the app must not be used
+ * until the update is installed, so there is no way to dismiss it: it walks the user through
+ * downloading and installing instead, and the installer opens by itself as soon as the download is
+ * done.
+ *
+ * Installing replaces the APK and kills the process, including the swim tracking service. The swim
+ * itself is not lost (it is derived from the persisted entry), but its unlock notification only
+ * resumes once the user opens the app again.
  *
  * @property repository Where releases are found, downloaded and installed.
  * @property currentVersion The version of the running app.
- * @property now The current time in epoch milliseconds, used to space out the checks.
+ * @property now The current time in epoch milliseconds, used to drop a check that answers too late.
  */
 class UpdateViewModel(
     private val repository: UpdateRepository = UpdateRepositoryProvider.repository,
@@ -66,8 +76,7 @@ class UpdateViewModel(
   val state: StateFlow<UpdateUiState> = _state.asStateFlow()
 
   private var downloadJob: Job? = null
-  private var checkJob: Job? = null
-  private var lastCheckMillis = 0L
+  private val startMillis = now()
 
   init {
     checkForUpdate()
@@ -92,18 +101,12 @@ class UpdateViewModel(
 
   /**
    * To be called whenever the app comes back to the foreground. If the user was sent to the
-   * settings to allow installs and did so, the installation carries on without another tap. While
-   * the app is usable, it looks for a new release again if the last check is old enough.
+   * settings to allow installs and did so, the installation carries on without another tap. It
+   * never looks for a new release: that only happens at startup.
    */
   fun onResume() {
-    when (val current = _state.value) {
-      is UpdateUiState.ReadyToInstall ->
-          if (current.needsPermission && repository.canInstall()) {
-            install(current.update, current.apk)
-          }
-      UpdateUiState.None -> if (now() - lastCheckMillis >= RECHECK_INTERVAL_MILLIS) checkForUpdate()
-      else -> Unit
-    }
+    val current = _state.value as? UpdateUiState.ReadyToInstall ?: return
+    if (current.needsPermission && repository.canInstall()) install(current.update, current.apk)
   }
 
   /** Stops the download in progress. The update is still required, so it is offered again. */
@@ -115,11 +118,12 @@ class UpdateViewModel(
   }
 
   private fun checkForUpdate() {
-    if (checkJob?.isActive == true) return
-    lastCheckMillis = now()
-    checkJob = viewModelScope.launch {
+    viewModelScope.launch {
       val update = repository.checkForUpdate(currentVersion) ?: return@launch
-      if (_state.value == UpdateUiState.None) _state.value = UpdateUiState.Available(update)
+      val tooLate = now() - startMillis > STARTUP_CHECK_WINDOW_MILLIS
+      if (!tooLate && _state.value == UpdateUiState.None) {
+        _state.value = UpdateUiState.Available(update)
+      }
     }
   }
 
