@@ -195,6 +195,42 @@ describe('Firestore rules tests', async () => {
     });
   });
 
+  describe('Swim distance', () => {
+    const withDistance = (fields: Record<string, unknown>) =>
+      setDoc(myEntry(untaggedEntryId), { ...untaggedEntry, ...fields });
+
+    test('Entries can be backed up while awaiting their distance', async () => {
+      await assertSucceeds(
+        withDistance({ swimDistanceMeters: null, awaitingDistance: true }),
+      );
+    });
+
+    test('Entries can carry a distance of up to 50 km, with the marker cleared', async () => {
+      await assertSucceeds(withDistance({ swimDistanceMeters: 1, awaitingDistance: false }));
+      await assertSucceeds(withDistance({ swimDistanceMeters: 1200, awaitingDistance: false }));
+      await assertSucceeds(withDistance({ swimDistanceMeters: 50000, awaitingDistance: false }));
+    });
+
+    test('Distances must be positive integers of at most 50000', async () => {
+      await assertFails(withDistance({ swimDistanceMeters: 0 }));
+      await assertFails(withDistance({ swimDistanceMeters: -5 }));
+      await assertFails(withDistance({ swimDistanceMeters: 50001 }));
+      await assertFails(withDistance({ swimDistanceMeters: 12.5 }));
+      await assertFails(withDistance({ swimDistanceMeters: '1200' }));
+    });
+
+    test('The awaiting marker must be a boolean', async () => {
+      await assertFails(withDistance({ awaitingDistance: 'yes' }));
+      await assertFails(withDistance({ awaitingDistance: null }));
+      await assertFails(withDistance({ awaitingDistance: 1 }));
+    });
+
+    test('An existing entry can be updated with its distance', async () => {
+      await assertSucceeds(updateDoc(myEntry(), { swimDistanceMeters: 900, awaitingDistance: false }));
+      await assertFails(updateDoc(myEntry(), { swimDistanceMeters: 0 }));
+    });
+  });
+
   describe('Subscription validation', () => {
     const newId = '9a9a9a9a-0000-4000-8000-000000000003';
     const valid = { ...subscription, id: newId };
