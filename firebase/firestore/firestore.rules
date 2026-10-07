@@ -18,7 +18,11 @@ rules_version = '2';
 //     subscription active at that time, if any
 //   - swimDurationMillis: int | null (optional key, 1..21600000 when set) -
 //     how long the swim lasted, once reported; 21600000 is 6 hours, the cap
-//     the app puts on a swim (MAX_SWIM_DURATION)
+//     the app puts on a swim (no longer written by the app, kept for old entries)
+//   - swimDistanceMeters: int | null (optional key, 1..50000 when set) - how
+//     far the user said they swam
+//   - awaitingDistance: bool (optional key) - true until the user logged the
+//     distance of a swim they just confirmed
 //
 // Collection: users/{userId}/subscriptions
 // Document ID: the subscription's id (a UUID)
@@ -82,10 +86,14 @@ service cloud.firestore {
 
     function isValidEntry(entryId, data) {
       return data.keys().hasAll(['timestampEpochMilli', 'subscriptionId']) &&
-        data.keys().hasOnly(['timestampEpochMilli', 'subscriptionId', 'swimDurationMillis']) &&
+        data.keys().hasOnly([
+          'timestampEpochMilli', 'subscriptionId', 'swimDurationMillis',
+          'swimDistanceMeters', 'awaitingDistance']) &&
         isPastEpochMilli(data.timestampEpochMilli) &&
         (data.subscriptionId == null || isBoundedString(data.subscriptionId, 64)) &&
         isValidSwimDuration(data) &&
+        isValidSwimDistance(data) &&
+        (!('awaitingDistance' in data) || data.awaitingDistance is bool) &&
         // The ID is derived from the fields, so they can't drift apart.
         entryId == string(data.timestampEpochMilli) + '_' +
           (data.subscriptionId == null ? 'none' : data.subscriptionId);
@@ -96,6 +104,13 @@ service cloud.firestore {
       return !('swimDurationMillis' in data) || data.swimDurationMillis == null ||
         (data.swimDurationMillis is int && data.swimDurationMillis > 0 &&
           data.swimDurationMillis <= 21600000);
+    }
+
+    // The swim distance is optional, and null until the user logged it.
+    function isValidSwimDistance(data) {
+      return !('swimDistanceMeters' in data) || data.swimDistanceMeters == null ||
+        (data.swimDistanceMeters is int && data.swimDistanceMeters > 0 &&
+          data.swimDistanceMeters <= 50000);
     }
 
     function isValidSubscription(subscriptionId, data) {

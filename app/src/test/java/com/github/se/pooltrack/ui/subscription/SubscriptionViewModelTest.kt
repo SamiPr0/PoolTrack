@@ -222,6 +222,8 @@ class SubscriptionViewModelTest {
     val after = Instant.now().toEpochMilli()
     val entry = entries.storedEntries.single()
     assertEquals("new", entry.subscriptionId)
+    assertTrue(entry.awaitingDistance)
+    assertNull(entry.swimDistanceMeters)
     assertTrue(entry.timestampEpochMilli in before..after)
     assertEquals(
         Instant.ofEpochMilli(entry.timestampEpochMilli),

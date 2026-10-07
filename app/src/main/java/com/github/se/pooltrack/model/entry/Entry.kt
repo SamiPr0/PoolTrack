@@ -12,14 +12,22 @@ import kotlinx.serialization.Serializable
  *   `null` if none was (or for entries recorded before this was tracked). This is what lets an
  *   entry-limited subscription count how many of its entries have actually been used.
  * @property swimDurationMillis How long the swim lasted, in milliseconds, once the user picked
- *   their phone back up and it was reported to them; `null` while the swim is still in progress (or
- *   for entries recorded before this was tracked).
+ *   their phone back up and it was reported to them; `null` for entries recorded after swims
+ *   stopped being timed (the app asks for a distance instead), and for older ones that never got
+ *   it. Kept so old entries still show their duration.
+ * @property swimDistanceMeters How far the user swam, in metres, as they logged it; `null` until
+ *   they do (or for entries recorded before distances were logged).
+ * @property awaitingDistance Whether the user still has to log [swimDistanceMeters]. `true` only
+ *   for entries created by confirming a scan, so entries added by hand, imported or recorded before
+ *   distances existed are never waiting for one.
  */
 @Serializable
 data class Entry(
     val timestampEpochMilli: Long,
     val subscriptionId: String? = null,
     val swimDurationMillis: Long? = null,
+    val swimDistanceMeters: Int? = null,
+    val awaitingDistance: Boolean = false,
 )
 
 /** The instant this entry was confirmed. */
@@ -28,7 +36,7 @@ val Entry.timestamp: Instant
 
 /**
  * Whether [other] is the same entry, i.e. has the same timestamp and subscription. Unlike `==` this
- * ignores [Entry.swimDurationMillis], which changes after the entry was recorded, so an older
+ * ignores the swim duration and distance, which change after the entry was recorded, so an older
  * snapshot of an entry still matches it.
  */
 fun Entry.isSameEntryAs(other: Entry): Boolean =

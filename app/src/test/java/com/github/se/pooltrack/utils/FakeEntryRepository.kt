@@ -34,4 +34,13 @@ class FakeEntryRepository(initialEntries: List<Entry> = emptyList()) : EntryRepo
     entries.value =
         entries.value.map { if (it == entry) it.copy(swimDurationMillis = durationMillis) else it }
   }
+
+  override suspend fun recordSwimDistance(entry: Entry, meters: Int) {
+    entries.value =
+        entries.value.map {
+          if (it.isSameEntryAs(entry))
+              it.copy(swimDistanceMeters = meters, awaitingDistance = false)
+          else it
+        }
+  }
 }

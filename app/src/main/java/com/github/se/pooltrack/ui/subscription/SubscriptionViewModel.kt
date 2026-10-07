@@ -129,12 +129,17 @@ class SubscriptionViewModel(
    * actually entered the pool. The reopen cooldown is derived from this same entry list (see
    * [com.github.se.pooltrack.ui.home.HomeStats]), so there is nothing extra to record here. The
    * entry is tagged with whichever subscription is active right now, so an entry-limited
-   * subscription can count how many of its entries have actually been used.
+   * subscription can count how many of its entries have actually been used. It awaits the swim
+   * distance, which the app then asks for (see [com.github.se.pooltrack.ui.poolstay]).
    */
   fun onScannerAccepted() {
     val subscriptionId = activeSubscription.value?.id
     val entry =
-        Entry(timestampEpochMilli = Instant.now().toEpochMilli(), subscriptionId = subscriptionId)
+        Entry(
+            timestampEpochMilli = Instant.now().toEpochMilli(),
+            subscriptionId = subscriptionId,
+            awaitingDistance = true,
+        )
     viewModelScope.launch { entryRepository.addEntry(entry) }
   }
 }

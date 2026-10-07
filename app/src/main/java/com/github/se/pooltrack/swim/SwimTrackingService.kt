@@ -19,9 +19,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
- * Waits, while the user swims, for them to unlock their phone again, then tells them how long they
- * swam. A foreground service because `ACTION_USER_PRESENT` can only be received by a receiver
- * registered at runtime. Stops itself as soon as there is no swim left to report.
+ * Waits, while the user swims, for them to unlock their phone again, then reminds them, once, to
+ * log how far they swam. A foreground service because `ACTION_USER_PRESENT` can only be received by
+ * a receiver registered at runtime. Stops itself as soon as there is no swim left to report.
  */
 class SwimTrackingService : Service() {
 
@@ -43,7 +43,7 @@ class SwimTrackingService : Service() {
     super.onCreate()
     EntryRepositoryProvider.init(this)
     reporter =
-        SwimReporter(EntryRepositoryProvider.repository) { SwimNotifications.postReport(this, it) }
+        SwimReporter(EntryRepositoryProvider.repository) { SwimNotifications.postLogReminder(this) }
     SwimNotifications.createChannels(this)
     val notification = SwimNotifications.trackingNotification(this)
     // The special-use type only exists (and is only required) from Android 14.
@@ -72,7 +72,7 @@ class SwimTrackingService : Service() {
         return@launch
       }
       // Stopping also dismisses the tracking notification.
-      reporter.awaitTrackedEntryRemoved()
+      reporter.awaitTrackedEntryResolved()
       stopSelf()
     }
     return START_STICKY

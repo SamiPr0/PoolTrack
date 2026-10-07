@@ -47,7 +47,7 @@ class EntryDetailsScreenTest {
           maxEntries = 10,
           price = 50.0,
       )
-  // Fixed, long-past times: a swim without a duration is "Not recorded", never "In progress".
+  // Fixed, long-past times: a swim without a duration or distance is "Not recorded".
   private val first = Entry(1_000_000_000_000L, subscriptionId = "sub-1")
   private val second =
       Entry(1_000_259_200_000L, subscriptionId = "sub-1", swimDurationMillis = 4_320_000L)
@@ -100,13 +100,25 @@ class EntryDetailsScreenTest {
   }
 
   @Test
-  fun entryDetailsScreen_showsSwimInProgress_whenEntryIsRecentAndNotReported() {
-    val now = Entry(Instant.now().toEpochMilli(), subscriptionId = "sub-1")
-    show(now.timestampEpochMilli, entries = FakeEntryRepository(listOf(now)))
+  fun entryDetailsScreen_showsTheLoggedDistance_whenRecorded() {
+    val logged = second.copy(swimDurationMillis = null, swimDistanceMeters = 1200)
+    show(logged.timestampEpochMilli, entries = FakeEntryRepository(listOf(first, logged)))
 
     composeTestRule
+        .onNodeWithTag(EntryDetailsScreenTestTags.SWIM_DISTANCE)
+        .assertTextContains("1200 m")
+    composeTestRule.onNodeWithText("swum").assertIsDisplayed()
+    composeTestRule.onAllNodesWithTag(EntryDetailsScreenTestTags.SWIM_DURATION).assertCountEquals(0)
+  }
+
+  @Test
+  fun entryDetailsScreen_showsTheOldDuration_whenNoDistanceWasLogged() {
+    show(second.timestampEpochMilli)
+
+    composeTestRule.onAllNodesWithTag(EntryDetailsScreenTestTags.SWIM_DISTANCE).assertCountEquals(0)
+    composeTestRule
         .onNodeWithTag(EntryDetailsScreenTestTags.SWIM_DURATION)
-        .assertTextContains("In progress")
+        .assertTextContains("1h 12min")
   }
 
   @Test

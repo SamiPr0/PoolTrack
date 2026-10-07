@@ -29,6 +29,7 @@ import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
 import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
 import com.github.se.pooltrack.model.swim.isSwimPending
 import com.github.se.pooltrack.model.update.UpdateRepositoryProvider
+import com.github.se.pooltrack.swim.SwimNotifications
 import com.github.se.pooltrack.swim.SwimTrackingService
 import com.github.se.pooltrack.ui.account.AccountViewModel
 import com.github.se.pooltrack.ui.account.SignInScreen
@@ -38,6 +39,9 @@ import com.github.se.pooltrack.ui.home.HomeScreen
 import com.github.se.pooltrack.ui.navigation.ENTRY_TIMESTAMP_ARG
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
+import com.github.se.pooltrack.ui.poolstay.PoolStayScreen
+import com.github.se.pooltrack.ui.poolstay.PoolStayState
+import com.github.se.pooltrack.ui.poolstay.PoolStayViewModel
 import com.github.se.pooltrack.ui.subscription.SubscriptionQuickViewScreen
 import com.github.se.pooltrack.ui.subscription.SubscriptionScreen
 import com.github.se.pooltrack.ui.theme.PoolTrackTheme
@@ -66,7 +70,7 @@ class MainActivity : ComponentActivity() {
     setContent { PoolTrackTheme { Surface(modifier = Modifier.fillMaxSize()) { PoolTrackApp() } } }
   }
 
-  // Needed to tell the user how long they swam; without it the swim is tracked but silent.
+  // Needed to remind the user to log their distance; without it the swim is tracked but silent.
   private fun requestNotificationPermissionIfNeeded() {
     if (
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -86,7 +90,11 @@ class MainActivity : ComponentActivity() {
             .getEntries()
             .map { isSwimPending(it.firstOrNull()) }
             .distinctUntilChanged()
-            .collect { pending -> if (pending) SwimTrackingService.start(this@MainActivity) }
+            .collect { pending ->
+              if (pending) SwimTrackingService.start(this@MainActivity)
+              // Logged or cancelled in the app: the reminder, if posted, is stale.
+              else SwimNotifications.cancelLogReminder(this@MainActivity)
+            }
       }
     }
   }
@@ -98,7 +106,8 @@ class MainActivity : ComponentActivity() {
  * since subscriptions and entries are only meaningful once backed up to one. A newer release takes
  * precedence over both: [UpdateRequiredScreen] replaces the whole app until it is installed. If the
  * check can't reach GitHub (e.g. offline at the pool), the app stays usable so the pass can still
- * be shown.
+ * be shown. Once signed in, a stay in the pool replaces the app too ([PoolStayScreen]) until the
+ * user logged how far they swam.
  */
 @Composable
 fun PoolTrackApp(
@@ -118,6 +127,20 @@ fun PoolTrackApp(
   if (user == null || user.isAnonymous) {
     SignInScreen(viewModel = accountViewModel)
     return
+  }
+
+  // After a confirmed scan the user sees only the pool stay screen, until they logged a distance.
+  // It is derived from the stored entry, so reopening the app later lands here again.
+  val poolStayViewModel: PoolStayViewModel = viewModel()
+  val poolStay by poolStayViewModel.state.collectAsState()
+  when (poolStay) {
+    PoolStayState.Loading -> return
+    PoolStayState.None -> Unit
+    is PoolStayState.CancelWindow,
+    is PoolStayState.LogRequired -> {
+      PoolStayScreen(poolStayViewModel)
+      return
+    }
   }
 
   val navController: NavHostController = rememberNavController()
