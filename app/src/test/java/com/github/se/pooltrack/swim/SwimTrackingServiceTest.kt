@@ -10,6 +10,7 @@ import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
 import com.github.se.pooltrack.utils.FakeEntryRepository
 import java.time.Duration
 import java.time.Instant
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -107,6 +108,34 @@ class SwimTrackingServiceTest {
     controller.destroy()
     unlockPhone()
 
+    assertNull(repository.storedEntries.single().swimDurationMillis)
+  }
+
+  @Test
+  fun removingTheEntry_stopsTheServiceAtOnce() {
+    val entry = entryEnteredAgo(Duration.ofMinutes(2))
+    val (controller, repository) = startService(entry)
+    assertTrue(!shadowOf(controller.get()).isStoppedBySelf)
+
+    runBlocking { repository.deleteEntry(entry) }
+    shadowOf(android.os.Looper.getMainLooper()).idle()
+
+    assertTrue(shadowOf(controller.get()).isStoppedBySelf)
+  }
+
+  @Test
+  fun unlock_afterTheEntryWasRemoved_doesNotReportAnOlderEntry() {
+    val older = entryEnteredAgo(Duration.ofMinutes(90)).copy(subscriptionId = "old")
+    val newest = entryEnteredAgo(Duration.ofMinutes(20))
+    val (_, repository) = startService(older, newest)
+
+    runBlocking { repository.deleteEntry(newest) }
+    shadowOf(android.os.Looper.getMainLooper()).idle()
+    unlockPhone()
+
+    assertNull(
+        shadowOf(notificationManager).getNotification(SwimNotifications.REPORT_NOTIFICATION_ID)
+    )
     assertNull(repository.storedEntries.single().swimDurationMillis)
   }
 }

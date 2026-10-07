@@ -25,3 +25,11 @@ data class Entry(
 /** The instant this entry was confirmed. */
 val Entry.timestamp: Instant
   get() = Instant.ofEpochMilli(timestampEpochMilli)
+
+/**
+ * Whether [other] is the same entry, i.e. has the same timestamp and subscription. Unlike `==` this
+ * ignores [Entry.swimDurationMillis], which changes after the entry was recorded, so an older
+ * snapshot of an entry still matches it.
+ */
+fun Entry.isSameEntryAs(other: Entry): Boolean =
+    timestampEpochMilli == other.timestampEpochMilli && subscriptionId == other.subscriptionId
