@@ -43,6 +43,27 @@ class EntryRepositoryTest {
   }
 
   @Test
+  fun deleteEntry_matchesTimestampAndSubscription_ignoringDistanceAndMarker() = runTest {
+    val stored =
+        Entry(1_000L, subscriptionId = "a", swimDistanceMeters = 900, awaitingDistance = false)
+    val repository = FakeEntryRepository(listOf(stored))
+
+    repository.deleteEntry(Entry(1_000L, subscriptionId = "a", awaitingDistance = true))
+
+    assertEquals(emptyList<Entry>(), repository.storedEntries)
+  }
+
+  @Test
+  fun setSubscription_keepsTheDistanceAndMarker() = runTest {
+    val stored = Entry(1_000L, subscriptionId = "a", awaitingDistance = true)
+    val repository = FakeEntryRepository(listOf(stored))
+
+    repository.setSubscription(stored, "b")
+
+    assertEquals(listOf(stored.copy(subscriptionId = "b")), repository.storedEntries)
+  }
+
+  @Test
   fun getLastEntryTimestamp_isNull_whenNoEntriesRecorded() = runTest {
     assertNull(FakeEntryRepository().getLastEntryTimestamp().first())
   }
