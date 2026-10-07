@@ -75,6 +75,35 @@ class SubscriptionViewModel(
   }
 
   /**
+   * Edits the details of an existing subscription. Entries already recorded against it are never
+   * touched, so lowering [maxEntries] below the used count simply leaves it used up. Ignored if the
+   * input is invalid: a blank [displayName], a non-positive [maxEntries], or both an expiration
+   * date and an entry limit (the two are mutually exclusive, as when adding).
+   *
+   * @param id The identifier of the subscription to edit.
+   * @param displayName The new label; surrounding whitespace is trimmed.
+   * @param expiresAtEpochMilli When it expires, as epoch milliseconds, or `null` for no date-based
+   *   expiration.
+   * @param maxEntries The number of entries it's good for, or `null` for no entry-count limit.
+   * @param price How much it cost, or `null` if not recorded.
+   */
+  fun onEditSubscription(
+      id: String,
+      displayName: String,
+      expiresAtEpochMilli: Long?,
+      maxEntries: Int?,
+      price: Double?,
+  ) {
+    val name = displayName.trim()
+    if (name.isEmpty()) return
+    if (maxEntries != null && maxEntries <= 0) return
+    if (expiresAtEpochMilli != null && maxEntries != null) return
+    viewModelScope.launch {
+      subscriptionRepository.updateSubscription(id, name, expiresAtEpochMilli, maxEntries, price)
+    }
+  }
+
+  /**
    * Makes the subscription with [id] the active one.
    *
    * @param id The identifier of the subscription to activate.

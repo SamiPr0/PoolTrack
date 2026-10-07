@@ -145,6 +145,62 @@ class SubscriptionViewModelTest {
   }
 
   @Test
+  fun onEditSubscription_updatesDetails_andTrimsName() {
+    val subscriptions = FakeSubscriptionRepository(listOf(older, newer), "new")
+    val viewModel = SubscriptionViewModel(subscriptions, FakeEntryRepository())
+
+    viewModel.onEditSubscription("old", "  Renamed  ", 5_000L, null, 20.0)
+
+    val expected =
+        older
+            .copy(displayName = "Renamed", expiresAtEpochMilli = 5_000L, maxEntries = null)
+            .copy(price = 20.0)
+    assertEquals(listOf(newer, expected), viewModel.subscriptions.value)
+    assertEquals("new", viewModel.activeSubscription.value?.id)
+  }
+
+  @Test
+  fun onEditSubscription_switchingType_clearsTheOtherField() {
+    val dated = older.copy(expiresAtEpochMilli = 5_000L)
+    val viewModel =
+        SubscriptionViewModel(FakeSubscriptionRepository(listOf(dated)), FakeEntryRepository())
+
+    viewModel.onEditSubscription("old", "Old", null, 10, null)
+
+    val edited = viewModel.subscriptions.value.single()
+    assertNull(edited.expiresAtEpochMilli)
+    assertEquals(10, edited.maxEntries)
+  }
+
+  @Test
+  fun onEditSubscription_keepsEntries_whenMaxEntriesDropsBelowUsedCount() {
+    val limited = older.copy(maxEntries = 10)
+    val entries =
+        FakeEntryRepository(
+            List(5) { Entry(timestampEpochMilli = it.toLong(), subscriptionId = "old") }
+        )
+    val viewModel = SubscriptionViewModel(FakeSubscriptionRepository(listOf(limited)), entries)
+
+    viewModel.onEditSubscription("old", "Old", null, 2, null)
+
+    assertEquals(2, viewModel.subscriptions.value.single().maxEntries)
+    assertEquals(5, entries.storedEntries.size)
+    assertEquals(mapOf("old" to 5), viewModel.entryCountsBySubscriptionId.value)
+  }
+
+  @Test
+  fun onEditSubscription_ignoresInvalidInput() {
+    val repository = FakeSubscriptionRepository(listOf(older))
+    val viewModel = SubscriptionViewModel(repository, FakeEntryRepository())
+
+    viewModel.onEditSubscription("old", "   ", null, null, null)
+    viewModel.onEditSubscription("old", "X", null, 0, null)
+    viewModel.onEditSubscription("old", "X", 5_000L, 3, null)
+
+    assertEquals(listOf(older), viewModel.subscriptions.value)
+  }
+
+  @Test
   fun onScannerAccepted_recordsOneEntryTaggedWithTheActiveSubscription() {
     val entries = FakeEntryRepository()
     val viewModel =
