@@ -22,6 +22,8 @@ import java.time.temporal.ChronoUnit
  *   can't be known.
  * @property daysSincePreviousSwim Calendar days between the previous entry and this one, or `null`
  *   if this is the first entry.
+ * @property subscriptionDeleted Whether the entry was tagged with a subscription that has since
+ *   been deleted. `false` for an entry that never had one.
  */
 data class EntryDetails(
     val entry: Entry,
@@ -31,6 +33,7 @@ data class EntryDetails(
     val entryNumberOnSubscription: Int?,
     val costOfEntry: Double?,
     val daysSincePreviousSwim: Long?,
+    val subscriptionDeleted: Boolean = false,
 )
 
 /**
@@ -65,6 +68,7 @@ fun computeEntryDetails(
       entryNumberOnSubscription = entryNumberOnSubscription,
       costOfEntry = subscription?.pricePerEntry,
       daysSincePreviousSwim = daysSincePreviousSwim,
+      subscriptionDeleted = entry.subscriptionId != null && subscription == null,
   )
 }
 

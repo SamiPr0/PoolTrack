@@ -102,6 +102,7 @@ object SubscriptionScreenTestTags {
   const val ACTIVE_BADGE = "SubscriptionScreenActiveBadge"
   const val SET_ACTIVE_BUTTON = "SubscriptionScreenSetActiveButton"
   const val DELETE_BUTTON = "SubscriptionScreenDeleteButton"
+  const val DELETE_ENTRIES_NOTE = "SubscriptionScreenDeleteEntriesNote"
   const val CONFIRM_DELETE_BUTTON = "SubscriptionScreenConfirmDeleteButton"
   const val CANCEL_DELETE_BUTTON = "SubscriptionScreenCancelDeleteButton"
   const val ADD_BUTTON = "SubscriptionScreenAddButton"
@@ -238,7 +239,20 @@ fun SubscriptionScreen(
     AlertDialog(
         onDismissRequest = { subscriptionPendingDeletion = null },
         title = { Text("Delete this subscription?") },
-        text = { Text("\"${subscription.displayName}\" will be permanently removed.") },
+        text = {
+          val entryCount = entryCountsBySubscriptionId[subscription.id] ?: 0
+          Column {
+            Text("\"${subscription.displayName}\" will be permanently removed.")
+            if (entryCount > 0) {
+              Text(
+                  deletionEntriesNote(entryCount),
+                  modifier =
+                      Modifier.padding(top = 8.dp)
+                          .testTag(SubscriptionScreenTestTags.DELETE_ENTRIES_NOTE),
+              )
+            }
+          }
+        },
         confirmButton = {
           TextButton(
               onClick = {
@@ -842,3 +856,8 @@ private fun SubscriptionThumbnail(uri: String, width: Dp, height: Dp) {
     }
   }
 }
+
+/** Tells the user that deleting a subscription leaves the entries made with it in the history. */
+internal fun deletionEntriesNote(entryCount: Int): String =
+    if (entryCount == 1) "Its 1 entry stays in your history."
+    else "Its $entryCount entries stay in your history."

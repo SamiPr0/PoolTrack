@@ -7,6 +7,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EntryDetailsTest {
@@ -98,7 +99,7 @@ class EntryDetailsTest {
   }
 
   @Test
-  fun computeEntryDetails_hasNoSubscription_whenItWasDeletedOrNeverSet() {
+  fun computeEntryDetails_hasNoSubscription_whenItWasNeverSet() {
     val orphan = Entry(at(2), subscriptionId = null)
 
     val details = computeEntryDetails(orphan.timestampEpochMilli, listOf(orphan), emptyList(), zone)
@@ -115,6 +116,19 @@ class EntryDetailsTest {
         ),
         details,
     )
+  }
+
+  @Test
+  fun computeEntryDetails_flagsDeletedSubscription_whenItsTagNoLongerMatchesAny() {
+    val orphan = Entry(at(2), subscriptionId = "gone")
+
+    val details =
+        computeEntryDetails(orphan.timestampEpochMilli, listOf(orphan), emptyList(), zone)!!
+
+    assertNull(details.subscription)
+    assertNull(details.entryNumberOnSubscription)
+    assertNull(details.costOfEntry)
+    assertTrue(details.subscriptionDeleted)
   }
 
   @Test

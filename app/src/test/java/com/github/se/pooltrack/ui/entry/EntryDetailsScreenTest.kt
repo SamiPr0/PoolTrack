@@ -94,7 +94,7 @@ class EntryDetailsScreenTest {
     composeTestRule
         .onNodeWithTag(EntryDetailsScreenTestTags.SWIM_DURATION)
         .assertTextContains("Not recorded")
-    composeTestRule.onNodeWithText("None").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Deleted subscription").assertIsDisplayed()
     composeTestRule.onNodeWithText("First swim").assertIsDisplayed()
     composeTestRule.onAllNodesWithTag(EntryDetailsScreenTestTags.COST).assertCountEquals(0)
   }

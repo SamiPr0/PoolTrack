@@ -415,6 +415,41 @@ class SubscriptionScreenTest {
   }
 
   @Test
+  fun subscriptionScreen_deleteDialog_saysEntriesStay_whenSubscriptionHasEntries() {
+    val entries =
+        FakeEntryRepository(
+            listOf(
+                Entry(timestampEpochMilli = 1L, subscriptionId = "new"),
+                Entry(timestampEpochMilli = 2L, subscriptionId = "new"),
+                Entry(timestampEpochMilli = 3L, subscriptionId = "old"),
+            )
+        )
+    setScreen(FakeSubscriptionRepository(listOf(older, newer)), entries)
+    composeRule.onAllNodesWithTag(SubscriptionScreenTestTags.SUBSCRIPTION_ITEM)[0].performClick()
+
+    tag(SubscriptionScreenTestTags.DELETE_BUTTON).performClick()
+
+    tag(SubscriptionScreenTestTags.DELETE_ENTRIES_NOTE)
+        .assertTextEquals("Its 2 entries stay in your history.")
+  }
+
+  @Test
+  fun subscriptionScreen_deleteDialog_omitsEntriesNote_whenSubscriptionHasNoEntries() {
+    setScreen(FakeSubscriptionRepository(listOf(newer)))
+    tag(SubscriptionScreenTestTags.SUBSCRIPTION_ITEM).performClick()
+
+    tag(SubscriptionScreenTestTags.DELETE_BUTTON).performClick()
+
+    tag(SubscriptionScreenTestTags.DELETE_ENTRIES_NOTE).assertDoesNotExist()
+  }
+
+  @Test
+  fun deletionEntriesNote_isSingular_forOneEntry() {
+    assertEquals("Its 1 entry stays in your history.", deletionEntriesNote(1))
+    assertEquals("Its 5 entries stay in your history.", deletionEntriesNote(5))
+  }
+
+  @Test
   fun subscriptionScreen_confirmDelete_removesOnlyThatSubscription() {
     val subscriptions = FakeSubscriptionRepository(listOf(older, newer))
     setScreen(subscriptions)
