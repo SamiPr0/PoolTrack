@@ -9,11 +9,13 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.github.se.pooltrack.model.auth.AuthRepository
 import com.github.se.pooltrack.model.auth.AuthRepositoryProvider
+import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
 import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
 import com.github.se.pooltrack.model.update.UpdateRepositoryProvider
 import com.github.se.pooltrack.ui.account.SignInScreenTestTags
 import com.github.se.pooltrack.ui.navigation.NavigationTestTags
+import com.github.se.pooltrack.ui.poolstay.PoolStayScreenTestTags
 import com.github.se.pooltrack.ui.update.UpdateRequiredScreenTestTags
 import com.github.se.pooltrack.utils.FakeAuthRepository
 import com.github.se.pooltrack.utils.FakeAuthRepository.Companion.GOOGLE_USER
@@ -22,6 +24,8 @@ import com.github.se.pooltrack.utils.FakeSubscriptionRepository
 import com.github.se.pooltrack.utils.FakeUpdateRepository
 import com.github.se.pooltrack.utils.FirebaseTestApp
 import com.github.se.pooltrack.utils.MainDispatcherRule
+import java.time.Duration
+import java.time.Instant
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -105,6 +109,58 @@ class MainActivityTest {
     ActivityScenario.launch(MainActivity::class.java).use {
       composeRule.onNodeWithTag(UpdateRequiredScreenTestTags.SCREEN).assertDoesNotExist()
       composeRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertIsDisplayed()
+    }
+  }
+
+  private fun waitingEntry(minutesAgo: Long) =
+      Entry(
+          timestampEpochMilli = Instant.now().minus(Duration.ofMinutes(minutesAgo)).toEpochMilli(),
+          awaitingDistance = true,
+      )
+
+  @Test
+  fun onCreate_showsTheCancelWindowOnly_whenAnEntryWasJustConfirmed() {
+    EntryRepositoryProvider.repository = FakeEntryRepository(listOf(waitingEntry(minutesAgo = 3)))
+    AuthRepositoryProvider.repository = FakeAuthRepository(initialUser = GOOGLE_USER)
+
+    ActivityScenario.launch(MainActivity::class.java).use {
+      composeRule.onNodeWithTag(PoolStayScreenTestTags.CANCEL_BUTTON).assertIsDisplayed()
+      composeRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertDoesNotExist()
+    }
+  }
+
+  @Test
+  fun onCreate_routesStraightToTheDistanceScreen_whenAnEntryAwaitsItsDistance() {
+    EntryRepositoryProvider.repository = FakeEntryRepository(listOf(waitingEntry(minutesAgo = 90)))
+    AuthRepositoryProvider.repository = FakeAuthRepository(initialUser = GOOGLE_USER)
+
+    ActivityScenario.launch(MainActivity::class.java).use {
+      composeRule.onNodeWithTag(PoolStayScreenTestTags.DISTANCE_INPUT).assertIsDisplayed()
+      composeRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertDoesNotExist()
+    }
+  }
+
+  @Test
+  fun onCreate_showsTheNormalApp_forEntriesNotAwaitingADistance() {
+    // Added by hand, imported or recorded before distances existed: never trapped.
+    EntryRepositoryProvider.repository =
+        FakeEntryRepository(listOf(waitingEntry(minutesAgo = 90).copy(awaitingDistance = false)))
+    AuthRepositoryProvider.repository = FakeAuthRepository(initialUser = GOOGLE_USER)
+
+    ActivityScenario.launch(MainActivity::class.java).use {
+      composeRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertIsDisplayed()
+      composeRule.onNodeWithTag(PoolStayScreenTestTags.DISTANCE_INPUT).assertDoesNotExist()
+    }
+  }
+
+  @Test
+  fun onCreate_signsInBeforeShowingThePoolStay() {
+    EntryRepositoryProvider.repository = FakeEntryRepository(listOf(waitingEntry(minutesAgo = 90)))
+    AuthRepositoryProvider.repository = FakeAuthRepository(initialUser = null)
+
+    ActivityScenario.launch(MainActivity::class.java).use {
+      composeRule.onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON).assertIsDisplayed()
+      composeRule.onNodeWithTag(PoolStayScreenTestTags.DISTANCE_INPUT).assertDoesNotExist()
     }
   }
 
