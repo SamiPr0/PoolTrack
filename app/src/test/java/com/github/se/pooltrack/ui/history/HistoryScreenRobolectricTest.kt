@@ -189,6 +189,18 @@ class HistoryScreenRobolectricTest {
   }
 
   @Test
+  fun historyScreen_showsLoggedDistanceNextToTime() {
+    val logged = entryAt(today, hour = 8).copy(swimDistanceMeters = 1200)
+    val both =
+        entryAt(today.minusDays(1), hour = 9)
+            .copy(swimDurationMillis = 4_320_000L, swimDistanceMeters = 800)
+    show(FakeEntryRepository(listOf(logged, both)))
+
+    composeTestRule.onNodeWithText("${timeLabel(logged)} · 1200 m").assertIsDisplayed()
+    composeTestRule.onNodeWithText("${timeLabel(both)} · 1h 12min · 800 m").assertIsDisplayed()
+  }
+
+  @Test
   fun historyScreen_opensEntryDetails_whenEntryTapped() {
     val entry = entryAt(today)
     val repository = FakeEntryRepository(listOf(entry))

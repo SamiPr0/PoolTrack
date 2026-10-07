@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.model.entry.timestamp
+import com.github.se.pooltrack.model.swim.formatSwimDistance
 import com.github.se.pooltrack.model.swim.formatSwimDuration
 import com.github.se.pooltrack.ui.navigation.BottomNavigationMenu
 import com.github.se.pooltrack.ui.navigation.NavigationActions
@@ -333,12 +334,17 @@ private fun dayLabel(day: LocalDate, today: LocalDate): String =
       }
     }
 
-/** The entry time, followed by the swim duration once it was recorded: "18:42 · 52min". */
-private fun entryRowLabel(entry: Entry): String {
-  val time = entryTimeFormatter().format(entry.timestamp)
-  val duration = entry.swimDurationMillis ?: return time
-  return "$time · ${formatSwimDuration(Duration.ofMillis(duration))}"
-}
+/**
+ * The entry time, followed by the swim duration (old entries) and the logged distance, whichever
+ * were recorded: "18:42 · 52min · 1200 m".
+ */
+private fun entryRowLabel(entry: Entry): String =
+    listOfNotNull(
+            entryTimeFormatter().format(entry.timestamp),
+            entry.swimDurationMillis?.let { formatSwimDuration(Duration.ofMillis(it)) },
+            entry.swimDistanceMeters?.let { formatSwimDistance(it) },
+        )
+        .joinToString(" · ")
 
 @Composable
 private fun EntryRow(

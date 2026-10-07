@@ -36,8 +36,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.entry.timestamp
+import com.github.se.pooltrack.model.swim.formatSwimDistance
 import com.github.se.pooltrack.model.swim.formatSwimDuration
-import com.github.se.pooltrack.model.swim.isSwimPending
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
@@ -50,6 +50,7 @@ object EntryDetailsScreenTestTags {
   const val NOT_FOUND_MESSAGE = "EntryDetailsScreenNotFoundMessage"
   const val DATE = "EntryDetailsScreenDate"
   const val SWIM_DURATION = "EntryDetailsScreenSwimDuration"
+  const val SWIM_DISTANCE = "EntryDetailsScreenSwimDistance"
   const val SWIM_NUMBER = "EntryDetailsScreenSwimNumber"
   const val SUBSCRIPTION = "EntryDetailsScreenSubscription"
   const val COST = "EntryDetailsScreenCost"
@@ -147,7 +148,7 @@ fun EntryDetailsScreen(
   }
 }
 
-/** The date, entry time and swim duration, the answers to "when, and for how long?". */
+/** The date, entry time and how far (or, for old entries, how long) the user swam. */
 @Composable
 private fun SwimHero(details: EntryDetails) {
   Card(
@@ -169,24 +170,36 @@ private fun SwimHero(details: EntryDetails) {
           style = MaterialTheme.typography.bodyMedium,
       )
       Text(
-          text = swimDurationLabel(details),
+          text = swimHeroLabel(details),
           style = MaterialTheme.typography.displaySmall,
           fontWeight = FontWeight.Bold,
           modifier =
-              Modifier.padding(top = 16.dp).testTag(EntryDetailsScreenTestTags.SWIM_DURATION),
+              Modifier.padding(top = 16.dp)
+                  .testTag(
+                      if (details.entry.swimDistanceMeters != null)
+                          EntryDetailsScreenTestTags.SWIM_DISTANCE
+                      else EntryDetailsScreenTestTags.SWIM_DURATION
+                  ),
       )
       Text(
-          text = if (details.swimDuration != null) "in the water" else "swim duration",
+          text =
+              when {
+                details.entry.swimDistanceMeters != null -> "swum"
+                details.swimDuration != null -> "in the water"
+                else -> "swim distance"
+              },
           style = MaterialTheme.typography.bodyMedium,
       )
     }
   }
 }
 
-private fun swimDurationLabel(details: EntryDetails): String =
+/** The logged distance, else the duration old entries have, else "Not recorded". */
+private fun swimHeroLabel(details: EntryDetails): String =
     when {
+      details.entry.swimDistanceMeters != null ->
+          formatSwimDistance(details.entry.swimDistanceMeters)
       details.swimDuration != null -> formatSwimDuration(details.swimDuration)
-      isSwimPending(details.entry) -> "In progress"
       else -> "Not recorded"
     }
 
