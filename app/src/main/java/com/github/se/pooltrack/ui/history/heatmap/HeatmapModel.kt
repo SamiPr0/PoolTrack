@@ -4,7 +4,6 @@ import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.model.entry.timestamp
 import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.Month
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 
@@ -23,16 +22,12 @@ const val DEFAULT_WEEK_COUNT = 53
  */
 data class HeatmapDay(val date: LocalDate, val count: Int, val level: Int)
 
-/** A month name placed above the column of [weekIndex]. */
-data class HeatmapMonthLabel(val weekIndex: Int, val month: Month)
-
 /**
  * The heatmap grid: one list per week, oldest first, each with seven slots in the order of
  * [firstDayOfWeek]. A slot is `null` for days that are after today.
  */
 data class Heatmap(
     val weeks: List<List<HeatmapDay?>>,
-    val monthLabels: List<HeatmapMonthLabel>,
     val firstDayOfWeek: DayOfWeek,
 )
 
@@ -84,32 +79,7 @@ fun buildHeatmap(
           }
         }
       }
-  return Heatmap(weeks, monthLabels(firstWeekStart, weekCount), firstDayOfWeek)
-}
-
-/**
- * Labels the first column in which each month appears, skipping a label that would sit closer than
- * [minGap] columns to the previous one (it would overlap on screen).
- */
-private fun monthLabels(
-    firstWeekStart: LocalDate,
-    weekCount: Int,
-    minGap: Int = 3,
-): List<HeatmapMonthLabel> {
-  val labels = mutableListOf<HeatmapMonthLabel>()
-  var previousMonth: Month? = null
-  for (week in 0 until weekCount) {
-    // A week belongs to the month in which most of it falls, i.e. the month of its fourth day.
-    val month = firstWeekStart.plusWeeks(week.toLong()).plusDays(3).month
-    if (month != previousMonth) {
-      val lastIndex = labels.lastOrNull()?.weekIndex
-      if (lastIndex == null || week - lastIndex >= minGap) {
-        labels += HeatmapMonthLabel(week, month)
-      }
-      previousMonth = month
-    }
-  }
-  return labels
+  return Heatmap(weeks, firstDayOfWeek)
 }
 
 /**

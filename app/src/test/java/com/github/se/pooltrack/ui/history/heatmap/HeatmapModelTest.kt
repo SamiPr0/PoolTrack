@@ -3,7 +3,6 @@ package com.github.se.pooltrack.ui.history.heatmap
 import com.github.se.pooltrack.model.entry.Entry
 import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.Month
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -106,29 +105,6 @@ class HeatmapModelTest {
   @Test
   fun buildHeatmap_rejectsNonPositiveWeekCount() {
     assertThrows(IllegalArgumentException::class.java) { build(weeks = 0) }
-  }
-
-  @Test
-  fun buildHeatmap_labelsEachMonthOnce_atItsFirstColumn() {
-    // 53 weeks ending 2026-10-07 start on Monday 2025-10-06.
-    val heatmap = buildHeatmap(emptyMap(), today, DEFAULT_WEEK_COUNT, DayOfWeek.MONDAY)
-
-    val months = heatmap.monthLabels.map { it.month }
-    // October opens and closes the range, every other month shows up once.
-    assertEquals(13, months.size)
-    assertEquals(12, months.distinct().size)
-    assertEquals(0, heatmap.monthLabels.first().weekIndex)
-    assertEquals(Month.OCTOBER, heatmap.monthLabels.first().month)
-    assertEquals(Month.OCTOBER, heatmap.monthLabels.last().month)
-  }
-
-  @Test
-  fun buildHeatmap_keepsMonthLabelsApart() {
-    val heatmap = buildHeatmap(emptyMap(), today, DEFAULT_WEEK_COUNT, DayOfWeek.MONDAY)
-
-    heatmap.monthLabels.zipWithNext().forEach { (a, b) ->
-      assert(b.weekIndex - a.weekIndex >= 3) { "$a and $b overlap" }
-    }
   }
 
   @Test
