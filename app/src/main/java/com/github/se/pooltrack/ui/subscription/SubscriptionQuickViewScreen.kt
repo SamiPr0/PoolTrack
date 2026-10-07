@@ -3,10 +3,10 @@ package com.github.se.pooltrack.ui.subscription
 import android.graphics.Bitmap
 import android.net.Uri
 import android.view.WindowManager
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,14 +39,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.subscription.renderFirstPdfPage
 import com.github.se.pooltrack.ui.navigation.NavigationActions
@@ -159,9 +165,6 @@ private fun CooldownLockedMessage(cooldown: Duration, modifier: Modifier = Modif
   }
 }
 
-private const val MIN_ZOOM_SCALE = 1f
-private const val MAX_ZOOM_SCALE = 6f
-
 /**
  * Renders the pass plus the Accept button; calls [onAccepted] once tapped. The user pinch-zooms and
  * pans to bring the QR code up to size themselves - rather than the app guessing where it is on the
@@ -172,15 +175,19 @@ private fun PassDisplayAndAccept(
     uri: String,
     onAccepted: () -> Unit,
     modifier: Modifier = Modifier,
+    zoomViewModel: PassZoomViewModel =
+        // Activity-scoped so the zoom outlives this navigation entry.
+        viewModel(
+            viewModelStoreOwner =
+                (LocalActivity.current as? ComponentActivity)
+                    ?: checkNotNull(LocalViewModelStoreOwner.current),
+        ),
 ) {
   val context = LocalContext.current
   var pageBitmap by remember(uri) { mutableStateOf<Bitmap?>(null) }
-  var scale by remember(uri) { mutableStateOf(MIN_ZOOM_SCALE) }
-  var offset by remember(uri) { mutableStateOf(Offset.Zero) }
-  val transformableState = rememberTransformableState { _, zoomChange, panChange, _ ->
-    scale = (scale * zoomChange).coerceIn(MIN_ZOOM_SCALE, MAX_ZOOM_SCALE)
-    offset = if (scale <= MIN_ZOOM_SCALE) Offset.Zero else offset + panChange
-  }
+  val transform by zoomViewModel.transform.collectAsState()
+  var viewport by remember { mutableStateOf(Size.Zero) }
+  SideEffect { zoomViewModel.onPassShown(uri) }
 
   LaunchedEffect(uri) {
     pageBitmap = withContext(Dispatchers.IO) { renderFirstPdfPage(context, Uri.parse(uri)) }
@@ -195,7 +202,17 @@ private fun PassDisplayAndAccept(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
     )
     Box(
-        modifier = Modifier.weight(1f).fillMaxWidth(),
+        modifier =
+            Modifier.weight(1f)
+                .fillMaxWidth()
+                .clipToBounds()
+                .onSizeChanged { viewport = Size(it.width.toFloat(), it.height.toFloat()) }
+                .pointerInput(Unit) {
+                  detectTransformGestures { centroid, pan, zoom, _ ->
+                    val center = Offset(size.width / 2f, size.height / 2f)
+                    zoomViewModel.onGesture(zoom, centroid - center, pan, viewport)
+                  }
+                },
         contentAlignment = Alignment.Center,
     ) {
       val bitmap = pageBitmap
@@ -212,12 +229,11 @@ private fun PassDisplayAndAccept(
                 Modifier.fillMaxSize()
                     .padding(24.dp)
                     .graphicsLayer(
-                        scaleX = scale,
-                        scaleY = scale,
-                        translationX = offset.x,
-                        translationY = offset.y,
+                        scaleX = transform.scale,
+                        scaleY = transform.scale,
+                        translationX = transform.offset.x,
+                        translationY = transform.offset.y,
                     )
-                    .transformable(transformableState)
                     .testTag(SubscriptionQuickViewScreenTestTags.PDF_IMAGE),
         )
       }
