@@ -13,6 +13,7 @@ import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
 import com.github.se.pooltrack.model.swim.SwimReporter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -26,6 +27,7 @@ class SwimTrackingService : Service() {
 
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
   private lateinit var reporter: SwimReporter
+  private var watchJob: Job? = null
 
   private val unlockReceiver =
       object : BroadcastReceiver() {
@@ -63,7 +65,16 @@ class SwimTrackingService : Service() {
   }
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-    scope.launch { stopIfNothingPending() }
+    watchJob?.cancel()
+    watchJob = scope.launch {
+      if (!reporter.startTracking()) {
+        stopSelf()
+        return@launch
+      }
+      // Stopping also dismisses the tracking notification.
+      reporter.awaitTrackedEntryRemoved()
+      stopSelf()
+    }
     return START_STICKY
   }
 
