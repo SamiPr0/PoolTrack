@@ -26,6 +26,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.core.app.ActivityOptionsCompat
 import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.model.subscription.Subscription
@@ -487,6 +488,95 @@ class SubscriptionScreenTest {
 
     assertEquals(listOf(newer), subscriptions.storedSubscriptions)
     composeRule.onNodeWithText("Delete this subscription?").assertDoesNotExist()
+  }
+
+  // ---------- edit flow ----------
+
+  private fun openEditDialog() {
+    tag(SubscriptionScreenTestTags.SUBSCRIPTION_ITEM).performClick()
+    tag(SubscriptionScreenTestTags.EDIT_BUTTON).performClick()
+    tag(SubscriptionScreenTestTags.EXPIRATION_DIALOG).assertIsDisplayed()
+  }
+
+  @Test
+  fun subscriptionScreen_edit_prefillsFields_andSavesNewNameAndPrice() {
+    val limited = newer.copy(maxEntries = 10, price = 60.0)
+    val subscriptions = FakeSubscriptionRepository(listOf(limited))
+    setScreen(subscriptions)
+    openEditDialog()
+
+    tag(SubscriptionScreenTestTags.EDIT_NAME_FIELD).assertTextContains("New pass")
+    tag(SubscriptionScreenTestTags.EXPIRATION_ENTRIES_FIELD).assertTextContains("10")
+    tag(SubscriptionScreenTestTags.EXPIRATION_PRICE_FIELD).assertTextContains("60")
+    tag(SubscriptionScreenTestTags.EDIT_NAME_FIELD).performTextReplacement("Gym card")
+    tag(SubscriptionScreenTestTags.EXPIRATION_PRICE_FIELD).performTextReplacement("45.5")
+    tag(SubscriptionScreenTestTags.EXPIRATION_CONFIRM_BUTTON).performClick()
+
+    val saved = subscriptions.storedSubscriptions.single()
+    assertEquals(limited.copy(displayName = "Gym card", price = 45.5), saved)
+    tag(SubscriptionScreenTestTags.EXPIRATION_DIALOG).assertDoesNotExist()
+  }
+
+  @Test
+  fun subscriptionScreen_edit_keepsExistingExpiryUnlessChanged() {
+    val dated = newer.copy(expiresAtEpochMilli = 4_000_000_000_000L)
+    val subscriptions = FakeSubscriptionRepository(listOf(dated))
+    setScreen(subscriptions)
+    openEditDialog()
+
+    tag(SubscriptionScreenTestTags.EXPIRATION_KEEP_BUTTON).assertIsDisplayed()
+    tag(SubscriptionScreenTestTags.EXPIRATION_CONFIRM_BUTTON).assertIsEnabled().performClick()
+
+    assertEquals(dated, subscriptions.storedSubscriptions.single())
+  }
+
+  @Test
+  fun subscriptionScreen_edit_switchingFromDateToEntries_clearsTheDate() {
+    val dated = newer.copy(expiresAtEpochMilli = 4_000_000_000_000L)
+    val subscriptions = FakeSubscriptionRepository(listOf(dated))
+    setScreen(subscriptions)
+    openEditDialog()
+
+    tag(SubscriptionScreenTestTags.EXPIRATION_ENTRIES_BUTTON).performClick()
+    tag(SubscriptionScreenTestTags.EXPIRATION_ENTRIES_FIELD).performTextInput("5")
+    tag(SubscriptionScreenTestTags.EXPIRATION_CONFIRM_BUTTON).performClick()
+
+    val saved = subscriptions.storedSubscriptions.single()
+    assertNull(saved.expiresAtEpochMilli)
+    assertEquals(5, saved.maxEntries)
+  }
+
+  @Test
+  fun subscriptionScreen_edit_blankNameDisablesSave() {
+    setScreen(FakeSubscriptionRepository(listOf(newer)))
+    openEditDialog()
+
+    tag(SubscriptionScreenTestTags.EDIT_NAME_FIELD).performTextReplacement("  ")
+
+    tag(SubscriptionScreenTestTags.EXPIRATION_CONFIRM_BUTTON).assertIsNotEnabled()
+  }
+
+  @Test
+  fun subscriptionScreen_edit_cancelChangesNothing() {
+    val subscriptions = FakeSubscriptionRepository(listOf(newer))
+    setScreen(subscriptions)
+    openEditDialog()
+
+    tag(SubscriptionScreenTestTags.EDIT_NAME_FIELD).performTextReplacement("Other")
+    composeRule.onNodeWithText("Cancel").performClick()
+
+    assertEquals(listOf(newer), subscriptions.storedSubscriptions)
+    tag(SubscriptionScreenTestTags.EXPIRATION_DIALOG).assertDoesNotExist()
+  }
+
+  @Test
+  fun subscriptionScreen_edit_isAvailableForExpiredSubscriptions() {
+    val expired = newer.copy(expiresAtEpochMilli = 1_000L)
+    setScreen(FakeSubscriptionRepository(listOf(expired)))
+
+    tag(SubscriptionScreenTestTags.SUBSCRIPTION_ITEM).performClick()
+
+    tag(SubscriptionScreenTestTags.EDIT_BUTTON).assertIsDisplayed()
   }
 
   // ---------- add flow ----------
