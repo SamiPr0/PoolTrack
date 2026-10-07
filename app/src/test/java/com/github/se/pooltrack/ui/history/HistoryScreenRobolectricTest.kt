@@ -14,8 +14,8 @@ import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
 import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
-import com.github.se.pooltrack.ui.history.heatmap.ContributionHeatmapTestTags
 import com.github.se.pooltrack.ui.history.heatmap.HistoryOverviewTestTags
+import com.github.se.pooltrack.ui.history.heatmap.MonthCalendarTestTags
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.NavigationTestTags
 import com.github.se.pooltrack.ui.navigation.Screen
@@ -26,6 +26,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -360,13 +361,22 @@ class HistoryScreenRobolectricTest {
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.LINK_BANNER).assertCountEquals(0)
   }
 
+  /** Taps [date] in the calendar, first going back a month if it isn't in the current one. */
+  private fun tapDay(date: LocalDate) {
+    if (YearMonth.from(date) != YearMonth.from(today)) {
+      composeTestRule.onNodeWithTag(MonthCalendarTestTags.PREVIOUS).performClick()
+      composeTestRule.waitForIdle()
+    }
+    composeTestRule.onNodeWithTag(MonthCalendarTestTags.day(date)).performClick()
+  }
+
   @Test
   fun historyScreen_showsTheHeatmapOverview_whenEntriesExist() {
     show(FakeEntryRepository(listOf(entryAt(today), entryAt(today.minusDays(2)))))
 
     composeTestRule.onNodeWithTag(HistoryOverviewTestTags.CARD).assertIsDisplayed()
     composeTestRule.onNodeWithText("2 visits in the last year").assertIsDisplayed()
-    composeTestRule.onNodeWithTag(ContributionHeatmapTestTags.cell(today)).assertExists()
+    composeTestRule.onNodeWithTag(MonthCalendarTestTags.day(today)).assertExists()
   }
 
   @Test
@@ -381,7 +391,7 @@ class HistoryScreenRobolectricTest {
     val older = today.minusDays(3)
     show(FakeEntryRepository(listOf(entryAt(today), entryAt(older))))
 
-    composeTestRule.onNodeWithTag(ContributionHeatmapTestTags.cell(older)).performClick()
+    tapDay(older)
 
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(1)
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.DAY_HEADER).assertCountEquals(1)
@@ -394,7 +404,7 @@ class HistoryScreenRobolectricTest {
   @Test
   fun historyScreen_tappingTheSelectedDayAgain_showsEveryDay() {
     show(FakeEntryRepository(listOf(entryAt(today), entryAt(today.minusDays(3)))))
-    val cell = composeTestRule.onNodeWithTag(ContributionHeatmapTestTags.cell(today))
+    val cell = composeTestRule.onNodeWithTag(MonthCalendarTestTags.day(today))
 
     cell.performClick()
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(1)
@@ -406,10 +416,7 @@ class HistoryScreenRobolectricTest {
   @Test
   fun historyScreen_saysSoWhenTheTappedDayHasNoEntries() {
     show(FakeEntryRepository(listOf(entryAt(today.minusDays(5)))))
-
-    composeTestRule
-        .onNodeWithTag(ContributionHeatmapTestTags.cell(today.minusDays(1)))
-        .performClick()
+    tapDay(today.minusDays(1))
 
     composeTestRule.onNodeWithTag(HistoryScreenTestTags.NO_ENTRIES_THAT_DAY).assertIsDisplayed()
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(0)

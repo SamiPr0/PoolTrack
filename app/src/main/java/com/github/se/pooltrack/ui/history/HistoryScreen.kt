@@ -38,6 +38,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -47,7 +48,6 @@ import com.github.se.pooltrack.model.entry.timestamp
 import com.github.se.pooltrack.model.swim.formatSwimDistance
 import com.github.se.pooltrack.model.swim.formatSwimDuration
 import com.github.se.pooltrack.ui.history.heatmap.HistoryOverview
-import com.github.se.pooltrack.ui.history.heatmap.buildHeatmap
 import com.github.se.pooltrack.ui.navigation.BottomNavigationMenu
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
@@ -226,14 +226,7 @@ fun HistoryScreen(
     } else {
       val today = LocalDate.now(ZONE)
       val allEntriesByDay = entries.groupBy { it.timestamp.atZone(ZONE).toLocalDate() }
-      val heatmap =
-          remember(entries, today) {
-            buildHeatmap(
-                countsByDay = allEntriesByDay.mapValues { it.value.size },
-                today = today,
-                firstDayOfWeek = WeekFields.of(Locale.getDefault()).firstDayOfWeek,
-            )
-          }
+      val countsByDay = remember(allEntriesByDay) { allEntriesByDay.mapValues { it.value.size } }
       val entriesByDay =
           selectedDate?.let { day -> allEntriesByDay.filterKeys { it == day } } ?: allEntriesByDay
 
@@ -246,7 +239,9 @@ fun HistoryScreen(
       ) {
         item(key = "overview") {
           HistoryOverview(
-              heatmap = heatmap,
+              countsByDay = countsByDay,
+              today = today,
+              firstDayOfWeek = WeekFields.of(LocalConfiguration.current.locales[0]).firstDayOfWeek,
               selectedDate = selectedDate,
               onDayClick = { day -> selectedDate = if (day == selectedDate) null else day },
               onClearSelection = { selectedDate = null },

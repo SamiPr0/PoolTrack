@@ -10,12 +10,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.YearMonth
 
 object HistoryOverviewTestTags {
   const val CARD = "HistoryOverviewCard"
@@ -38,10 +41,12 @@ fun streakText(summary: HeatmapSummary): String? =
     }
 
 /**
- * The card on top of the History list: how much the user swam over the last year as a heatmap, a
- * one-line summary, and, once a day is picked, a bar to clear that filter.
+ * The card on top of the History list: how much the user swam over the last year in a month
+ * calendar, a one-line summary, and, once a day is picked, a bar to clear that filter.
  *
- * @param heatmap The grid, see [buildHeatmap].
+ * @param countsByDay Entries per day, see [entryCountsByDay].
+ * @param today The current day.
+ * @param firstDayOfWeek The weekday the calendar columns start on.
  * @param selectedDate The day the list is filtered to, if any.
  * @param onDayClick Called when a day is tapped; the caller toggles the filter.
  * @param onClearSelection Called to show every day again.
@@ -49,14 +54,23 @@ fun streakText(summary: HeatmapSummary): String? =
  */
 @Composable
 fun HistoryOverview(
-    heatmap: Heatmap,
+    countsByDay: Map<LocalDate, Int>,
+    today: LocalDate,
+    firstDayOfWeek: DayOfWeek,
     selectedDate: LocalDate?,
     onDayClick: (LocalDate) -> Unit,
     onClearSelection: () -> Unit,
     modifier: Modifier = Modifier,
     selectedLabel: (LocalDate) -> String = { it.toString() },
 ) {
-  val summary = summarize(heatmap)
+  val summary =
+      remember(countsByDay, today, firstDayOfWeek) {
+        summarize(buildHeatmap(countsByDay, today, firstDayOfWeek = firstDayOfWeek))
+      }
+  val months =
+      remember(countsByDay, today) {
+        monthsBetween(YearMonth.from(countsByDay.keys.minOrNull() ?: today), YearMonth.from(today))
+      }
   val activeDays = "${summary.activeDays} active ${if (summary.activeDays == 1) "day" else "days"}"
   Card(modifier = modifier.fillMaxWidth().testTag(HistoryOverviewTestTags.CARD)) {
     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -72,8 +86,11 @@ fun HistoryOverview(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
       }
-      ContributionHeatmap(
-          heatmap = heatmap,
+      MonthCalendar(
+          months = months,
+          countsByDay = countsByDay,
+          today = today,
+          firstDayOfWeek = firstDayOfWeek,
           selectedDate = selectedDate,
           onDayClick = onDayClick,
       )
