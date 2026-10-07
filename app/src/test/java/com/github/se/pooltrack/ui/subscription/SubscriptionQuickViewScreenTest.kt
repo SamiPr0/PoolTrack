@@ -14,11 +14,13 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pinch
 import com.github.se.pooltrack.model.entry.Entry
+import com.github.se.pooltrack.model.subscription.PassZoomRepositoryProvider
 import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.renderFirstPdfPage
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.NavigationTestTags
 import com.github.se.pooltrack.utils.FakeEntryRepository
+import com.github.se.pooltrack.utils.FakePassZoomRepository
 import com.github.se.pooltrack.utils.FakeSubscriptionRepository
 import com.github.se.pooltrack.utils.MainDispatcherRule
 import io.mockk.every
@@ -57,6 +59,8 @@ class SubscriptionQuickViewScreenTest {
   @Before
   fun setUp() {
     navigationActions = mockk(relaxed = true)
+    // The activity-scoped zoom ViewModel reads the provider's repository by default.
+    PassZoomRepositoryProvider.repository = FakePassZoomRepository()
     // The real renderer needs a PDF behind a content URI: stub it with a tiny bitmap.
     mockkStatic("com.github.se.pooltrack.model.subscription.PdfThumbnailKt")
     every { renderFirstPdfPage(any(), any()) } answers
