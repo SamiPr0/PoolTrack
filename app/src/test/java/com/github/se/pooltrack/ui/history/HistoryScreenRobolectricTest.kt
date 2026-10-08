@@ -19,6 +19,7 @@ import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
 import com.github.se.pooltrack.ui.history.heatmap.HistoryOverviewTestTags
 import com.github.se.pooltrack.ui.history.heatmap.MonthCalendarTestTags
+import com.github.se.pooltrack.ui.history.heatmap.YearCalendarTestTags
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.NavigationTestTags
 import com.github.se.pooltrack.ui.navigation.Screen
@@ -421,5 +422,31 @@ class HistoryScreenRobolectricTest {
 
     composeTestRule.onNodeWithTag(HistoryScreenTestTags.NO_ENTRIES_THAT_DAY).assertIsDisplayed()
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(0)
+  }
+
+  @Test
+  fun historyScreen_zoomsOutToTheYear_withAShadedTilePerMonth() {
+    show(FakeEntryRepository(listOf(entryAt(today), entryAt(today.minusDays(40)))))
+
+    composeTestRule.onNodeWithTag(MonthCalendarTestTags.ZOOM_OUT).performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(YearCalendarTestTags.CALENDAR).assertIsDisplayed()
+    composeTestRule.onAllNodesWithTag(MonthCalendarTestTags.CALENDAR).assertCountEquals(0)
+    composeTestRule.onNodeWithTag(YearCalendarTestTags.month(YearMonth.from(today))).assertExists()
+  }
+
+  @Test
+  fun historyScreen_zoomsBackIntoATappedMonth() {
+    val older = today.minusMonths(1).withDayOfMonth(15)
+    show(FakeEntryRepository(listOf(entryAt(today), entryAt(older))))
+    composeTestRule.onNodeWithTag(MonthCalendarTestTags.ZOOM_OUT).performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(YearCalendarTestTags.month(YearMonth.from(older))).performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(MonthCalendarTestTags.day(older)).assertExists()
+    composeTestRule.onAllNodesWithTag(YearCalendarTestTags.CALENDAR).assertCountEquals(0)
   }
 }

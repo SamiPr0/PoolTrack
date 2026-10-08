@@ -21,6 +21,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -44,6 +45,7 @@ object MonthCalendarTestTags {
   const val TITLE = "MonthCalendarTitle"
   const val PREVIOUS = "MonthCalendarPrevious"
   const val NEXT = "MonthCalendarNext"
+  const val ZOOM_OUT = "MonthCalendarZoomOut"
 
   fun day(date: LocalDate) = "MonthCalendarDay_$date"
 }
@@ -62,6 +64,9 @@ private const val ROWS = 6
  * @param selectedDate The highlighted day, if any.
  * @param onDayClick Called with the tapped day.
  * @param firstDayOfWeek The weekday the columns start on, usually the locale's.
+ * @param initialMonth The month to open on; the last one if it isn't in [months].
+ * @param onZoomOut When set, a "< year" button calls it with the month on screen.
+ * @param onMonthChanged Called with the month on screen, on opening and after every swipe.
  */
 @Composable
 fun MonthCalendar(
@@ -73,14 +78,38 @@ fun MonthCalendar(
     modifier: Modifier = Modifier,
     firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
     locale: Locale = Locale.getDefault(),
+    initialMonth: YearMonth = months.last(),
+    onZoomOut: ((YearMonth) -> Unit)? = null,
+    onMonthChanged: (YearMonth) -> Unit = {},
 ) {
   require(months.isNotEmpty()) { "months must not be empty" }
-  val pagerState = rememberPagerState(initialPage = months.lastIndex) { months.size }
+  val initialPage = months.indexOf(initialMonth).takeIf { it >= 0 } ?: months.lastIndex
+  val pagerState = rememberPagerState(initialPage = initialPage) { months.size }
   val scope = rememberCoroutineScope()
   val maxCount = remember(countsByDay) { countsByDay.values.maxOrNull() ?: 0 }
   val current = months[pagerState.currentPage]
+  LaunchedEffect(current) { onMonthChanged(current) }
 
   Column(modifier = modifier.fillMaxWidth().testTag(MonthCalendarTestTags.CALENDAR)) {
+    if (onZoomOut != null) {
+      // Like the iPhone's "< 2026": one step back to the year.
+      Row(
+          modifier =
+              Modifier.clickable { onZoomOut(current) }.testTag(MonthCalendarTestTags.ZOOM_OUT),
+          verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = current.year.toString(),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
+      }
+    }
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,

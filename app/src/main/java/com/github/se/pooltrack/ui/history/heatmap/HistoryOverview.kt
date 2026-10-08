@@ -86,7 +86,7 @@ fun HistoryOverview(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
       }
-      MonthCalendar(
+      HistoryCalendar(
           months = months,
           countsByDay = countsByDay,
           today = today,
