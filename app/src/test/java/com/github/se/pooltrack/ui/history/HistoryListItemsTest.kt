@@ -1,5 +1,6 @@
 package com.github.se.pooltrack.ui.history
 
+import com.github.se.pooltrack.ui.history.heatmap.visitsLabel
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.util.Locale

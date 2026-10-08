@@ -32,14 +32,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.github.se.pooltrack.ui.history.heatmap.visitsLabel
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
-/** "5 visits" (or "1 visit"). */
-internal fun visitsLabel(count: Int): String = if (count == 1) "1 visit" else "$count visits"
 
 /** The first day of the week that contains [day], where weeks start on [firstDayOfWeek]. */
 internal fun weekStart(day: LocalDate, firstDayOfWeek: DayOfWeek): LocalDate =
