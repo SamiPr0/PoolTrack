@@ -12,20 +12,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.DateRange
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,7 +35,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.entry.Entry
@@ -56,9 +50,9 @@ import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeFormatterBuilder
 import java.time.format.FormatStyle
 import java.time.temporal.WeekFields
 import java.util.Locale
@@ -68,10 +62,8 @@ object HistoryScreenTestTags {
   const val EMPTY_MESSAGE = "HistoryScreenEmptyMessage"
   const val ENTRY_LIST = "HistoryScreenEntryList"
   const val DAY_HEADER = "HistoryScreenDayHeader"
+  const val MONTH_HEADER = "HistoryScreenMonthHeader"
   const val ENTRY_ITEM = "HistoryScreenEntryItem"
-  const val DELETE_BUTTON = "HistoryScreenDeleteButton"
-  const val CONFIRM_DELETE_BUTTON = "HistoryScreenConfirmDeleteButton"
-  const val CANCEL_DELETE_BUTTON = "HistoryScreenCancelDeleteButton"
   const val ADD_PAST_ENTRY_BUTTON = "HistoryScreenAddPastEntryButton"
   const val UNDO_ADD_ACTION = "Undo"
   const val LINK_BANNER = "HistoryScreenLinkBanner"
@@ -88,13 +80,6 @@ private fun entryTimeFormatter(): DateTimeFormatter =
         .withLocale(Locale.getDefault())
         .withZone(ZONE)
 
-private fun entryDateTimeFormatter(): DateTimeFormatter =
-    DateTimeFormatterBuilder()
-        .appendPattern("EEEE, ")
-        .append(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM))
-        .toFormatter(Locale.getDefault())
-        .withZone(ZONE)
-
 /** HistoryScreen lists every confirmed pool entry, grouped by day, most recent first. */
 @Composable
 fun HistoryScreen(
@@ -102,7 +87,6 @@ fun HistoryScreen(
     navigationActions: NavigationActions? = null,
 ) {
   val entries by viewModel.entries.collectAsState()
-  var entryPendingDeletion by remember { mutableStateOf<Entry?>(null) }
   var showAddSheet by remember { mutableStateOf(false) }
   var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
   // Remembered across openings, so adding several entries from the same day takes one tap each.
@@ -131,6 +115,21 @@ fun HistoryScreen(
     }
   }
 
+  // Deleting needs no confirmation: the swipe is deliberate and the snackbar offers an Undo.
+  val onDeleteEntry: (Entry) -> Unit = { entry ->
+    viewModel.onDeleteEntry(entry)
+    scope.launch {
+      snackbarHostState.currentSnackbarData?.dismiss()
+      val outcome =
+          snackbarHostState.showSnackbar(
+              message = "Entry deleted",
+              actionLabel = HistoryScreenTestTags.UNDO_ADD_ACTION,
+              withDismissAction = true,
+          )
+      if (outcome == SnackbarResult.ActionPerformed) viewModel.onRestoreEntry(entry)
+    }
+  }
+
   if (showAddSheet) {
     AddPastEntrySheet(
         initialDate = lastAddedDate,
@@ -145,38 +144,6 @@ fun HistoryScreen(
         onDismiss = {
           showAddSheet = false
           viewModel.onAddPastEntryResultHandled()
-        },
-    )
-  }
-
-  entryPendingDeletion?.let { entry ->
-    AlertDialog(
-        onDismissRequest = { entryPendingDeletion = null },
-        title = { Text("Delete this entry?") },
-        text = {
-          Text(
-              "The entry from ${entryDateTimeFormatter().format(entry.timestamp)} will be " +
-                  "permanently removed."
-          )
-        },
-        confirmButton = {
-          TextButton(
-              onClick = {
-                viewModel.onDeleteEntry(entry)
-                entryPendingDeletion = null
-              },
-              modifier = Modifier.testTag(HistoryScreenTestTags.CONFIRM_DELETE_BUTTON),
-          ) {
-            Text("Delete")
-          }
-        },
-        dismissButton = {
-          TextButton(
-              onClick = { entryPendingDeletion = null },
-              modifier = Modifier.testTag(HistoryScreenTestTags.CANCEL_DELETE_BUTTON),
-          ) {
-            Text("Cancel")
-          }
         },
     )
   }
@@ -285,19 +252,30 @@ fun HistoryScreen(
             )
           }
         }
-        entriesByDay.forEach { (day, entriesForDay) ->
-          item(key = day.toEpochDay()) {
-            DayHeader(label = dayLabel(day, today), entryCount = entriesForDay.size)
-          }
-          items(entriesForDay, key = { it.timestamp.toEpochMilli() }) { entry ->
-            EntryRow(
-                entry = entry,
-                onClick = { navigationActions?.navigateToEntryDetails(entry.timestampEpochMilli) },
-                onDelete = { entryPendingDeletion = entry },
-                modifier = Modifier.padding(vertical = 4.dp),
-            )
-          }
-        }
+        entriesByDay.entries
+            .groupBy { YearMonth.from(it.key) }
+            .forEach { (month, days) ->
+              stickyHeader(key = "month-$month") {
+                MonthHeader(
+                    label = monthLabel(month, YearMonth.from(today)),
+                    visits = days.sumOf { it.value.size },
+                )
+              }
+              days.forEach { (day, entriesForDay) ->
+                item(key = day.toEpochDay()) {
+                  DayHeader(label = dayLabel(day, today), entryCount = entriesForDay.size)
+                }
+                items(entriesForDay, key = { it.timestamp.toEpochMilli() }) { entry ->
+                  SwipeableEntryRow(
+                      label = entryRowLabel(entry),
+                      onClick = {
+                        navigationActions?.navigateToEntryDetails(entry.timestampEpochMilli)
+                      },
+                      onDelete = { onDeleteEntry(entry) },
+                  )
+                }
+              }
+            }
       }
     }
   }
@@ -329,34 +307,8 @@ private fun LinkBanner(count: Int, onLink: () -> Unit, modifier: Modifier = Modi
   }
 }
 
-/** Section header grouping entries from the same calendar day. */
-@Composable
-private fun DayHeader(label: String, entryCount: Int) {
-  Surface(
-      modifier = Modifier.fillMaxWidth().testTag(HistoryScreenTestTags.DAY_HEADER),
-      color = MaterialTheme.colorScheme.background,
-  ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-      Text(
-          text = label,
-          style = MaterialTheme.typography.titleSmall,
-          fontWeight = FontWeight.Bold,
-      )
-      Text(
-          text = if (entryCount == 1) "1 entry" else "$entryCount entries",
-          style = MaterialTheme.typography.labelMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-      )
-    }
-  }
-}
-
 /** "Today", "Yesterday", or a weekday/date, omitting the year unless [day] isn't this year. */
-private fun dayLabel(day: LocalDate, today: LocalDate): String =
+internal fun dayLabel(day: LocalDate, today: LocalDate): String =
     when (day) {
       today -> "Today"
       today.minusDays(1) -> "Yesterday"
@@ -370,52 +322,10 @@ private fun dayLabel(day: LocalDate, today: LocalDate): String =
  * The entry time, followed by the swim duration (old entries) and the logged distance, whichever
  * were recorded: "18:42 · 52min · 1200 m".
  */
-private fun entryRowLabel(entry: Entry): String =
+internal fun entryRowLabel(entry: Entry): String =
     listOfNotNull(
             entryTimeFormatter().format(entry.timestamp),
             entry.swimDurationMillis?.let { formatSwimDuration(Duration.ofMillis(it)) },
             entry.swimDistanceMeters?.let { formatSwimDistance(it) },
         )
         .joinToString(" · ")
-
-@Composable
-private fun EntryRow(
-    entry: Entry,
-    onClick: () -> Unit,
-    onDelete: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-  Card(
-      onClick = onClick,
-      modifier = modifier.fillMaxWidth().testTag(HistoryScreenTestTags.ENTRY_ITEM),
-  ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = Icons.Filled.CheckCircle,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-        )
-        Text(
-            text = entryRowLabel(entry),
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(vertical = 12.dp, horizontal = 12.dp),
-        )
-      }
-      IconButton(
-          onClick = onDelete,
-          modifier = Modifier.testTag(HistoryScreenTestTags.DELETE_BUTTON),
-      ) {
-        Icon(
-            imageVector = Icons.Filled.Delete,
-            contentDescription = "Delete entry",
-            tint = MaterialTheme.colorScheme.error,
-        )
-      }
-    }
-  }
-}

@@ -2,14 +2,17 @@ package com.github.se.pooltrack.ui.history
 
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
 import com.github.se.pooltrack.model.subscription.Subscription
@@ -91,7 +94,6 @@ class HistoryScreenRobolectricTest {
     composeTestRule.onNodeWithText("Today").assertIsDisplayed()
     composeTestRule.onNodeWithText("Yesterday").assertIsDisplayed()
     composeTestRule.onNodeWithText("2 entries").assertIsDisplayed()
-    composeTestRule.onNodeWithText("1 entry").assertIsDisplayed()
     composeTestRule.onNodeWithText(timeLabel(todayMorning)).assertIsDisplayed()
     composeTestRule.onNodeWithText(timeLabel(todayEvening)).assertIsDisplayed()
     composeTestRule.onNodeWithText(timeLabel(yesterdayEntry)).assertIsDisplayed()
@@ -117,33 +119,27 @@ class HistoryScreenRobolectricTest {
     composeTestRule.onNodeWithText(expected).assertIsDisplayed()
   }
 
-  @Test
-  fun historyScreen_showsConfirmationDialog_whenDeleteTapped() {
-    val entry = entryAt(today)
-    val repository = FakeEntryRepository(listOf(entry))
-    show(repository)
-
-    composeTestRule.onNodeWithTag(HistoryScreenTestTags.DELETE_BUTTON).performClick()
-
-    composeTestRule.onNodeWithText("Delete this entry?").assertIsDisplayed()
-    composeTestRule.onNode(hasText("permanently removed.", substring = true)).assertIsDisplayed()
-    assertEquals(listOf(entry), repository.storedEntries)
+  private fun swipeAwayFirstEntry() {
+    composeTestRule
+        .onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM)
+        .onFirst()
+        .performTouchInput { swipeLeft() }
+    composeTestRule.waitForIdle()
   }
 
   @Test
-  fun historyScreen_deletesOnlyThatEntry_whenDeleteConfirmed() {
+  fun historyScreen_deletesOnlyThatEntry_whenSwipedAway() {
     val keep = entryAt(today, hour = 8)
     val remove = entryAt(today, hour = 18)
     val repository = FakeEntryRepository(listOf(keep, remove))
     show(repository)
 
-    // Most recent first, so the first delete button belongs to the 18:00 entry.
-    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.DELETE_BUTTON).onFirst().performClick()
-    composeTestRule.onNodeWithTag(HistoryScreenTestTags.CONFIRM_DELETE_BUTTON).performClick()
+    // Most recent first, so the first row is the 18:00 entry.
+    swipeAwayFirstEntry()
 
     assertEquals(listOf(keep), repository.storedEntries)
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(1)
-    composeTestRule.onAllNodesWithText("Delete this entry?").assertCountEquals(0)
+    composeTestRule.onNodeWithText("Entry deleted").assertIsDisplayed()
   }
 
   @Test
@@ -151,25 +147,54 @@ class HistoryScreenRobolectricTest {
     val repository = FakeEntryRepository(listOf(entryAt(today)))
     show(repository)
 
-    composeTestRule.onNodeWithTag(HistoryScreenTestTags.DELETE_BUTTON).performClick()
-    composeTestRule.onNodeWithTag(HistoryScreenTestTags.CONFIRM_DELETE_BUTTON).performClick()
+    swipeAwayFirstEntry()
 
     assertEquals(emptyList<Entry>(), repository.storedEntries)
     composeTestRule.onNodeWithTag(HistoryScreenTestTags.EMPTY_MESSAGE).assertIsDisplayed()
   }
 
   @Test
-  fun historyScreen_keepsEntry_whenDeleteCancelled() {
+  fun historyScreen_restoresTheEntryExactly_whenDeleteUndone() {
+    val entry = entryAt(today).copy(swimDistanceMeters = 900, swimDurationMillis = 60_000L)
+    val repository = FakeEntryRepository(listOf(entry))
+    show(repository)
+    swipeAwayFirstEntry()
+
+    composeTestRule.onNodeWithText(HistoryScreenTestTags.UNDO_ADD_ACTION).performClick()
+    composeTestRule.waitForIdle()
+
+    assertEquals(listOf(entry), repository.storedEntries)
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(1)
+  }
+
+  @Test
+  fun historyScreen_doesNotDelete_whenTheRowIsOnlyTapped() {
     val entry = entryAt(today)
     val repository = FakeEntryRepository(listOf(entry))
     show(repository)
 
-    composeTestRule.onNodeWithTag(HistoryScreenTestTags.DELETE_BUTTON).performClick()
-    composeTestRule.onNodeWithTag(HistoryScreenTestTags.CANCEL_DELETE_BUTTON).performClick()
+    composeTestRule.onNodeWithTag(HistoryScreenTestTags.ENTRY_ITEM).performClick()
 
     assertEquals(listOf(entry), repository.storedEntries)
-    composeTestRule.onAllNodesWithText("Delete this entry?").assertCountEquals(0)
-    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(1)
+  }
+
+  @Test
+  fun historyScreen_titlesEachMonth_withItsVisitCount() {
+    val thisMonthEntry = entryAt(today)
+    val lastYearEntries = listOf(entryAt(today.minusYears(1)), entryAt(today.minusYears(1), 9))
+    show(FakeEntryRepository(listOf(thisMonthEntry) + lastYearEntries))
+
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.MONTH_HEADER).assertCountEquals(2)
+    composeTestRule
+        .onNode(
+            hasTestTag(HistoryScreenTestTags.MONTH_HEADER) and hasAnyDescendant(hasText("1 visit"))
+        )
+        .assertExists()
+    composeTestRule
+        .onNode(
+            hasTestTag(HistoryScreenTestTags.MONTH_HEADER) and hasAnyDescendant(hasText("2 visits"))
+        )
+        .assertExists()
   }
 
   @Test
