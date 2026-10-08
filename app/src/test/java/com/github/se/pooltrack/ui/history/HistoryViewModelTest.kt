@@ -58,6 +58,18 @@ class HistoryViewModelTest {
     assertEquals(listOf(older), viewModel.entries.value)
   }
 
+  @Test
+  fun onRestoreEntry_putsBackADeletedEntryWithAllItsData() {
+    val detailed = newer.copy(swimDistanceMeters = 1200, swimDurationMillis = 3_000_000L)
+    val repository = FakeEntryRepository(listOf(older, detailed))
+    val viewModel = HistoryViewModel(repository, FakeSubscriptionRepository())
+    viewModel.onDeleteEntry(detailed)
+
+    viewModel.onRestoreEntry(detailed)
+
+    assertEquals(listOf(older, detailed), repository.storedEntries)
+  }
+
   private val now = Instant.parse("2026-10-06T12:00:00Z")
   private val past = Instant.parse("2025-09-15T15:49:34Z")
 
