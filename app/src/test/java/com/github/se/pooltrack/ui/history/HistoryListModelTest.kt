@@ -42,10 +42,10 @@ class HistoryListModelTest {
 
     assertEquals(
         listOf(
-            HistoryRow.Week(thisWeekMon, visits = 2, meters = 0),
+            HistoryRow.Week(thisWeekMon, visits = 2, meters = 0, loggedVisits = 0),
             HistoryRow.Item(thisWeekWed, wednesday),
             HistoryRow.Item(thisWeekMon, monday9),
-            HistoryRow.Week(LocalDate.of(2026, 9, 28), visits = 1, meters = 0),
+            HistoryRow.Week(LocalDate.of(2026, 9, 28), visits = 1, meters = 0, loggedVisits = 0),
             HistoryRow.Item(lastWeekSun, sunday),
         ),
         rows,
@@ -62,6 +62,7 @@ class HistoryListModelTest {
         )
 
     assertEquals(1500, (rows.first() as HistoryRow.Week).meters)
+    assertEquals(2, (rows.first() as HistoryRow.Week).loggedVisits)
   }
 
   @Test
@@ -129,13 +130,18 @@ class HistoryListModelTest {
   }
 
   @Test
-  fun weekTotals_listsVisitsAndDistance_whenThereIsOne() {
-    assertEquals("3 visits · 4.2 km", weekTotals(3, 4200))
-    assertEquals("1 visit · 600 m", weekTotals(1, 600))
+  fun weekTotals_listsVisitsAndDistance_whenEveryVisitHasOne() {
+    assertEquals("3 visits · 4.2 km", weekTotals(3, 4200, loggedVisits = 3))
+    assertEquals("1 visit · 600 m", weekTotals(1, 600, loggedVisits = 1))
+  }
+
+  @Test
+  fun weekTotals_saysLogged_whenOnlySomeVisitsHaveADistance() {
+    assertEquals("4 visits · 2.6 km logged", weekTotals(4, 2600, loggedVisits = 3))
   }
 
   @Test
   fun weekTotals_leavesOutTheDistance_whenNoneWasLogged() {
-    assertEquals("2 visits", weekTotals(2, 0))
+    assertEquals("2 visits", weekTotals(2, 0, loggedVisits = 0))
   }
 }

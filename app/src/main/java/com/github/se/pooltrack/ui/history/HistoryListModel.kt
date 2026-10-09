@@ -20,8 +20,14 @@ sealed interface HistoryRow {
    *
    * @property visits Entries in the week.
    * @property meters The distance logged during the week, in metres.
+   * @property loggedVisits How many of the [visits] have a distance, which the [meters] add up.
    */
-  data class Week(val start: LocalDate, val visits: Int, val meters: Int) : HistoryRow {
+  data class Week(
+      val start: LocalDate,
+      val visits: Int,
+      val meters: Int,
+      val loggedVisits: Int,
+  ) : HistoryRow {
     override val key: Any = "week-$start"
   }
 
@@ -50,6 +56,7 @@ fun buildHistoryRows(
                   start = start,
                   visits = items.size,
                   meters = items.sumOf { it.entry.swimDistanceMeters ?: 0 },
+                  loggedVisits = items.count { it.entry.swimDistanceMeters != null },
               )
           ) + items
         }

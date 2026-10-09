@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -75,7 +74,13 @@ internal fun weekLabel(
 
 /** The sticky title above the entries of one week, with how many visits it had. */
 @Composable
-internal fun WeekHeader(label: String, visits: Int, meters: Int, modifier: Modifier = Modifier) {
+internal fun WeekHeader(
+    label: String,
+    visits: Int,
+    meters: Int,
+    loggedVisits: Int,
+    modifier: Modifier = Modifier,
+) {
   Surface(
       modifier = modifier.fillMaxWidth().testTag(HistoryScreenTestTags.WEEK_HEADER),
       color = MaterialTheme.colorScheme.background,
@@ -91,7 +96,7 @@ internal fun WeekHeader(label: String, visits: Int, meters: Int, modifier: Modif
           fontWeight = FontWeight.Bold,
       )
       Text(
-          text = weekTotals(visits, meters),
+          text = weekTotals(visits, meters, loggedVisits),
           style = MaterialTheme.typography.labelMedium,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
@@ -214,11 +219,6 @@ internal fun SwipeableEntryRow(
               )
             }
           }
-          Icon(
-              imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-              contentDescription = null,
-              tint = MaterialTheme.colorScheme.onSurfaceVariant,
-          )
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
       }
@@ -226,7 +226,14 @@ internal fun SwipeableEntryRow(
   }
 }
 
-/** "5 visits · 4.2 km"; the distance is left out when none was logged that week. */
-internal fun weekTotals(visits: Int, meters: Int): String =
-    listOfNotNull(visitsLabel(visits), if (meters > 0) formatTotalDistance(meters) else null)
-        .joinToString(" · ")
+/**
+ * "5 visits · 4.2 km". The distance is left out when none was logged that week, and reads "logged"
+ * (as in "4.2 km logged") when only some of the visits have one, since the total then undercounts.
+ */
+internal fun weekTotals(visits: Int, meters: Int, loggedVisits: Int): String {
+  val distance =
+      if (meters > 0) {
+        formatTotalDistance(meters) + if (loggedVisits < visits) " logged" else ""
+      } else null
+  return listOfNotNull(visitsLabel(visits), distance).joinToString(" · ")
+}
