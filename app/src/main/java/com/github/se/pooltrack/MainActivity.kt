@@ -42,7 +42,6 @@ import com.github.se.pooltrack.ui.navigation.ENTRY_TIMESTAMP_ARG
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.poolstay.PoolStayScreen
-import com.github.se.pooltrack.ui.poolstay.PoolStayState
 import com.github.se.pooltrack.ui.poolstay.PoolStayViewModel
 import com.github.se.pooltrack.ui.subscription.SubscriptionQuickViewScreen
 import com.github.se.pooltrack.ui.subscription.SubscriptionScreen
@@ -108,10 +107,11 @@ class MainActivity : ComponentActivity() {
  * `PoolTrackApp` is the main composable function that sets up the whole app UI. Gated behind Google
  * sign-in - [SignInScreen] is shown instead until a real (non-anonymous) account is signed in -
  * since subscriptions and entries are only meaningful once backed up to one. A newer release takes
- * precedence over both: [UpdateRequiredScreen] replaces the whole app until it is installed. If the
+ * precedence over that: [UpdateRequiredScreen] replaces the whole app until it is installed. If the
  * check can't reach GitHub (e.g. offline at the pool), the app stays usable so the pass can still
  * be shown. Once signed in, a stay in the pool replaces the app too ([PoolStayScreen]) until the
- * user logged how far they swam.
+ * user logged how far they swam, and that comes even before the update, so a swim that just ended
+ * can be logged first. See [appGate] for the exact order.
  */
 @Composable
 fun PoolTrackApp(
@@ -120,31 +120,34 @@ fun PoolTrackApp(
 ) {
   LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { updateViewModel.onResume() }
   val updateState by updateViewModel.state.collectAsState()
-  if (updateState !is UpdateUiState.None) {
-    UpdateRequiredScreen(updateViewModel)
-    return
-  }
-
   val currentUser by accountViewModel.currentUser.collectAsState()
   val user = currentUser
-
-  if (user == null || user.isAnonymous) {
-    SignInScreen(viewModel = accountViewModel)
-    return
-  }
-
   // After a confirmed scan the user sees only the pool stay screen, until they logged a distance.
   // It is derived from the stored entry, so reopening the app later lands here again.
   val poolStayViewModel: PoolStayViewModel = viewModel()
   val poolStay by poolStayViewModel.state.collectAsState()
-  when (poolStay) {
-    PoolStayState.Loading -> return
-    PoolStayState.None -> Unit
-    is PoolStayState.CancelWindow,
-    is PoolStayState.LogRequired -> {
+
+  when (
+      appGate(
+          updateAvailable = updateState !is UpdateUiState.None,
+          signedIn = user != null && !user.isAnonymous,
+          poolStay = poolStay,
+      )
+  ) {
+    AppGate.Loading -> return
+    AppGate.PoolStay -> {
       PoolStayScreen(poolStayViewModel)
       return
     }
+    AppGate.Update -> {
+      UpdateRequiredScreen(updateViewModel)
+      return
+    }
+    AppGate.SignIn -> {
+      SignInScreen(viewModel = accountViewModel)
+      return
+    }
+    AppGate.App -> Unit
   }
 
   val navController: NavHostController = rememberNavController()
