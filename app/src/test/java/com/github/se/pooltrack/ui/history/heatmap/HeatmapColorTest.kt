@@ -7,14 +7,14 @@ import org.junit.Test
 class HeatmapColorTest {
 
   @Test
-  fun levelAlpha_startsAtTheMinimum_andEndsOpaque() {
-    assertEquals(0.7f, levelAlpha(1, DAY_MIN_ALPHA), 0.0001f)
-    assertEquals(1f, levelAlpha(MAX_LEVEL, DAY_MIN_ALPHA), 0.0001f)
+  fun levelAlpha_runsFromTheMinimumToTheMaximum() {
+    assertEquals(DayPalette.minAlpha, levelAlpha(1, DayPalette), 0.0001f)
+    assertEquals(DayPalette.maxAlpha, levelAlpha(MAX_LEVEL, DayPalette), 0.0001f)
   }
 
   @Test
   fun levelAlpha_growsWithTheLevel() {
-    val alphas = (1..MAX_LEVEL).map { levelAlpha(it, YEAR_MIN_ALPHA) }
+    val alphas = (1..MAX_LEVEL).map { levelAlpha(it, YearPalette) }
 
     assertEquals(alphas.sorted(), alphas)
     assertEquals(alphas.size, alphas.distinct().size)
@@ -22,13 +22,21 @@ class HeatmapColorTest {
 
   @Test
   fun levelAlpha_clampsLevelsOutsideTheScale() {
-    assertEquals(levelAlpha(1, DAY_MIN_ALPHA), levelAlpha(0, DAY_MIN_ALPHA), 0.0001f)
-    assertEquals(levelAlpha(MAX_LEVEL, DAY_MIN_ALPHA), levelAlpha(9, DAY_MIN_ALPHA), 0.0001f)
+    assertEquals(levelAlpha(1, DayPalette), levelAlpha(0, DayPalette), 0.0001f)
+    assertEquals(levelAlpha(MAX_LEVEL, DayPalette), levelAlpha(9, DayPalette), 0.0001f)
   }
 
   @Test
-  fun aSingleVisitIsClearlyFilled_butTheYearViewStillSpreadsOut() {
-    assertTrue(levelAlpha(1, DAY_MIN_ALPHA) >= 0.6f)
-    assertTrue(levelAlpha(MAX_LEVEL, YEAR_MIN_ALPHA) - levelAlpha(1, YEAR_MIN_ALPHA) >= 0.6f)
+  fun everyFillIsASoftTint_neverTheFullColor() {
+    listOf(DayPalette, YearPalette).forEach { palette ->
+      assertTrue(palette.maxAlpha <= 0.7f)
+      assertTrue(palette.minAlpha > 0f)
+    }
+  }
+
+  @Test
+  fun aSingleVisitIsVisible_andTheYearViewStillSpreadsOut() {
+    assertTrue(DayPalette.minAlpha >= 0.35f)
+    assertTrue(YearPalette.maxAlpha - YearPalette.minAlpha >= 0.4f)
   }
 }

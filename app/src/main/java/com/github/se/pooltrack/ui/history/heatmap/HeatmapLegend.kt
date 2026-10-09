@@ -15,28 +15,31 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
- * How opaque a day with one visit is. High, because most days have at most one visit: a faint fill
- * would make every visited day look like it barely counted.
+ * How opaque the primary color is from the lightest filled level to the darkest. The fills are soft
+ * tints, never the full color, so the text on top stays in the normal text color and the card stays
+ * calm.
  */
-const val DAY_MIN_ALPHA = 0.7f
+data class HeatmapPalette(val minAlpha: Float, val maxAlpha: Float)
 
 /**
- * How opaque the lightest tile of the year view is; those span 1 to 12 visits, so it starts low.
+ * Days. Most days have at most one visit, so the lightest step is already clearly visible and the
+ * range is narrow.
  */
-const val YEAR_MIN_ALPHA = 0.25f
+val DayPalette = HeatmapPalette(minAlpha = 0.40f, maxAlpha = 0.65f)
 
-/** The opacity of the primary color at [level] (1 to [MAX_LEVEL]), from [minAlpha] up to 1. */
-fun levelAlpha(level: Int, minAlpha: Float): Float =
-    minAlpha + (1f - minAlpha) * (level.coerceIn(1, MAX_LEVEL) - 1) / (MAX_LEVEL - 1)
+/** Months in the year view, which span one visit to a dozen or more, so the range is wider. */
+val YearPalette = HeatmapPalette(minAlpha = 0.15f, maxAlpha = 0.60f)
 
-/**
- * The fill at [level], from nothing (0) to the busiest ([MAX_LEVEL]); the lightest filled level has
- * the opacity [minAlpha].
- */
+/** The opacity of the primary color at [level] (1 to [MAX_LEVEL]) in [palette]. */
+fun levelAlpha(level: Int, palette: HeatmapPalette): Float =
+    palette.minAlpha +
+        (palette.maxAlpha - palette.minAlpha) * (level.coerceIn(1, MAX_LEVEL) - 1) / (MAX_LEVEL - 1)
+
+/** The fill at [level], from nothing (0) to the busiest ([MAX_LEVEL]), in [palette]. */
 @Composable
-fun heatmapColor(level: Int, minAlpha: Float = DAY_MIN_ALPHA): Color =
+fun heatmapColor(level: Int, palette: HeatmapPalette = DayPalette): Color =
     if (level <= 0) Color.Transparent
-    else MaterialTheme.colorScheme.primary.copy(alpha = levelAlpha(level, minAlpha))
+    else MaterialTheme.colorScheme.primary.copy(alpha = levelAlpha(level, palette))
 
 /** The "Less, five dots, More" key explaining the colors. */
 @Composable

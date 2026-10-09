@@ -153,7 +153,6 @@ private fun MonthTileCell(
   val textColor =
       when {
         tile.isFuture -> scheme.onSurface.copy(alpha = 0.3f)
-        tile.level >= 3 -> scheme.onPrimary
         else -> scheme.onSurface
       }
   Box(
@@ -163,7 +162,7 @@ private fun MonthTileCell(
               .aspectRatio(1.35f)
               .background(
                   if (tile.level == 0) scheme.onSurface.copy(alpha = 0.06f)
-                  else heatmapColor(tile.level, YEAR_MIN_ALPHA),
+                  else heatmapColor(tile.level, YearPalette),
                   TileShape,
               )
               .then(

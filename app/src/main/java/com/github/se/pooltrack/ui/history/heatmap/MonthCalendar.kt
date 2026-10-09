@@ -202,7 +202,6 @@ internal fun DayCell(
   val textColor =
       when {
         day.isFuture -> scheme.onSurface.copy(alpha = 0.3f)
-        day.level >= 1 -> scheme.onPrimary
         else -> scheme.onSurface
       }
   val ring =
