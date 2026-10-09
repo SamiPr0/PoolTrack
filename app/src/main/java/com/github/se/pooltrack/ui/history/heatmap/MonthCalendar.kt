@@ -1,5 +1,6 @@
 package com.github.se.pooltrack.ui.history.heatmap
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,9 +50,6 @@ object MonthCalendarTestTags {
 
   fun day(date: LocalDate) = "MonthCalendarDay_$date"
 }
-
-/** A calendar page always has this many rows, so swiping never changes the height. */
-private const val ROWS = 6
 
 /**
  * A month calendar in the spirit of the iPhone's: a title with previous/next buttons, a row of
@@ -162,17 +160,20 @@ fun MonthCalendar(
       }
     }
 
-    HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth()) { page ->
+    // A month has four to six weeks; the card follows the one on screen instead of leaving blanks.
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxWidth().animateContentSize(),
+    ) { page ->
       val grid =
           remember(months[page], countsByDay, today, firstDayOfWeek, maxCount) {
             buildMonthGrid(months[page], countsByDay, today, firstDayOfWeek, maxCount)
           }
       Column(modifier = Modifier.fillMaxWidth()) {
-        (0 until ROWS).forEach { row ->
+        grid.weeks.forEach { week ->
           Row(modifier = Modifier.fillMaxWidth()) {
-            val week = grid.weeks.getOrNull(row)
             (0 until 7).forEach { column ->
-              val day = week?.get(column)
+              val day = week[column]
               Box(modifier = Modifier.weight(1f).aspectRatio(1f).padding(3.dp)) {
                 if (day != null) {
                   DayCell(
@@ -201,7 +202,7 @@ internal fun DayCell(
   val textColor =
       when {
         day.isFuture -> scheme.onSurface.copy(alpha = 0.3f)
-        day.level >= 3 -> scheme.onPrimary
+        day.level >= 1 -> scheme.onPrimary
         else -> scheme.onSurface
       }
   val ring =
