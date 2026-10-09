@@ -128,6 +128,52 @@ class HistoryScreenRobolectricTest {
     composeTestRule.waitForIdle()
   }
 
+  /** Swipes the first row to the left and confirms the dialog that asks whether to delete it. */
+  private fun deleteFirstEntry() {
+    swipeAwayFirstEntry()
+    composeTestRule.onNodeWithTag(HistoryScreenTestTags.CONFIRM_DELETE_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+  }
+
+  @Test
+  fun historyScreen_asksBeforeDeleting_andChangesNothingYet_whenAnEntryIsSwiped() {
+    val entry = entryAt(today)
+    val repository = FakeEntryRepository(listOf(entry))
+    show(repository)
+
+    swipeAwayFirstEntry()
+
+    composeTestRule.onNodeWithText("Delete this visit?").assertIsDisplayed()
+    composeTestRule.onNode(hasText("will be removed.", substring = true)).assertIsDisplayed()
+    assertEquals(listOf(entry), repository.storedEntries)
+  }
+
+  @Test
+  fun historyScreen_keepsTheEntry_andTheRowComesBack_whenDeletingIsCancelled() {
+    val entry = entryAt(today)
+    val repository = FakeEntryRepository(listOf(entry))
+    show(repository)
+    swipeAwayFirstEntry()
+
+    composeTestRule.onNodeWithTag(HistoryScreenTestTags.CANCEL_DELETE_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    assertEquals(listOf(entry), repository.storedEntries)
+    composeTestRule.onAllNodesWithText("Delete this visit?").assertCountEquals(0)
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(1)
+    composeTestRule.onNodeWithText(timeLabel(entry)).assertIsDisplayed()
+  }
+
+  @Test
+  fun deletionSummary_namesTheDayAndTime() {
+    val entry = entryAt(today, hour = 18)
+
+    assertEquals(
+        "The visit on Today at ${timeLabel(entry)} will be removed.",
+        deletionSummary(entry),
+    )
+  }
+
   @Test
   fun historyScreen_deletesOnlyThatEntry_whenSwipedAway() {
     val keep = entryAt(today, hour = 8)
@@ -136,7 +182,7 @@ class HistoryScreenRobolectricTest {
     show(repository)
 
     // Most recent first, so the first row is the 18:00 entry.
-    swipeAwayFirstEntry()
+    deleteFirstEntry()
 
     assertEquals(listOf(keep), repository.storedEntries)
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(1)
@@ -148,7 +194,7 @@ class HistoryScreenRobolectricTest {
     val repository = FakeEntryRepository(listOf(entryAt(today)))
     show(repository)
 
-    swipeAwayFirstEntry()
+    deleteFirstEntry()
 
     assertEquals(emptyList<Entry>(), repository.storedEntries)
     composeTestRule.onNodeWithTag(HistoryScreenTestTags.EMPTY_MESSAGE).assertIsDisplayed()
@@ -159,7 +205,7 @@ class HistoryScreenRobolectricTest {
     val entry = entryAt(today).copy(swimDistanceMeters = 900, swimDurationMillis = 60_000L)
     val repository = FakeEntryRepository(listOf(entry))
     show(repository)
-    swipeAwayFirstEntry()
+    deleteFirstEntry()
 
     composeTestRule.onNodeWithText(HistoryScreenTestTags.UNDO_ADD_ACTION).performClick()
     composeTestRule.waitForIdle()
@@ -526,7 +572,7 @@ class HistoryScreenRobolectricTest {
   fun historyScreen_dismissesTheSwipeTip_afterAVisitWasSwipedAway() {
     show(FakeEntryRepository(listOf(entryAt(today), entryAt(today.minusDays(40)))))
 
-    swipeAwayFirstEntry()
+    deleteFirstEntry()
 
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.SWIPE_HINT).assertCountEquals(0)
   }

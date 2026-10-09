@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -62,6 +63,8 @@ object HistoryScreenTestTags {
   const val ENTRY_LIST = "HistoryScreenEntryList"
   const val WEEK_HEADER = "HistoryScreenWeekHeader"
   const val SWIPE_HINT = "HistoryScreenSwipeHint"
+  const val CONFIRM_DELETE_BUTTON = "HistoryScreenConfirmDeleteButton"
+  const val CANCEL_DELETE_BUTTON = "HistoryScreenCancelDeleteButton"
   const val SWIPE_HINT_DISMISS = "HistoryScreenSwipeHintDismiss"
   const val ENTRY_ITEM = "HistoryScreenEntryItem"
   const val ADD_PAST_ENTRY_BUTTON = "HistoryScreenAddPastEntryButton"
@@ -87,6 +90,7 @@ fun HistoryScreen(
 ) {
   val entries by viewModel.entries.collectAsState()
   var showAddSheet by remember { mutableStateOf(false) }
+  var entryPendingDeletion by remember { mutableStateOf<Entry?>(null) }
   var highlightedDate by remember { mutableStateOf<LocalDate?>(null) }
   // Remembered across openings, so adding several entries from the same day takes one tap each.
   var lastAddedDate by remember { mutableStateOf(LocalDate.now(ZONE)) }
@@ -116,7 +120,7 @@ fun HistoryScreen(
     }
   }
 
-  // Deleting needs no confirmation: the swipe is deliberate and the snackbar offers an Undo.
+  // Deleting is confirmed first (see the dialog below), and a snackbar still offers an Undo.
   val onDeleteEntry: (Entry) -> Unit = { entry ->
     viewModel.onDeleteEntry(entry)
     viewModel.onSwipeHintDismissed()
@@ -146,6 +150,33 @@ fun HistoryScreen(
         onDismiss = {
           showAddSheet = false
           viewModel.onAddPastEntryResultHandled()
+        },
+    )
+  }
+
+  entryPendingDeletion?.let { entry ->
+    AlertDialog(
+        onDismissRequest = { entryPendingDeletion = null },
+        title = { Text("Delete this visit?") },
+        text = { Text("${deletionSummary(entry)} You can undo it right after.") },
+        confirmButton = {
+          TextButton(
+              onClick = {
+                onDeleteEntry(entry)
+                entryPendingDeletion = null
+              },
+              modifier = Modifier.testTag(HistoryScreenTestTags.CONFIRM_DELETE_BUTTON),
+          ) {
+            Text("Delete")
+          }
+        },
+        dismissButton = {
+          TextButton(
+              onClick = { entryPendingDeletion = null },
+              modifier = Modifier.testTag(HistoryScreenTestTags.CANCEL_DELETE_BUTTON),
+          ) {
+            Text("Cancel")
+          }
         },
     )
   }
@@ -300,7 +331,7 @@ fun HistoryScreen(
                       onClick = {
                         navigationActions?.navigateToEntryDetails(row.entry.timestampEpochMilli)
                       },
-                      onDelete = { onDeleteEntry(row.entry) },
+                      onDeleteRequested = { entryPendingDeletion = row.entry },
                   )
                 }
           }
@@ -376,3 +407,10 @@ private const val HIGHLIGHT_MILLIS = 2_500L
 
 /** How far below the top a scrolled-to row stops, so the sticky week header doesn't cover it. */
 private val STICKY_HEADER_CLEARANCE = 56.dp
+
+/** "The visit on Wednesday, Oct 7 at 12:00 PM will be removed." */
+internal fun deletionSummary(entry: Entry): String {
+  val day = entry.timestamp.atZone(ZONE).toLocalDate()
+  val time = entryTimeFormatter().format(entry.timestamp)
+  return "The visit on ${dayLabel(day, LocalDate.now(ZONE))} at $time will be removed."
+}

@@ -144,7 +144,9 @@ private fun DateBlock(day: LocalDate, isToday: Boolean, locale: Locale = Locale.
  * @param texts What the row says, see [entryRowTexts].
  * @param highlighted Whether to tint the row, e.g. because its day was picked in the calendar.
  * @param onClick Called when the row is tapped.
- * @param onDelete Called once the row was swiped away.
+ * @param onDeleteRequested Called when the row was swiped to the left (or the screen reader action
+ *   was used). The row never goes away by itself: it springs back, and the caller asks the user to
+ *   confirm before deleting anything.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -154,16 +156,16 @@ internal fun SwipeableEntryRow(
     texts: EntryRowTexts,
     highlighted: Boolean,
     onClick: () -> Unit,
-    onDelete: () -> Unit,
+    onDeleteRequested: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
   val dismissState =
       rememberSwipeToDismissBoxState(
+          // Never settle on the dismissed position: the row springs back while the caller asks the
+          // user to confirm, so a swipe made by mistake leaves nothing changed.
           confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-              onDelete()
-              true
-            } else false
+            if (value == SwipeToDismissBoxValue.EndToStart) onDeleteRequested()
+            false
           }
       )
   SwipeToDismissBox(
@@ -174,7 +176,7 @@ internal fun SwipeableEntryRow(
             customActions =
                 listOf(
                     CustomAccessibilityAction("Delete entry") {
-                      onDelete()
+                      onDeleteRequested()
                       true
                     }
                 )
