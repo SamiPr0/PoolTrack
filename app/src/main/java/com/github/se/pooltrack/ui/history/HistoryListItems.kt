@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -75,7 +74,13 @@ internal fun weekLabel(
 
 /** The sticky title above the entries of one week, with how many visits it had. */
 @Composable
-internal fun WeekHeader(label: String, visits: Int, meters: Int, modifier: Modifier = Modifier) {
+internal fun WeekHeader(
+    label: String,
+    visits: Int,
+    meters: Int,
+    loggedVisits: Int,
+    modifier: Modifier = Modifier,
+) {
   Surface(
       modifier = modifier.fillMaxWidth().testTag(HistoryScreenTestTags.WEEK_HEADER),
       color = MaterialTheme.colorScheme.background,
@@ -91,7 +96,7 @@ internal fun WeekHeader(label: String, visits: Int, meters: Int, modifier: Modif
           fontWeight = FontWeight.Bold,
       )
       Text(
-          text = weekTotals(visits, meters),
+          text = weekTotals(visits, meters, loggedVisits),
           style = MaterialTheme.typography.labelMedium,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
@@ -139,7 +144,9 @@ private fun DateBlock(day: LocalDate, isToday: Boolean, locale: Locale = Locale.
  * @param texts What the row says, see [entryRowTexts].
  * @param highlighted Whether to tint the row, e.g. because its day was picked in the calendar.
  * @param onClick Called when the row is tapped.
- * @param onDelete Called once the row was swiped away.
+ * @param onDeleteRequested Called when the row was swiped to the left (or the screen reader action
+ *   was used). The row never goes away by itself: it springs back, and the caller asks the user to
+ *   confirm before deleting anything.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -149,16 +156,16 @@ internal fun SwipeableEntryRow(
     texts: EntryRowTexts,
     highlighted: Boolean,
     onClick: () -> Unit,
-    onDelete: () -> Unit,
+    onDeleteRequested: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
   val dismissState =
       rememberSwipeToDismissBoxState(
+          // Never settle on the dismissed position: the row springs back while the caller asks the
+          // user to confirm, so a swipe made by mistake leaves nothing changed.
           confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-              onDelete()
-              true
-            } else false
+            if (value == SwipeToDismissBoxValue.EndToStart) onDeleteRequested()
+            false
           }
       )
   SwipeToDismissBox(
@@ -169,7 +176,7 @@ internal fun SwipeableEntryRow(
             customActions =
                 listOf(
                     CustomAccessibilityAction("Delete entry") {
-                      onDelete()
+                      onDeleteRequested()
                       true
                     }
                 )
@@ -214,11 +221,6 @@ internal fun SwipeableEntryRow(
               )
             }
           }
-          Icon(
-              imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-              contentDescription = null,
-              tint = MaterialTheme.colorScheme.onSurfaceVariant,
-          )
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
       }
@@ -226,7 +228,14 @@ internal fun SwipeableEntryRow(
   }
 }
 
-/** "5 visits · 4.2 km"; the distance is left out when none was logged that week. */
-internal fun weekTotals(visits: Int, meters: Int): String =
-    listOfNotNull(visitsLabel(visits), if (meters > 0) formatTotalDistance(meters) else null)
-        .joinToString(" · ")
+/**
+ * "5 visits · 4.2 km". The distance is left out when none was logged that week, and reads "logged"
+ * (as in "4.2 km logged") when only some of the visits have one, since the total then undercounts.
+ */
+internal fun weekTotals(visits: Int, meters: Int, loggedVisits: Int): String {
+  val distance =
+      if (meters > 0) {
+        formatTotalDistance(meters) + if (loggedVisits < visits) " logged" else ""
+      } else null
+  return listOfNotNull(visitsLabel(visits), distance).joinToString(" · ")
+}

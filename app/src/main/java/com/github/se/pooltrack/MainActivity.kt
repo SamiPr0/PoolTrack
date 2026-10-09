@@ -26,6 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
+import com.github.se.pooltrack.model.hint.HintRepositoryProvider
 import com.github.se.pooltrack.model.subscription.PassZoomRepositoryProvider
 import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
 import com.github.se.pooltrack.model.swim.isSwimPending
@@ -65,6 +66,7 @@ class MainActivity : ComponentActivity() {
     EntryRepositoryProvider.init(this)
     SubscriptionRepositoryProvider.init(this)
     PassZoomRepositoryProvider.init(this)
+    HintRepositoryProvider.init(this)
     UpdateRepositoryProvider.init(this)
     requestNotificationPermissionIfNeeded()
     startSwimTrackingWhileASwimIsPending()
