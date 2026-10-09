@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.DateRange
@@ -34,20 +34,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.model.entry.timestamp
-import com.github.se.pooltrack.model.swim.formatSwimDistance
-import com.github.se.pooltrack.model.swim.formatSwimDuration
 import com.github.se.pooltrack.ui.history.heatmap.HistoryOverview
+import com.github.se.pooltrack.ui.history.heatmap.entryCountsByDay
 import com.github.se.pooltrack.ui.navigation.BottomNavigationMenu
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
-import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -55,6 +54,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.time.temporal.WeekFields
 import java.util.Locale
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 object HistoryScreenTestTags {
@@ -66,7 +66,6 @@ object HistoryScreenTestTags {
   const val UNDO_ADD_ACTION = "Undo"
   const val LINK_BANNER = "HistoryScreenLinkBanner"
   const val LINK_BUTTON = "HistoryScreenLinkButton"
-  const val NO_ENTRIES_THAT_DAY = "HistoryScreenNoEntriesThatDay"
 }
 
 private val ZONE = ZoneId.systemDefault()
@@ -86,7 +85,7 @@ fun HistoryScreen(
 ) {
   val entries by viewModel.entries.collectAsState()
   var showAddSheet by remember { mutableStateOf(false) }
-  var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
+  var highlightedDate by remember { mutableStateOf<LocalDate?>(null) }
   // Remembered across openings, so adding several entries from the same day takes one tap each.
   var lastAddedDate by remember { mutableStateOf(LocalDate.now(ZONE)) }
   var lastAddedTime by remember { mutableStateOf(LocalTime.of(12, 0)) }
@@ -191,12 +190,37 @@ fun HistoryScreen(
     } else {
       val today = LocalDate.now(ZONE)
       val firstDayOfWeek = WeekFields.of(LocalConfiguration.current.locales[0]).firstDayOfWeek
-      val allEntriesByDay = entries.groupBy { it.timestamp.atZone(ZONE).toLocalDate() }
-      val countsByDay = remember(allEntriesByDay) { allEntriesByDay.mapValues { it.value.size } }
-      val entriesByDay =
-          selectedDate?.let { day -> allEntriesByDay.filterKeys { it == day } } ?: allEntriesByDay
+      val countsByDay = remember(entries) { entryCountsByDay(entries, ZONE) }
+      val rows =
+          remember(entries, firstDayOfWeek) { buildHistoryRows(entries, firstDayOfWeek, ZONE) }
+      val listState = rememberLazyListState()
+      val headerClearance = with(LocalDensity.current) { STICKY_HEADER_CLEARANCE.roundToPx() }
+      // The overview, and the link banner when there is one, come before the rows.
+      val leadingItems = if (linkSuggestions.isEmpty()) 1 else 2
+
+      // A picked day stays highlighted for a moment, so the eye can find its row.
+      LaunchedEffect(highlightedDate) {
+        if (highlightedDate != null) {
+          delay(HIGHLIGHT_MILLIS)
+          highlightedDate = null
+        }
+      }
+
+      val onDayPicked: (LocalDate) -> Unit = { day ->
+        highlightedDate = day
+        val index = rows.indexOfDay(day)
+        scope.launch {
+          if (index != null) {
+            listState.animateScrollToItem(leadingItems + index, scrollOffset = -headerClearance)
+          } else {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar("No visit on ${dayLabel(day, today)}")
+          }
+        }
+      }
 
       LazyColumn(
+          state = listState,
           modifier =
               Modifier.fillMaxSize()
                   .padding(paddingValues)
@@ -208,24 +232,10 @@ fun HistoryScreen(
               countsByDay = countsByDay,
               today = today,
               firstDayOfWeek = firstDayOfWeek,
-              selectedDate = selectedDate,
-              onDayClick = { day -> selectedDate = if (day == selectedDate) null else day },
-              onClearSelection = { selectedDate = null },
-              selectedLabel = { dayLabel(it, today) },
+              selectedDate = highlightedDate,
+              onDayClick = onDayPicked,
               modifier = Modifier.padding(vertical = 4.dp),
           )
-        }
-        if (selectedDate != null && entriesByDay.isEmpty()) {
-          item(key = "no-entries-that-day") {
-            Text(
-                text = "No entries on this day.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier =
-                    Modifier.padding(vertical = 16.dp)
-                        .testTag(HistoryScreenTestTags.NO_ENTRIES_THAT_DAY),
-            )
-          }
         }
         if (linkSuggestions.isNotEmpty()) {
           item(key = "link-banner") {
@@ -251,29 +261,35 @@ fun HistoryScreen(
             )
           }
         }
-        entriesByDay.entries
-            .groupBy { weekStart(it.key, firstDayOfWeek) }
-            .forEach { (start, days) ->
-              stickyHeader(key = "week-$start") {
-                WeekHeader(
-                    label = weekLabel(start, today, firstDayOfWeek),
-                    visits = days.sumOf { it.value.size },
-                )
-              }
-              days.forEach { (day, entriesForDay) ->
-                items(entriesForDay, key = { it.timestamp.toEpochMilli() }) { entry ->
-                  SwipeableEntryRow(
-                      day = day,
-                      isToday = day == today,
-                      label = entryRowLabel(entry),
-                      onClick = {
-                        navigationActions?.navigateToEntryDetails(entry.timestampEpochMilli)
-                      },
-                      onDelete = { onDeleteEntry(entry) },
+        rows.forEach { row ->
+          when (row) {
+            is HistoryRow.Week ->
+                stickyHeader(key = row.key) {
+                  WeekHeader(
+                      label = weekLabel(row.start, today, firstDayOfWeek),
+                      visits = row.visits,
+                      meters = row.meters,
                   )
                 }
-              }
-            }
+            is HistoryRow.Item ->
+                item(key = row.key) {
+                  SwipeableEntryRow(
+                      day = row.day,
+                      isToday = row.day == today,
+                      texts =
+                          entryRowTexts(
+                              row.entry,
+                              entryTimeFormatter().format(row.entry.timestamp),
+                          ),
+                      highlighted = row.day == highlightedDate,
+                      onClick = {
+                        navigationActions?.navigateToEntryDetails(row.entry.timestampEpochMilli)
+                      },
+                      onDelete = { onDeleteEntry(row.entry) },
+                  )
+                }
+          }
+        }
       }
     }
   }
@@ -316,14 +332,8 @@ internal fun dayLabel(day: LocalDate, today: LocalDate): String =
       }
     }
 
-/**
- * The entry time, followed by the swim duration (old entries) and the logged distance, whichever
- * were recorded: "18:42 · 52min · 1200 m".
- */
-internal fun entryRowLabel(entry: Entry): String =
-    listOfNotNull(
-            entryTimeFormatter().format(entry.timestamp),
-            entry.swimDurationMillis?.let { formatSwimDuration(Duration.ofMillis(it)) },
-            entry.swimDistanceMeters?.let { formatSwimDistance(it) },
-        )
-        .joinToString(" · ")
+/** How long a day picked in the calendar keeps its row tinted. */
+private const val HIGHLIGHT_MILLIS = 2_500L
+
+/** How far below the top a scrolled-to row stops, so the sticky week header doesn't cover it. */
+private val STICKY_HEADER_CLEARANCE = 56.dp

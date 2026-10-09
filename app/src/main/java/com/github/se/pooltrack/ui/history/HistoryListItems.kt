@@ -75,7 +75,7 @@ internal fun weekLabel(
 
 /** The sticky title above the entries of one week, with how many visits it had. */
 @Composable
-internal fun WeekHeader(label: String, visits: Int, modifier: Modifier = Modifier) {
+internal fun WeekHeader(label: String, visits: Int, meters: Int, modifier: Modifier = Modifier) {
   Surface(
       modifier = modifier.fillMaxWidth().testTag(HistoryScreenTestTags.WEEK_HEADER),
       color = MaterialTheme.colorScheme.background,
@@ -91,7 +91,7 @@ internal fun WeekHeader(label: String, visits: Int, modifier: Modifier = Modifie
           fontWeight = FontWeight.Bold,
       )
       Text(
-          text = visitsLabel(visits),
+          text = weekTotals(visits, meters),
           style = MaterialTheme.typography.labelMedium,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
@@ -136,7 +136,8 @@ private fun DateBlock(day: LocalDate, isToday: Boolean, locale: Locale = Locale.
  *
  * @param day The day of the entry, shown in the date block.
  * @param isToday Whether [day] is today.
- * @param label The text of the row, see [entryRowLabel].
+ * @param texts What the row says, see [entryRowTexts].
+ * @param highlighted Whether to tint the row, e.g. because its day was picked in the calendar.
  * @param onClick Called when the row is tapped.
  * @param onDelete Called once the row was swiped away.
  */
@@ -145,7 +146,8 @@ private fun DateBlock(day: LocalDate, isToday: Boolean, locale: Locale = Locale.
 internal fun SwipeableEntryRow(
     day: LocalDate,
     isToday: Boolean,
-    label: String,
+    texts: EntryRowTexts,
+    highlighted: Boolean,
     onClick: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
@@ -186,18 +188,32 @@ internal fun SwipeableEntryRow(
         }
       },
   ) {
-    Surface(onClick = onClick, color = MaterialTheme.colorScheme.background) {
+    Surface(
+        onClick = onClick,
+        color =
+            if (highlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+            else MaterialTheme.colorScheme.background,
+    ) {
       Column {
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
           DateBlock(day = day, isToday = isToday)
-          Text(
-              text = label,
-              style = MaterialTheme.typography.bodyLarge,
-              modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
-          )
+          Column(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
+            Text(
+                text = texts.primary,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            texts.secondary?.let {
+              Text(
+                  text = it,
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+              )
+            }
+          }
           Icon(
               imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
               contentDescription = null,
@@ -209,3 +225,8 @@ internal fun SwipeableEntryRow(
     }
   }
 }
+
+/** "5 visits · 4.2 km"; the distance is left out when none was logged that week. */
+internal fun weekTotals(visits: Int, meters: Int): String =
+    listOfNotNull(visitsLabel(visits), if (meters > 0) formatTotalDistance(meters) else null)
+        .joinToString(" · ")

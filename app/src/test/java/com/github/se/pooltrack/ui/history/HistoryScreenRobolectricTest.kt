@@ -7,6 +7,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -19,6 +20,7 @@ import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
 import com.github.se.pooltrack.ui.history.heatmap.HistoryOverviewTestTags
 import com.github.se.pooltrack.ui.history.heatmap.MonthCalendarTestTags
+import com.github.se.pooltrack.ui.history.heatmap.WeekStripTestTags
 import com.github.se.pooltrack.ui.history.heatmap.YearCalendarTestTags
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.NavigationTestTags
@@ -187,25 +189,48 @@ class HistoryScreenRobolectricTest {
   }
 
   @Test
-  fun historyScreen_showsSwimDurationNextToTime_whenRecorded() {
+  fun historyScreen_showsTheTimeAndSwimDuration_whenNoDistanceWasLogged() {
     val reported = entryAt(today, hour = 8).copy(swimDurationMillis = 4_320_000L)
     val unreported = entryAt(today.minusDays(1), hour = 9)
     show(FakeEntryRepository(listOf(reported, unreported)))
 
-    composeTestRule.onNodeWithText("${timeLabel(reported)} · 1h 12min").assertIsDisplayed()
+    composeTestRule.onNodeWithText(timeLabel(reported)).assertIsDisplayed()
+    composeTestRule.onNodeWithText("1h 12min").assertIsDisplayed()
     composeTestRule.onNodeWithText(timeLabel(unreported)).assertIsDisplayed()
   }
 
   @Test
-  fun historyScreen_showsLoggedDistanceNextToTime() {
+  fun historyScreen_leadsWithTheLoggedDistance_overTheTime() {
     val logged = entryAt(today, hour = 8).copy(swimDistanceMeters = 1200)
     val both =
         entryAt(today.minusDays(1), hour = 9)
             .copy(swimDurationMillis = 4_320_000L, swimDistanceMeters = 800)
     show(FakeEntryRepository(listOf(logged, both)))
 
-    composeTestRule.onNodeWithText("${timeLabel(logged)} · 1200 m").assertIsDisplayed()
-    composeTestRule.onNodeWithText("${timeLabel(both)} · 1h 12min · 800 m").assertIsDisplayed()
+    composeTestRule.onNodeWithText("1200 m").assertIsDisplayed()
+    composeTestRule.onNodeWithText(timeLabel(logged)).assertIsDisplayed()
+    composeTestRule.onNodeWithText("800 m").assertIsDisplayed()
+    composeTestRule.onNodeWithText("${timeLabel(both)} · 1h 12min").assertIsDisplayed()
+  }
+
+  @Test
+  fun historyScreen_totalsTheWeeksDistance_inItsHeader() {
+    val first = entryAt(today, hour = 8).copy(swimDistanceMeters = 1200)
+    val second = entryAt(today.minusMonths(2), hour = 9).copy(swimDistanceMeters = 800)
+    show(FakeEntryRepository(listOf(first, second)))
+
+    composeTestRule
+        .onNode(
+            hasTestTag(HistoryScreenTestTags.WEEK_HEADER) and
+                hasAnyDescendant(hasText("1 visit · 1.2 km"))
+        )
+        .assertExists()
+    composeTestRule
+        .onNode(
+            hasTestTag(HistoryScreenTestTags.WEEK_HEADER) and
+                hasAnyDescendant(hasText("1 visit · 800 m"))
+        )
+        .assertExists()
   }
 
   @Test
@@ -363,70 +388,69 @@ class HistoryScreenRobolectricTest {
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.LINK_BANNER).assertCountEquals(0)
   }
 
-  /** Taps [date] in the calendar, first going back a month if it isn't in the current one. */
-  private fun tapDay(date: LocalDate) {
-    if (YearMonth.from(date) != YearMonth.from(today)) {
-      composeTestRule.onNodeWithTag(MonthCalendarTestTags.PREVIOUS).performClick()
-      composeTestRule.waitForIdle()
-    }
-    composeTestRule.onNodeWithTag(MonthCalendarTestTags.day(date)).performClick()
+  private fun expandCalendar() {
+    composeTestRule.onNodeWithTag(HistoryOverviewTestTags.TOGGLE).performClick()
+    composeTestRule.waitForIdle()
   }
 
   @Test
-  fun historyScreen_showsTheHeatmapOverview_whenEntriesExist() {
-    show(FakeEntryRepository(listOf(entryAt(today), entryAt(today.minusDays(2)))))
+  fun historyScreen_showsACompactOverview_withTheWeekAndOneSummaryLine() {
+    show(FakeEntryRepository(listOf(entryAt(today))))
 
     composeTestRule.onNodeWithTag(HistoryOverviewTestTags.CARD).assertIsDisplayed()
-    composeTestRule.onNodeWithText("2 visits in the last year").assertIsDisplayed()
-    composeTestRule.onNodeWithTag(MonthCalendarTestTags.day(today)).assertExists()
+    composeTestRule.onNodeWithTag(HistoryOverviewTestTags.SUMMARY).assertIsDisplayed()
+    composeTestRule.onNodeWithText("1 this week").assertIsDisplayed()
+    composeTestRule.onNodeWithTag(WeekStripTestTags.day(today)).assertExists()
+    composeTestRule.onAllNodesWithTag(MonthCalendarTestTags.CALENDAR).assertCountEquals(0)
   }
 
   @Test
-  fun historyScreen_hidesTheHeatmapOverview_whenThereAreNoEntries() {
+  fun historyScreen_hidesTheOverview_whenThereAreNoEntries() {
     show(FakeEntryRepository())
 
     composeTestRule.onAllNodesWithTag(HistoryOverviewTestTags.CARD).assertCountEquals(0)
   }
 
   @Test
-  fun historyScreen_filtersTheListToATappedDay_andClearsIt() {
-    val older = today.minusDays(3)
-    show(FakeEntryRepository(listOf(entryAt(today), entryAt(older))))
+  fun historyScreen_expandsTheOverviewToTheMonthCalendar_andCollapsesIt() {
+    show(FakeEntryRepository(listOf(entryAt(today))))
 
-    tapDay(older)
+    expandCalendar()
 
-    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(1)
-    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.WEEK_HEADER).assertCountEquals(1)
+    composeTestRule.onNodeWithTag(MonthCalendarTestTags.CALENDAR).assertIsDisplayed()
+    composeTestRule.onAllNodesWithTag(WeekStripTestTags.STRIP).assertCountEquals(0)
 
-    composeTestRule.onNodeWithTag(HistoryOverviewTestTags.CLEAR_FILTER).performClick()
+    expandCalendar()
 
-    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(2)
+    composeTestRule.onNodeWithTag(WeekStripTestTags.STRIP).assertIsDisplayed()
+    composeTestRule.onAllNodesWithTag(MonthCalendarTestTags.CALENDAR).assertCountEquals(0)
   }
 
   @Test
-  fun historyScreen_tappingTheSelectedDayAgain_showsEveryDay() {
-    show(FakeEntryRepository(listOf(entryAt(today), entryAt(today.minusDays(3)))))
-    val cell = composeTestRule.onNodeWithTag(MonthCalendarTestTags.day(today))
+  fun historyScreen_keepsEveryEntryListed_whenADayIsTapped() {
+    show(FakeEntryRepository(listOf(entryAt(today), entryAt(today.minusDays(40)))))
 
-    cell.performClick()
-    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(1)
-    cell.performClick()
+    composeTestRule.onNodeWithTag(WeekStripTestTags.day(today)).performClick()
+    composeTestRule.waitForIdle()
 
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(2)
+    composeTestRule.onAllNodesWithText("No visit on Today").assertCountEquals(0)
   }
 
   @Test
-  fun historyScreen_saysSoWhenTheTappedDayHasNoEntries() {
-    show(FakeEntryRepository(listOf(entryAt(today.minusDays(5)))))
-    tapDay(today.minusDays(1))
+  fun historyScreen_saysSoWhenTheTappedDayHasNoVisit() {
+    show(FakeEntryRepository(listOf(entryAt(today.minusDays(40)))))
 
-    composeTestRule.onNodeWithTag(HistoryScreenTestTags.NO_ENTRIES_THAT_DAY).assertIsDisplayed()
-    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(0)
+    composeTestRule.onNodeWithTag(WeekStripTestTags.day(today)).performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithText("No visit on Today").assertIsDisplayed()
   }
 
   @Test
   fun historyScreen_zoomsOutToTheYear_withAShadedTilePerMonth() {
     show(FakeEntryRepository(listOf(entryAt(today), entryAt(today.minusDays(40)))))
+    expandCalendar()
 
     composeTestRule.onNodeWithTag(MonthCalendarTestTags.ZOOM_OUT).performClick()
     composeTestRule.waitForIdle()
@@ -440,6 +464,7 @@ class HistoryScreenRobolectricTest {
   fun historyScreen_zoomsBackIntoATappedMonth() {
     val older = today.minusMonths(1).withDayOfMonth(15)
     show(FakeEntryRepository(listOf(entryAt(today), entryAt(older))))
+    expandCalendar()
     composeTestRule.onNodeWithTag(MonthCalendarTestTags.ZOOM_OUT).performClick()
     composeTestRule.waitForIdle()
 
