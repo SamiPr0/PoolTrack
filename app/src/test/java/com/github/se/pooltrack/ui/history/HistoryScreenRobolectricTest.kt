@@ -16,6 +16,8 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
+import com.github.se.pooltrack.model.hint.Hint
+import com.github.se.pooltrack.model.hint.HintRepositoryProvider
 import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
 import com.github.se.pooltrack.ui.history.heatmap.HistoryOverviewTestTags
@@ -26,6 +28,7 @@ import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.NavigationTestTags
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.utils.FakeEntryRepository
+import com.github.se.pooltrack.utils.FakeHintRepository
 import com.github.se.pooltrack.utils.FakeSubscriptionRepository
 import com.github.se.pooltrack.utils.MainDispatcherRule
 import io.mockk.mockk
@@ -63,7 +66,7 @@ class HistoryScreenRobolectricTest {
       )
 
   private fun show(repository: FakeEntryRepository, navigationActions: NavigationActions? = null) {
-    val viewModel = HistoryViewModel(repository, FakeSubscriptionRepository())
+    val viewModel = HistoryViewModel(repository, FakeSubscriptionRepository(), FakeHintRepository())
     composeTestRule.setContent { HistoryScreen(viewModel, navigationActions) }
   }
 
@@ -282,16 +285,18 @@ class HistoryScreenRobolectricTest {
     val entry = entryAt(today)
     EntryRepositoryProvider.repository = FakeEntryRepository(listOf(entry))
     SubscriptionRepositoryProvider.repository = FakeSubscriptionRepository()
+    HintRepositoryProvider.repository = FakeHintRepository()
     try {
       assertEquals(listOf(entry), HistoryViewModel().entries.value)
     } finally {
       // The providers are lateinit singletons: un-initialise them so later tests are unaffected.
-      listOf(EntryRepositoryProvider, SubscriptionRepositoryProvider).forEach { provider ->
-        provider::class.java.getDeclaredField("repository").apply {
-          isAccessible = true
-          set(provider, null)
-        }
-      }
+      listOf(EntryRepositoryProvider, SubscriptionRepositoryProvider, HintRepositoryProvider)
+          .forEach { provider ->
+            provider::class.java.getDeclaredField("repository").apply {
+              isAccessible = true
+              set(provider, null)
+            }
+          }
     }
   }
 
@@ -365,7 +370,12 @@ class HistoryScreenRobolectricTest {
   fun historyScreen_offersToLinkUnlinkedEntries_andLinksThemWithUndo() {
     val unlinked = Entry(entryAt(today.minusDays(30)).timestampEpochMilli, subscriptionId = null)
     val repository = FakeEntryRepository(listOf(unlinked))
-    val viewModel = HistoryViewModel(repository, FakeSubscriptionRepository(listOf(expiredPass)))
+    val viewModel =
+        HistoryViewModel(
+            repository,
+            FakeSubscriptionRepository(listOf(expiredPass)),
+            FakeHintRepository(),
+        )
     composeTestRule.setContent { HistoryScreen(viewModel) }
 
     composeTestRule.onNodeWithTag(HistoryScreenTestTags.LINK_BANNER).assertIsDisplayed()
@@ -394,12 +404,10 @@ class HistoryScreenRobolectricTest {
   }
 
   @Test
-  fun historyScreen_showsACompactOverview_withTheWeekAndOneSummaryLine() {
+  fun historyScreen_showsACompactOverview_withJustTheWeek() {
     show(FakeEntryRepository(listOf(entryAt(today))))
 
     composeTestRule.onNodeWithTag(HistoryOverviewTestTags.CARD).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(HistoryOverviewTestTags.SUMMARY).assertIsDisplayed()
-    composeTestRule.onNodeWithText("1 this week").assertIsDisplayed()
     composeTestRule.onNodeWithTag(WeekStripTestTags.day(today)).assertExists()
     composeTestRule.onAllNodesWithTag(MonthCalendarTestTags.CALENDAR).assertCountEquals(0)
   }
@@ -473,5 +481,53 @@ class HistoryScreenRobolectricTest {
 
     composeTestRule.onNodeWithTag(MonthCalendarTestTags.day(older)).assertExists()
     composeTestRule.onAllNodesWithTag(YearCalendarTestTags.CALENDAR).assertCountEquals(0)
+  }
+
+  @Test
+  fun historyScreen_marksTheWeeksDistanceAsLogged_whenSomeVisitsHaveNone() {
+    val withDistance = entryAt(today, hour = 8).copy(swimDistanceMeters = 1200)
+    val without = entryAt(today, hour = 18)
+    show(FakeEntryRepository(listOf(withDistance, without)))
+
+    composeTestRule
+        .onNode(
+            hasTestTag(HistoryScreenTestTags.WEEK_HEADER) and
+                hasAnyDescendant(hasText("2 visits · 1.2 km logged"))
+        )
+        .assertExists()
+  }
+
+  @Test
+  fun historyScreen_showsTheSwipeTip_untilItIsDismissed() {
+    show(FakeEntryRepository(listOf(entryAt(today))))
+    composeTestRule.onNodeWithTag(HistoryScreenTestTags.SWIPE_HINT).assertIsDisplayed()
+
+    composeTestRule.onNodeWithTag(HistoryScreenTestTags.SWIPE_HINT_DISMISS).performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.SWIPE_HINT).assertCountEquals(0)
+  }
+
+  @Test
+  fun historyScreen_hidesTheSwipeTip_whenItWasDismissedBefore() {
+    val viewModel =
+        HistoryViewModel(
+            FakeEntryRepository(listOf(entryAt(today))),
+            FakeSubscriptionRepository(),
+            FakeHintRepository(dismissed = setOf(Hint.SwipeToDelete)),
+        )
+    composeTestRule.setContent { HistoryScreen(viewModel) }
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.SWIPE_HINT).assertCountEquals(0)
+  }
+
+  @Test
+  fun historyScreen_dismissesTheSwipeTip_afterAVisitWasSwipedAway() {
+    show(FakeEntryRepository(listOf(entryAt(today), entryAt(today.minusDays(40)))))
+
+    swipeAwayFirstEntry()
+
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.SWIPE_HINT).assertCountEquals(0)
   }
 }

@@ -61,6 +61,8 @@ object HistoryScreenTestTags {
   const val EMPTY_MESSAGE = "HistoryScreenEmptyMessage"
   const val ENTRY_LIST = "HistoryScreenEntryList"
   const val WEEK_HEADER = "HistoryScreenWeekHeader"
+  const val SWIPE_HINT = "HistoryScreenSwipeHint"
+  const val SWIPE_HINT_DISMISS = "HistoryScreenSwipeHintDismiss"
   const val ENTRY_ITEM = "HistoryScreenEntryItem"
   const val ADD_PAST_ENTRY_BUTTON = "HistoryScreenAddPastEntryButton"
   const val UNDO_ADD_ACTION = "Undo"
@@ -93,6 +95,8 @@ fun HistoryScreen(
   val snackbarHostState = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
   val linkSuggestions by viewModel.linkSuggestions.collectAsState()
+  val showSwipeHint by viewModel.showSwipeHint.collectAsState()
+  val listState = rememberLazyListState()
 
   // On success the sheet closes and an Undo snackbar appears. The snackbar is launched in its own
   // scope: clearing the result below would otherwise cancel this effect, and the snackbar with it.
@@ -115,6 +119,7 @@ fun HistoryScreen(
   // Deleting needs no confirmation: the swipe is deliberate and the snackbar offers an Undo.
   val onDeleteEntry: (Entry) -> Unit = { entry ->
     viewModel.onDeleteEntry(entry)
+    viewModel.onSwipeHintDismissed()
     scope.launch {
       snackbarHostState.currentSnackbarData?.dismiss()
       val outcome =
@@ -153,6 +158,7 @@ fun HistoryScreen(
             onClick = { showAddSheet = true },
             icon = { Icon(Icons.Filled.Add, contentDescription = null) },
             text = { Text("Add past entry") },
+            expanded = listState.firstVisibleItemIndex == 0,
             modifier = Modifier.testTag(HistoryScreenTestTags.ADD_PAST_ENTRY_BUTTON),
         )
       },
@@ -193,10 +199,10 @@ fun HistoryScreen(
       val countsByDay = remember(entries) { entryCountsByDay(entries, ZONE) }
       val rows =
           remember(entries, firstDayOfWeek) { buildHistoryRows(entries, firstDayOfWeek, ZONE) }
-      val listState = rememberLazyListState()
       val headerClearance = with(LocalDensity.current) { STICKY_HEADER_CLEARANCE.roundToPx() }
-      // The overview, and the link banner when there is one, come before the rows.
-      val leadingItems = if (linkSuggestions.isEmpty()) 1 else 2
+      // The overview, then the link banner and the swipe tip when they show, come before the rows.
+      val leadingItems =
+          1 + (if (linkSuggestions.isEmpty()) 0 else 1) + (if (showSwipeHint) 1 else 0)
 
       // A picked day stays highlighted for a moment, so the eye can find its row.
       LaunchedEffect(highlightedDate) {
@@ -237,6 +243,14 @@ fun HistoryScreen(
               modifier = Modifier.padding(vertical = 4.dp),
           )
         }
+        if (showSwipeHint) {
+          item(key = "swipe-hint") {
+            SwipeHint(
+                onDismiss = viewModel::onSwipeHintDismissed,
+                modifier = Modifier.padding(vertical = 4.dp),
+            )
+          }
+        }
         if (linkSuggestions.isNotEmpty()) {
           item(key = "link-banner") {
             LinkBanner(
@@ -269,6 +283,7 @@ fun HistoryScreen(
                       label = weekLabel(row.start, today, firstDayOfWeek),
                       visits = row.visits,
                       meters = row.meters,
+                      loggedVisits = row.loggedVisits,
                   )
                 }
             is HistoryRow.Item ->
@@ -290,6 +305,30 @@ fun HistoryScreen(
                 }
           }
         }
+      }
+    }
+  }
+}
+
+/** A one-time tip that visits can be swiped away, shown until it is dismissed. */
+@Composable
+private fun SwipeHint(onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+  Card(modifier = modifier.fillMaxWidth().testTag(HistoryScreenTestTags.SWIPE_HINT)) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+      Text(
+          text = "Tip: swipe a visit to the left to delete it.",
+          style = MaterialTheme.typography.bodyMedium,
+          modifier = Modifier.weight(1f).padding(vertical = 12.dp),
+      )
+      TextButton(
+          onClick = onDismiss,
+          modifier = Modifier.testTag(HistoryScreenTestTags.SWIPE_HINT_DISMISS),
+      ) {
+        Text("Got it")
       }
     }
   }
