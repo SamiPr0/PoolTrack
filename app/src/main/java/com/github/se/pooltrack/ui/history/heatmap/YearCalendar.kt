@@ -163,7 +163,7 @@ private fun MonthTileCell(
               .aspectRatio(1.35f)
               .background(
                   if (tile.level == 0) scheme.onSurface.copy(alpha = 0.06f)
-                  else heatmapColor(tile.level),
+                  else heatmapColor(tile.level, YEAR_MIN_ALPHA),
                   TileShape,
               )
               .then(

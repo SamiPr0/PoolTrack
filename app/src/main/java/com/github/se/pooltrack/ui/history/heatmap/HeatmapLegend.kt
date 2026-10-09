@@ -14,18 +14,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-/** The fill of a day at [level], from no entry (0) to the busiest days ([MAX_LEVEL]). */
+/**
+ * How opaque a day with one visit is. High, because most days have at most one visit: a faint fill
+ * would make every visited day look like it barely counted.
+ */
+const val DAY_MIN_ALPHA = 0.7f
+
+/**
+ * How opaque the lightest tile of the year view is; those span 1 to 12 visits, so it starts low.
+ */
+const val YEAR_MIN_ALPHA = 0.25f
+
+/** The opacity of the primary color at [level] (1 to [MAX_LEVEL]), from [minAlpha] up to 1. */
+fun levelAlpha(level: Int, minAlpha: Float): Float =
+    minAlpha + (1f - minAlpha) * (level.coerceIn(1, MAX_LEVEL) - 1) / (MAX_LEVEL - 1)
+
+/**
+ * The fill at [level], from nothing (0) to the busiest ([MAX_LEVEL]); the lightest filled level has
+ * the opacity [minAlpha].
+ */
 @Composable
-fun heatmapColor(level: Int): Color {
-  val scheme = MaterialTheme.colorScheme
-  return when (level) {
-    0 -> Color.Transparent
-    1 -> scheme.primary.copy(alpha = 0.3f)
-    2 -> scheme.primary.copy(alpha = 0.5f)
-    3 -> scheme.primary.copy(alpha = 0.75f)
-    else -> scheme.primary
-  }
-}
+fun heatmapColor(level: Int, minAlpha: Float = DAY_MIN_ALPHA): Color =
+    if (level <= 0) Color.Transparent
+    else MaterialTheme.colorScheme.primary.copy(alpha = levelAlpha(level, minAlpha))
 
 /** The "Less, five dots, More" key explaining the colors. */
 @Composable
