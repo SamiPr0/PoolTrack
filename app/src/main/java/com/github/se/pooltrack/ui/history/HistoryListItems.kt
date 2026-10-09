@@ -39,7 +39,6 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
-
 /** The first day of the week that contains [day], where weeks start on [firstDayOfWeek]. */
 internal fun weekStart(day: LocalDate, firstDayOfWeek: DayOfWeek): LocalDate =
     day.with(TemporalAdjusters.previousOrSame(firstDayOfWeek))
