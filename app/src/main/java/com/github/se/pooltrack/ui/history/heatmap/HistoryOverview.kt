@@ -34,13 +34,8 @@ object HistoryOverviewTestTags {
   const val TOGGLE = "HistoryOverviewToggle"
 }
 
-/** The week-streak sentence ("4-week streak"), or `null` when there is no streak yet. */
-fun streakText(summary: HeatmapSummary): String? =
-    if (summary.currentWeekStreak >= 2) "${summary.currentWeekStreak}-week streak" else null
-
-/** The one-line summary: "5 this week · 4-week streak". */
-fun overviewSummary(visitsThisWeek: Int, summary: HeatmapSummary): String =
-    listOfNotNull("$visitsThisWeek this week", streakText(summary)).joinToString(" · ")
+/** The one-line summary: "5 this week". */
+fun overviewSummary(visitsThisWeek: Int): String = "$visitsThisWeek this week"
 
 /**
  * The card on top of the History list. By default it is compact: a one-line summary and the current
@@ -62,10 +57,6 @@ fun HistoryOverview(
     modifier: Modifier = Modifier,
 ) {
   var expanded by rememberSaveable { mutableStateOf(false) }
-  val summary =
-      remember(countsByDay, today, firstDayOfWeek) {
-        summarize(buildHeatmap(countsByDay, today, firstDayOfWeek = firstDayOfWeek))
-      }
   val visitsThisWeek =
       remember(countsByDay, today, firstDayOfWeek) {
         buildWeekStrip(today, countsByDay, firstDayOfWeek).sumOf { it.count }
@@ -83,7 +74,7 @@ fun HistoryOverview(
           verticalAlignment = Alignment.CenterVertically,
       ) {
         Text(
-            text = overviewSummary(visitsThisWeek, summary),
+            text = overviewSummary(visitsThisWeek),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f).testTag(HistoryOverviewTestTags.SUMMARY),
