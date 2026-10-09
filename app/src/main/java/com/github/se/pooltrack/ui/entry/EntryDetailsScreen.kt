@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -17,6 +19,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -58,6 +62,10 @@ object EntryDetailsScreenTestTags {
   const val DELETE_BUTTON = "EntryDetailsScreenDeleteButton"
   const val CONFIRM_DELETE_BUTTON = "EntryDetailsScreenConfirmDeleteButton"
   const val CANCEL_DELETE_BUTTON = "EntryDetailsScreenCancelDeleteButton"
+  const val EDIT_BUTTON = "EntryDetailsScreenEditButton"
+  const val DISTANCE_FIELD = "EntryDetailsScreenDistanceField"
+  const val SAVE_DISTANCE_BUTTON = "EntryDetailsScreenSaveDistanceButton"
+  const val CANCEL_EDIT_BUTTON = "EntryDetailsScreenCancelEditButton"
 }
 
 private val ZONE = ZoneId.systemDefault()
@@ -101,6 +109,42 @@ fun EntryDetailsScreen(
     )
   }
 
+  val distanceInput by viewModel.distanceInput.collectAsState()
+  val isDistanceInputValid by viewModel.isDistanceInputValid.collectAsState()
+  distanceInput?.let { input ->
+    AlertDialog(
+        onDismissRequest = viewModel::onDistanceEditCancelled,
+        title = { Text("Edit distance") },
+        text = {
+          OutlinedTextField(
+              value = input,
+              onValueChange = viewModel::onDistanceInputChanged,
+              label = { Text("Distance in metres") },
+              singleLine = true,
+              keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+              modifier = Modifier.testTag(EntryDetailsScreenTestTags.DISTANCE_FIELD),
+          )
+        },
+        confirmButton = {
+          TextButton(
+              onClick = viewModel::onDistanceEditSaved,
+              enabled = isDistanceInputValid,
+              modifier = Modifier.testTag(EntryDetailsScreenTestTags.SAVE_DISTANCE_BUTTON),
+          ) {
+            Text("Save")
+          }
+        },
+        dismissButton = {
+          TextButton(
+              onClick = viewModel::onDistanceEditCancelled,
+              modifier = Modifier.testTag(EntryDetailsScreenTestTags.CANCEL_EDIT_BUTTON),
+          ) {
+            Text("Cancel")
+          }
+        },
+    )
+  }
+
   Scaffold(
       topBar = {
         TopNavigationMenu(
@@ -108,6 +152,12 @@ fun EntryDetailsScreen(
             onGoBack = { navigationActions?.goBack() },
             actions = {
               if (details != null) {
+                IconButton(
+                    onClick = viewModel::onEditDistance,
+                    modifier = Modifier.testTag(EntryDetailsScreenTestTags.EDIT_BUTTON),
+                ) {
+                  Icon(Icons.Outlined.Edit, contentDescription = "Edit distance")
+                }
                 IconButton(
                     onClick = { confirmingDelete = true },
                     modifier = Modifier.testTag(EntryDetailsScreenTestTags.DELETE_BUTTON),
