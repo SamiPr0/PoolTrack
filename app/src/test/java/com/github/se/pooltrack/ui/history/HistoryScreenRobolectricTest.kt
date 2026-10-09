@@ -2,6 +2,8 @@ package com.github.se.pooltrack.ui.history
 
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -10,10 +12,16 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.model.entry.EntryRepositoryProvider
 import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.SubscriptionRepositoryProvider
+import com.github.se.pooltrack.ui.history.heatmap.HistoryOverviewTestTags
+import com.github.se.pooltrack.ui.history.heatmap.MonthCalendarTestTags
+import com.github.se.pooltrack.ui.history.heatmap.WeekStripTestTags
+import com.github.se.pooltrack.ui.history.heatmap.YearCalendarTestTags
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.NavigationTestTags
 import com.github.se.pooltrack.ui.navigation.Screen
@@ -24,6 +32,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -34,7 +43,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+// A tall screen: the heatmap card sits above the list and would push the rows out of view.
+@Config(qualifiers = "w360dp-h1200dp")
 @RunWith(RobolectricTestRunner::class)
 class HistoryScreenRobolectricTest {
 
@@ -72,72 +84,60 @@ class HistoryScreenRobolectricTest {
   }
 
   @Test
-  fun historyScreen_showsEntriesGroupedByDay_whenEntriesRecorded() {
-    val yesterdayEntry = entryAt(today.minusDays(1), hour = 9)
-    val todayMorning = entryAt(today, hour = 8)
-    val todayEvening = entryAt(today, hour = 18)
-    show(FakeEntryRepository(listOf(yesterdayEntry, todayMorning, todayEvening)))
+  fun historyScreen_listsEntriesUnderWeekHeaders_withTheirVisitCounts() {
+    val thisWeekMorning = entryAt(today, hour = 8)
+    val thisWeekEvening = entryAt(today, hour = 18)
+    val older = entryAt(today.minusWeeks(3), hour = 9)
+    show(FakeEntryRepository(listOf(older, thisWeekMorning, thisWeekEvening)))
 
     composeTestRule.onNodeWithTag(HistoryScreenTestTags.ENTRY_LIST).assertIsDisplayed()
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.EMPTY_MESSAGE).assertCountEquals(0)
-    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.DAY_HEADER).assertCountEquals(2)
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.WEEK_HEADER).assertCountEquals(2)
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(3)
-    composeTestRule.onNodeWithText("Today").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Yesterday").assertIsDisplayed()
-    composeTestRule.onNodeWithText("2 entries").assertIsDisplayed()
-    composeTestRule.onNodeWithText("1 entry").assertIsDisplayed()
-    composeTestRule.onNodeWithText(timeLabel(todayMorning)).assertIsDisplayed()
-    composeTestRule.onNodeWithText(timeLabel(todayEvening)).assertIsDisplayed()
-    composeTestRule.onNodeWithText(timeLabel(yesterdayEntry)).assertIsDisplayed()
+    composeTestRule.onNodeWithText("This week").assertIsDisplayed()
+    composeTestRule
+        .onNode(
+            hasTestTag(HistoryScreenTestTags.WEEK_HEADER) and hasAnyDescendant(hasText("2 visits"))
+        )
+        .assertExists()
+    composeTestRule
+        .onNode(
+            hasTestTag(HistoryScreenTestTags.WEEK_HEADER) and hasAnyDescendant(hasText("1 visit"))
+        )
+        .assertExists()
+    composeTestRule.onNodeWithText(timeLabel(thisWeekMorning)).assertIsDisplayed()
+    composeTestRule.onNodeWithText(timeLabel(thisWeekEvening)).assertIsDisplayed()
+    composeTestRule.onNodeWithText(timeLabel(older)).assertIsDisplayed()
   }
 
   @Test
-  fun historyScreen_labelsOlderDaysWithoutYear_whenSameYear() {
-    val sameYearDay = listOf(today.minusDays(2), today.plusDays(2)).first { it.year == today.year }
-    show(FakeEntryRepository(listOf(entryAt(sameYearDay))))
+  fun historyScreen_namesTheWeekBeforeThisOne_lastWeek() {
+    show(FakeEntryRepository(listOf(entryAt(today.minusWeeks(1)))))
 
-    val expected =
-        sameYearDay.format(DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.getDefault()))
-    composeTestRule.onNodeWithText(expected).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Last week").assertIsDisplayed()
+  }
+
+  private fun swipeAwayFirstEntry() {
+    composeTestRule
+        .onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM)
+        .onFirst()
+        .performTouchInput { swipeLeft() }
+    composeTestRule.waitForIdle()
   }
 
   @Test
-  fun historyScreen_labelsOlderDaysWithYear_whenDifferentYear() {
-    val lastYearDay = today.minusYears(1)
-    show(FakeEntryRepository(listOf(entryAt(lastYearDay))))
-
-    val expected =
-        lastYearDay.format(DateTimeFormatter.ofPattern("EEEE, MMM d, yyyy", Locale.getDefault()))
-    composeTestRule.onNodeWithText(expected).assertIsDisplayed()
-  }
-
-  @Test
-  fun historyScreen_showsConfirmationDialog_whenDeleteTapped() {
-    val entry = entryAt(today)
-    val repository = FakeEntryRepository(listOf(entry))
-    show(repository)
-
-    composeTestRule.onNodeWithTag(HistoryScreenTestTags.DELETE_BUTTON).performClick()
-
-    composeTestRule.onNodeWithText("Delete this entry?").assertIsDisplayed()
-    composeTestRule.onNode(hasText("permanently removed.", substring = true)).assertIsDisplayed()
-    assertEquals(listOf(entry), repository.storedEntries)
-  }
-
-  @Test
-  fun historyScreen_deletesOnlyThatEntry_whenDeleteConfirmed() {
+  fun historyScreen_deletesOnlyThatEntry_whenSwipedAway() {
     val keep = entryAt(today, hour = 8)
     val remove = entryAt(today, hour = 18)
     val repository = FakeEntryRepository(listOf(keep, remove))
     show(repository)
 
-    // Most recent first, so the first delete button belongs to the 18:00 entry.
-    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.DELETE_BUTTON).onFirst().performClick()
-    composeTestRule.onNodeWithTag(HistoryScreenTestTags.CONFIRM_DELETE_BUTTON).performClick()
+    // Most recent first, so the first row is the 18:00 entry.
+    swipeAwayFirstEntry()
 
     assertEquals(listOf(keep), repository.storedEntries)
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(1)
-    composeTestRule.onAllNodesWithText("Delete this entry?").assertCountEquals(0)
+    composeTestRule.onNodeWithText("Entry deleted").assertIsDisplayed()
   }
 
   @Test
@@ -145,25 +145,35 @@ class HistoryScreenRobolectricTest {
     val repository = FakeEntryRepository(listOf(entryAt(today)))
     show(repository)
 
-    composeTestRule.onNodeWithTag(HistoryScreenTestTags.DELETE_BUTTON).performClick()
-    composeTestRule.onNodeWithTag(HistoryScreenTestTags.CONFIRM_DELETE_BUTTON).performClick()
+    swipeAwayFirstEntry()
 
     assertEquals(emptyList<Entry>(), repository.storedEntries)
     composeTestRule.onNodeWithTag(HistoryScreenTestTags.EMPTY_MESSAGE).assertIsDisplayed()
   }
 
   @Test
-  fun historyScreen_keepsEntry_whenDeleteCancelled() {
+  fun historyScreen_restoresTheEntryExactly_whenDeleteUndone() {
+    val entry = entryAt(today).copy(swimDistanceMeters = 900, swimDurationMillis = 60_000L)
+    val repository = FakeEntryRepository(listOf(entry))
+    show(repository)
+    swipeAwayFirstEntry()
+
+    composeTestRule.onNodeWithText(HistoryScreenTestTags.UNDO_ADD_ACTION).performClick()
+    composeTestRule.waitForIdle()
+
+    assertEquals(listOf(entry), repository.storedEntries)
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(1)
+  }
+
+  @Test
+  fun historyScreen_doesNotDelete_whenTheRowIsOnlyTapped() {
     val entry = entryAt(today)
     val repository = FakeEntryRepository(listOf(entry))
     show(repository)
 
-    composeTestRule.onNodeWithTag(HistoryScreenTestTags.DELETE_BUTTON).performClick()
-    composeTestRule.onNodeWithTag(HistoryScreenTestTags.CANCEL_DELETE_BUTTON).performClick()
+    composeTestRule.onNodeWithTag(HistoryScreenTestTags.ENTRY_ITEM).performClick()
 
     assertEquals(listOf(entry), repository.storedEntries)
-    composeTestRule.onAllNodesWithText("Delete this entry?").assertCountEquals(0)
-    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(1)
   }
 
   @Test
@@ -179,25 +189,48 @@ class HistoryScreenRobolectricTest {
   }
 
   @Test
-  fun historyScreen_showsSwimDurationNextToTime_whenRecorded() {
+  fun historyScreen_showsTheTimeAndSwimDuration_whenNoDistanceWasLogged() {
     val reported = entryAt(today, hour = 8).copy(swimDurationMillis = 4_320_000L)
     val unreported = entryAt(today.minusDays(1), hour = 9)
     show(FakeEntryRepository(listOf(reported, unreported)))
 
-    composeTestRule.onNodeWithText("${timeLabel(reported)} · 1h 12min").assertIsDisplayed()
+    composeTestRule.onNodeWithText(timeLabel(reported)).assertIsDisplayed()
+    composeTestRule.onNodeWithText("1h 12min").assertIsDisplayed()
     composeTestRule.onNodeWithText(timeLabel(unreported)).assertIsDisplayed()
   }
 
   @Test
-  fun historyScreen_showsLoggedDistanceNextToTime() {
+  fun historyScreen_leadsWithTheLoggedDistance_overTheTime() {
     val logged = entryAt(today, hour = 8).copy(swimDistanceMeters = 1200)
     val both =
         entryAt(today.minusDays(1), hour = 9)
             .copy(swimDurationMillis = 4_320_000L, swimDistanceMeters = 800)
     show(FakeEntryRepository(listOf(logged, both)))
 
-    composeTestRule.onNodeWithText("${timeLabel(logged)} · 1200 m").assertIsDisplayed()
-    composeTestRule.onNodeWithText("${timeLabel(both)} · 1h 12min · 800 m").assertIsDisplayed()
+    composeTestRule.onNodeWithText("1200 m").assertIsDisplayed()
+    composeTestRule.onNodeWithText(timeLabel(logged)).assertIsDisplayed()
+    composeTestRule.onNodeWithText("800 m").assertIsDisplayed()
+    composeTestRule.onNodeWithText("${timeLabel(both)} · 1h 12min").assertIsDisplayed()
+  }
+
+  @Test
+  fun historyScreen_totalsTheWeeksDistance_inItsHeader() {
+    val first = entryAt(today, hour = 8).copy(swimDistanceMeters = 1200)
+    val second = entryAt(today.minusMonths(2), hour = 9).copy(swimDistanceMeters = 800)
+    show(FakeEntryRepository(listOf(first, second)))
+
+    composeTestRule
+        .onNode(
+            hasTestTag(HistoryScreenTestTags.WEEK_HEADER) and
+                hasAnyDescendant(hasText("1 visit · 1.2 km"))
+        )
+        .assertExists()
+    composeTestRule
+        .onNode(
+            hasTestTag(HistoryScreenTestTags.WEEK_HEADER) and
+                hasAnyDescendant(hasText("1 visit · 800 m"))
+        )
+        .assertExists()
   }
 
   @Test
@@ -353,5 +386,92 @@ class HistoryScreenRobolectricTest {
     show(FakeEntryRepository(listOf(Entry(entryAt(today).timestampEpochMilli))))
 
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.LINK_BANNER).assertCountEquals(0)
+  }
+
+  private fun expandCalendar() {
+    composeTestRule.onNodeWithTag(HistoryOverviewTestTags.TOGGLE).performClick()
+    composeTestRule.waitForIdle()
+  }
+
+  @Test
+  fun historyScreen_showsACompactOverview_withTheWeekAndOneSummaryLine() {
+    show(FakeEntryRepository(listOf(entryAt(today))))
+
+    composeTestRule.onNodeWithTag(HistoryOverviewTestTags.CARD).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(HistoryOverviewTestTags.SUMMARY).assertIsDisplayed()
+    composeTestRule.onNodeWithText("1 this week").assertIsDisplayed()
+    composeTestRule.onNodeWithTag(WeekStripTestTags.day(today)).assertExists()
+    composeTestRule.onAllNodesWithTag(MonthCalendarTestTags.CALENDAR).assertCountEquals(0)
+  }
+
+  @Test
+  fun historyScreen_hidesTheOverview_whenThereAreNoEntries() {
+    show(FakeEntryRepository())
+
+    composeTestRule.onAllNodesWithTag(HistoryOverviewTestTags.CARD).assertCountEquals(0)
+  }
+
+  @Test
+  fun historyScreen_expandsTheOverviewToTheMonthCalendar_andCollapsesIt() {
+    show(FakeEntryRepository(listOf(entryAt(today))))
+
+    expandCalendar()
+
+    composeTestRule.onNodeWithTag(MonthCalendarTestTags.CALENDAR).assertIsDisplayed()
+    composeTestRule.onAllNodesWithTag(WeekStripTestTags.STRIP).assertCountEquals(0)
+
+    expandCalendar()
+
+    composeTestRule.onNodeWithTag(WeekStripTestTags.STRIP).assertIsDisplayed()
+    composeTestRule.onAllNodesWithTag(MonthCalendarTestTags.CALENDAR).assertCountEquals(0)
+  }
+
+  @Test
+  fun historyScreen_keepsEveryEntryListed_whenADayIsTapped() {
+    show(FakeEntryRepository(listOf(entryAt(today), entryAt(today.minusDays(40)))))
+
+    composeTestRule.onNodeWithTag(WeekStripTestTags.day(today)).performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(2)
+    composeTestRule.onAllNodesWithText("No visit on Today").assertCountEquals(0)
+  }
+
+  @Test
+  fun historyScreen_saysSoWhenTheTappedDayHasNoVisit() {
+    show(FakeEntryRepository(listOf(entryAt(today.minusDays(40)))))
+
+    composeTestRule.onNodeWithTag(WeekStripTestTags.day(today)).performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithText("No visit on Today").assertIsDisplayed()
+  }
+
+  @Test
+  fun historyScreen_zoomsOutToTheYear_withAShadedTilePerMonth() {
+    show(FakeEntryRepository(listOf(entryAt(today), entryAt(today.minusDays(40)))))
+    expandCalendar()
+
+    composeTestRule.onNodeWithTag(MonthCalendarTestTags.ZOOM_OUT).performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(YearCalendarTestTags.CALENDAR).assertIsDisplayed()
+    composeTestRule.onAllNodesWithTag(MonthCalendarTestTags.CALENDAR).assertCountEquals(0)
+    composeTestRule.onNodeWithTag(YearCalendarTestTags.month(YearMonth.from(today))).assertExists()
+  }
+
+  @Test
+  fun historyScreen_zoomsBackIntoATappedMonth() {
+    val older = today.minusMonths(1).withDayOfMonth(15)
+    show(FakeEntryRepository(listOf(entryAt(today), entryAt(older))))
+    expandCalendar()
+    composeTestRule.onNodeWithTag(MonthCalendarTestTags.ZOOM_OUT).performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(YearCalendarTestTags.month(YearMonth.from(older))).performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(MonthCalendarTestTags.day(older)).assertExists()
+    composeTestRule.onAllNodesWithTag(YearCalendarTestTags.CALENDAR).assertCountEquals(0)
   }
 }

@@ -96,6 +96,11 @@ class HistoryViewModel(
     viewModelScope.launch { repository.deleteEntry(entry) }
   }
 
+  /** Puts back [entry] exactly as it was, to undo [onDeleteEntry]. */
+  fun onRestoreEntry(entry: Entry) {
+    viewModelScope.launch { repository.addEntry(entry) }
+  }
+
   /**
    * Records an entry that happened at [timestamp], e.g. one that was forgotten at the time. It is
    * refused if [timestamp] is after [now] or an entry already exists at that exact instant (see
