@@ -81,42 +81,37 @@ class HistoryScreenRobolectricTest {
   }
 
   @Test
-  fun historyScreen_showsEntriesGroupedByDay_whenEntriesRecorded() {
-    val yesterdayEntry = entryAt(today.minusDays(1), hour = 9)
-    val todayMorning = entryAt(today, hour = 8)
-    val todayEvening = entryAt(today, hour = 18)
-    show(FakeEntryRepository(listOf(yesterdayEntry, todayMorning, todayEvening)))
+  fun historyScreen_listsEntriesUnderWeekHeaders_withTheirVisitCounts() {
+    val thisWeekMorning = entryAt(today, hour = 8)
+    val thisWeekEvening = entryAt(today, hour = 18)
+    val older = entryAt(today.minusWeeks(3), hour = 9)
+    show(FakeEntryRepository(listOf(older, thisWeekMorning, thisWeekEvening)))
 
     composeTestRule.onNodeWithTag(HistoryScreenTestTags.ENTRY_LIST).assertIsDisplayed()
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.EMPTY_MESSAGE).assertCountEquals(0)
-    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.DAY_HEADER).assertCountEquals(2)
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.WEEK_HEADER).assertCountEquals(2)
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(3)
-    composeTestRule.onNodeWithText("Today").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Yesterday").assertIsDisplayed()
-    composeTestRule.onNodeWithText("2 entries").assertIsDisplayed()
-    composeTestRule.onNodeWithText(timeLabel(todayMorning)).assertIsDisplayed()
-    composeTestRule.onNodeWithText(timeLabel(todayEvening)).assertIsDisplayed()
-    composeTestRule.onNodeWithText(timeLabel(yesterdayEntry)).assertIsDisplayed()
+    composeTestRule.onNodeWithText("This week").assertIsDisplayed()
+    composeTestRule
+        .onNode(
+            hasTestTag(HistoryScreenTestTags.WEEK_HEADER) and hasAnyDescendant(hasText("2 visits"))
+        )
+        .assertExists()
+    composeTestRule
+        .onNode(
+            hasTestTag(HistoryScreenTestTags.WEEK_HEADER) and hasAnyDescendant(hasText("1 visit"))
+        )
+        .assertExists()
+    composeTestRule.onNodeWithText(timeLabel(thisWeekMorning)).assertIsDisplayed()
+    composeTestRule.onNodeWithText(timeLabel(thisWeekEvening)).assertIsDisplayed()
+    composeTestRule.onNodeWithText(timeLabel(older)).assertIsDisplayed()
   }
 
   @Test
-  fun historyScreen_labelsOlderDaysWithoutYear_whenSameYear() {
-    val sameYearDay = listOf(today.minusDays(2), today.plusDays(2)).first { it.year == today.year }
-    show(FakeEntryRepository(listOf(entryAt(sameYearDay))))
+  fun historyScreen_namesTheWeekBeforeThisOne_lastWeek() {
+    show(FakeEntryRepository(listOf(entryAt(today.minusWeeks(1)))))
 
-    val expected =
-        sameYearDay.format(DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.getDefault()))
-    composeTestRule.onNodeWithText(expected).assertIsDisplayed()
-  }
-
-  @Test
-  fun historyScreen_labelsOlderDaysWithYear_whenDifferentYear() {
-    val lastYearDay = today.minusYears(1)
-    show(FakeEntryRepository(listOf(entryAt(lastYearDay))))
-
-    val expected =
-        lastYearDay.format(DateTimeFormatter.ofPattern("EEEE, MMM d, yyyy", Locale.getDefault()))
-    composeTestRule.onNodeWithText(expected).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Last week").assertIsDisplayed()
   }
 
   private fun swipeAwayFirstEntry() {
@@ -176,25 +171,6 @@ class HistoryScreenRobolectricTest {
     composeTestRule.onNodeWithTag(HistoryScreenTestTags.ENTRY_ITEM).performClick()
 
     assertEquals(listOf(entry), repository.storedEntries)
-  }
-
-  @Test
-  fun historyScreen_titlesEachMonth_withItsVisitCount() {
-    val thisMonthEntry = entryAt(today)
-    val lastYearEntries = listOf(entryAt(today.minusYears(1)), entryAt(today.minusYears(1), 9))
-    show(FakeEntryRepository(listOf(thisMonthEntry) + lastYearEntries))
-
-    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.MONTH_HEADER).assertCountEquals(2)
-    composeTestRule
-        .onNode(
-            hasTestTag(HistoryScreenTestTags.MONTH_HEADER) and hasAnyDescendant(hasText("1 visit"))
-        )
-        .assertExists()
-    composeTestRule
-        .onNode(
-            hasTestTag(HistoryScreenTestTags.MONTH_HEADER) and hasAnyDescendant(hasText("2 visits"))
-        )
-        .assertExists()
   }
 
   @Test
@@ -419,7 +395,7 @@ class HistoryScreenRobolectricTest {
     tapDay(older)
 
     composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.ENTRY_ITEM).assertCountEquals(1)
-    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.DAY_HEADER).assertCountEquals(1)
+    composeTestRule.onAllNodesWithTag(HistoryScreenTestTags.WEEK_HEADER).assertCountEquals(1)
 
     composeTestRule.onNodeWithTag(HistoryOverviewTestTags.CLEAR_FILTER).performClick()
 

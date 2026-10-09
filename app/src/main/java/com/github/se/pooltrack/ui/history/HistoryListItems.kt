@@ -8,10 +8,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -30,29 +30,56 @@ import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import java.time.YearMonth
-import java.time.format.TextStyle
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalAdjusters
 import java.util.Locale
-
-/** "October" for a month of the current year, "October 2025" for any other. */
-internal fun monthLabel(
-    month: YearMonth,
-    thisMonth: YearMonth,
-    locale: Locale = Locale.getDefault(),
-): String {
-  val name = month.month.getDisplayName(TextStyle.FULL_STANDALONE, locale)
-  return if (month.year == thisMonth.year) name else "$name ${month.year}"
-}
 
 /** "5 visits" (or "1 visit"). */
 internal fun visitsLabel(count: Int): String = if (count == 1) "1 visit" else "$count visits"
 
-/** The sticky title above all the entries of one month, with how many there were. */
+/** The first day of the week that contains [day], where weeks start on [firstDayOfWeek]. */
+internal fun weekStart(day: LocalDate, firstDayOfWeek: DayOfWeek): LocalDate =
+    day.with(TemporalAdjusters.previousOrSame(firstDayOfWeek))
+
+/**
+ * Names the week starting on [weekStart]: "This week", "Last week", or its dates, e.g. "Oct 5 – 11"
+ * or "Sep 28 – Oct 4". The year is added when the week isn't in [today]'s year (and both years when
+ * it spans New Year's Eve).
+ */
+internal fun weekLabel(
+    weekStart: LocalDate,
+    today: LocalDate,
+    firstDayOfWeek: DayOfWeek,
+    locale: Locale = Locale.getDefault(),
+): String {
+  val thisWeek = weekStart(today, firstDayOfWeek)
+  if (weekStart == thisWeek) return "This week"
+  if (weekStart == thisWeek.minusWeeks(1)) return "Last week"
+
+  val end = weekStart.plusDays(6)
+  fun format(date: LocalDate, pattern: String) =
+      date.format(DateTimeFormatter.ofPattern(pattern, locale))
+  return when {
+    weekStart.year != end.year ->
+        "${format(weekStart, "MMM d, yyyy")} – ${format(end, "MMM d, yyyy")}"
+    else -> {
+      val range =
+          if (weekStart.month == end.month) "${format(weekStart, "MMM d")} – ${end.dayOfMonth}"
+          else "${format(weekStart, "MMM d")} – ${format(end, "MMM d")}"
+      if (weekStart.year == today.year) range else "$range, ${weekStart.year}"
+    }
+  }
+}
+
+/** The sticky title above the entries of one week, with how many visits it had. */
 @Composable
-internal fun MonthHeader(label: String, visits: Int, modifier: Modifier = Modifier) {
+internal fun WeekHeader(label: String, visits: Int, modifier: Modifier = Modifier) {
   Surface(
-      modifier = modifier.fillMaxWidth().testTag(HistoryScreenTestTags.MONTH_HEADER),
+      modifier = modifier.fillMaxWidth().testTag(HistoryScreenTestTags.WEEK_HEADER),
       color = MaterialTheme.colorScheme.background,
   ) {
     Row(
@@ -62,7 +89,7 @@ internal fun MonthHeader(label: String, visits: Int, modifier: Modifier = Modifi
     ) {
       Text(
           text = label,
-          style = MaterialTheme.typography.titleLarge,
+          style = MaterialTheme.typography.titleMedium,
           fontWeight = FontWeight.Bold,
       )
       Text(
@@ -74,37 +101,43 @@ internal fun MonthHeader(label: String, visits: Int, modifier: Modifier = Modifi
   }
 }
 
-/** A light label above the entries of one day; the count only shows when there are several. */
+/** The weekday and day of the month, stacked ("THU" over "8"); today's is tinted. */
 @Composable
-internal fun DayHeader(label: String, entryCount: Int, modifier: Modifier = Modifier) {
-  Row(
+private fun DateBlock(day: LocalDate, isToday: Boolean, locale: Locale = Locale.getDefault()) {
+  val scheme = MaterialTheme.colorScheme
+  Column(
+      horizontalAlignment = Alignment.CenterHorizontally,
       modifier =
-          modifier
-              .fillMaxWidth()
-              .padding(top = 12.dp, bottom = 2.dp)
-              .testTag(HistoryScreenTestTags.DAY_HEADER),
-      horizontalArrangement = Arrangement.SpaceBetween,
-      verticalAlignment = Alignment.CenterVertically,
+          Modifier.width(48.dp)
+              .background(
+                  if (isToday) scheme.primaryContainer
+                  else scheme.surfaceVariant.copy(alpha = 0.5f),
+                  RoundedCornerShape(10.dp),
+              )
+              .padding(vertical = 6.dp),
   ) {
     Text(
-        text = label,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
+        text = day.format(DateTimeFormatter.ofPattern("EEE", locale)).uppercase(locale),
+        style = MaterialTheme.typography.labelSmall,
+        color = if (isToday) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
     )
-    if (entryCount > 1) {
-      Text(
-          text = "$entryCount entries",
-          style = MaterialTheme.typography.labelMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-      )
-    }
+    Text(
+        text = day.dayOfMonth.toString(),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = if (isToday) scheme.onPrimaryContainer else scheme.onSurface,
+    )
   }
 }
 
 /**
- * A flat, compact row for one entry. Tap it to open the entry; swipe it to the left to delete it
- * (the caller offers an Undo). Screen readers get a "Delete entry" action instead of the swipe.
+ * A flat, compact row for one entry: the day it happened on, then its time and swim details. Tap it
+ * to open the entry; swipe it to the left to delete it (the caller offers an Undo). Screen readers
+ * get a "Delete entry" action instead of the swipe.
  *
+ * @param day The day of the entry, shown in the date block.
+ * @param isToday Whether [day] is today.
  * @param label The text of the row, see [entryRowLabel].
  * @param onClick Called when the row is tapped.
  * @param onDelete Called once the row was swiped away.
@@ -112,6 +145,8 @@ internal fun DayHeader(label: String, entryCount: Int, modifier: Modifier = Modi
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SwipeableEntryRow(
+    day: LocalDate,
+    isToday: Boolean,
     label: String,
     onClick: () -> Unit,
     onDelete: () -> Unit,
@@ -156,19 +191,14 @@ internal fun SwipeableEntryRow(
     Surface(onClick = onClick, color = MaterialTheme.colorScheme.background) {
       Column {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 4.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-          Icon(
-              imageVector = Icons.Filled.CheckCircle,
-              contentDescription = null,
-              tint = MaterialTheme.colorScheme.primary,
-              modifier = Modifier.size(20.dp),
-          )
+          DateBlock(day = day, isToday = isToday)
           Text(
               text = label,
               style = MaterialTheme.typography.bodyLarge,
-              modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+              modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
           )
           Icon(
               imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,

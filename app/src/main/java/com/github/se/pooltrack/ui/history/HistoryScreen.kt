@@ -50,7 +50,6 @@ import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -61,8 +60,7 @@ import kotlinx.coroutines.launch
 object HistoryScreenTestTags {
   const val EMPTY_MESSAGE = "HistoryScreenEmptyMessage"
   const val ENTRY_LIST = "HistoryScreenEntryList"
-  const val DAY_HEADER = "HistoryScreenDayHeader"
-  const val MONTH_HEADER = "HistoryScreenMonthHeader"
+  const val WEEK_HEADER = "HistoryScreenWeekHeader"
   const val ENTRY_ITEM = "HistoryScreenEntryItem"
   const val ADD_PAST_ENTRY_BUTTON = "HistoryScreenAddPastEntryButton"
   const val UNDO_ADD_ACTION = "Undo"
@@ -192,6 +190,7 @@ fun HistoryScreen(
       }
     } else {
       val today = LocalDate.now(ZONE)
+      val firstDayOfWeek = WeekFields.of(LocalConfiguration.current.locales[0]).firstDayOfWeek
       val allEntriesByDay = entries.groupBy { it.timestamp.atZone(ZONE).toLocalDate() }
       val countsByDay = remember(allEntriesByDay) { allEntriesByDay.mapValues { it.value.size } }
       val entriesByDay =
@@ -208,7 +207,7 @@ fun HistoryScreen(
           HistoryOverview(
               countsByDay = countsByDay,
               today = today,
-              firstDayOfWeek = WeekFields.of(LocalConfiguration.current.locales[0]).firstDayOfWeek,
+              firstDayOfWeek = firstDayOfWeek,
               selectedDate = selectedDate,
               onDayClick = { day -> selectedDate = if (day == selectedDate) null else day },
               onClearSelection = { selectedDate = null },
@@ -253,20 +252,19 @@ fun HistoryScreen(
           }
         }
         entriesByDay.entries
-            .groupBy { YearMonth.from(it.key) }
-            .forEach { (month, days) ->
-              stickyHeader(key = "month-$month") {
-                MonthHeader(
-                    label = monthLabel(month, YearMonth.from(today)),
+            .groupBy { weekStart(it.key, firstDayOfWeek) }
+            .forEach { (start, days) ->
+              stickyHeader(key = "week-$start") {
+                WeekHeader(
+                    label = weekLabel(start, today, firstDayOfWeek),
                     visits = days.sumOf { it.value.size },
                 )
               }
               days.forEach { (day, entriesForDay) ->
-                item(key = day.toEpochDay()) {
-                  DayHeader(label = dayLabel(day, today), entryCount = entriesForDay.size)
-                }
                 items(entriesForDay, key = { it.timestamp.toEpochMilli() }) { entry ->
                   SwipeableEntryRow(
+                      day = day,
+                      isToday = day == today,
                       label = entryRowLabel(entry),
                       onClick = {
                         navigationActions?.navigateToEntryDetails(entry.timestampEpochMilli)
