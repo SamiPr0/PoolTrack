@@ -175,7 +175,11 @@ fun MonthCalendar(
               val day = week?.get(column)
               Box(modifier = Modifier.weight(1f).aspectRatio(1f).padding(3.dp)) {
                 if (day != null) {
-                  DayCell(day, selected = day.date == selectedDate) { onDayClick(day.date) }
+                  DayCell(
+                      day,
+                      selected = day.date == selectedDate,
+                      onClick = { onDayClick(day.date) },
+                  )
                 }
               }
             }
@@ -187,7 +191,12 @@ fun MonthCalendar(
 }
 
 @Composable
-private fun DayCell(day: MonthDay, selected: Boolean, onClick: () -> Unit) {
+internal fun DayCell(
+    day: MonthDay,
+    selected: Boolean,
+    onClick: () -> Unit,
+    testTag: String = MonthCalendarTestTags.day(day.date),
+) {
   val scheme = MaterialTheme.colorScheme
   val textColor =
       when {
@@ -216,7 +225,7 @@ private fun DayCell(day: MonthDay, selected: Boolean, onClick: () -> Unit) {
               .then(if (ring != null) Modifier.border(ring, CircleShape) else Modifier)
               .then(if (day.isFuture) Modifier else Modifier.clickable(onClick = onClick))
               .semantics { contentDescription = description }
-              .testTag(MonthCalendarTestTags.day(day.date)),
+              .testTag(testTag),
   ) {
     Text(
         text = day.date.dayOfMonth.toString(),

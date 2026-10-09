@@ -6,33 +6,29 @@ import org.junit.Test
 
 class HistoryOverviewTextTest {
 
-  private fun summary(visits: Int = 0, current: Int = 0, longest: Int = 0) =
-      HeatmapSummary(visits, activeDays = visits, current, longest)
+  private fun summary(current: Int = 0, longest: Int = 0) =
+      HeatmapSummary(visits = 0, activeDays = 0, current, longest)
 
   @Test
-  fun summaryTitle_isSingular_forOneVisit() {
-    assertEquals("1 visit in the last year", summaryTitle(summary(visits = 1)))
-  }
-
-  @Test
-  fun summaryTitle_isPlural_otherwise() {
-    assertEquals("0 visits in the last year", summaryTitle(summary(visits = 0)))
-    assertEquals("34 visits in the last year", summaryTitle(summary(visits = 34)))
-  }
-
-  @Test
-  fun streakText_showsTheCurrentStreak_fromTwoWeeks() {
-    assertEquals("3-week streak (best: 5)", streakText(summary(current = 3, longest = 5)))
-  }
-
-  @Test
-  fun streakText_showsTheBestStreak_whenTheCurrentOneIsOver() {
-    assertEquals("Best streak: 4 weeks in a row", streakText(summary(current = 1, longest = 4)))
+  fun streakText_namesTheCurrentStreak_fromTwoWeeks() {
+    assertEquals("2-week streak", streakText(summary(current = 2, longest = 2)))
+    assertEquals("4-week streak", streakText(summary(current = 4, longest = 9)))
   }
 
   @Test
   fun streakText_isNull_withoutAStreak() {
-    assertNull(streakText(summary(current = 1, longest = 1)))
+    assertNull(streakText(summary(current = 1, longest = 5)))
     assertNull(streakText(summary()))
+  }
+
+  @Test
+  fun overviewSummary_countsTheWeek_andAddsTheStreak() {
+    assertEquals("5 this week · 4-week streak", overviewSummary(5, summary(current = 4)))
+  }
+
+  @Test
+  fun overviewSummary_isJustTheWeek_withoutAStreak() {
+    assertEquals("0 this week", overviewSummary(0, summary()))
+    assertEquals("1 this week", overviewSummary(1, summary(current = 1)))
   }
 }

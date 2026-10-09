@@ -3,6 +3,7 @@ package com.github.se.pooltrack.ui.history.heatmap
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.temporal.TemporalAdjusters
 
 /**
  * One day of a [MonthGrid].
@@ -64,4 +65,29 @@ fun buildMonthGrid(
 fun monthsBetween(first: YearMonth, last: YearMonth): List<YearMonth> {
   if (first.isAfter(last)) return listOf(last)
   return generateSequence(first) { it.plusMonths(1) }.takeWhile { !it.isAfter(last) }.toList()
+}
+
+/**
+ * The seven days of the week containing [today], oldest first, starting on [firstDayOfWeek].
+ *
+ * @param maxCount The busiest day to scale the intensity against, as for [buildMonthGrid].
+ */
+fun buildWeekStrip(
+    today: LocalDate,
+    countsByDay: Map<LocalDate, Int>,
+    firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
+    maxCount: Int = countsByDay.values.maxOrNull() ?: 0,
+): List<MonthDay> {
+  val start = today.with(TemporalAdjusters.previousOrSame(firstDayOfWeek))
+  return (0 until 7).map { offset ->
+    val date = start.plusDays(offset.toLong())
+    val count = countsByDay[date] ?: 0
+    MonthDay(
+        date = date,
+        count = count,
+        level = intensityLevel(count, maxCount),
+        isToday = date == today,
+        isFuture = date.isAfter(today),
+    )
+  }
 }

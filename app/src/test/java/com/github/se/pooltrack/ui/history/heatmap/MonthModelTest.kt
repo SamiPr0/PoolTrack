@@ -127,4 +127,30 @@ class MonthModelTest {
   fun monthsBetween_fallsBackToTheLastMonth_whenFirstIsAfterIt() {
     assertEquals(listOf(october), monthsBetween(october.plusMonths(2), october))
   }
+
+  @Test
+  fun buildWeekStrip_hasTheSevenDaysOfTodaysWeek() {
+    val strip = buildWeekStrip(today, emptyMap(), DayOfWeek.MONDAY)
+
+    assertEquals((5..11).map { LocalDate.of(2026, 10, it) }, strip.map { it.date })
+  }
+
+  @Test
+  fun buildWeekStrip_startsOnTheGivenFirstDayOfWeek() {
+    val strip = buildWeekStrip(today, emptyMap(), DayOfWeek.SUNDAY)
+
+    assertEquals(LocalDate.of(2026, 10, 4), strip.first().date)
+  }
+
+  @Test
+  fun buildWeekStrip_marksTodayAndTheFuture_andCarriesTheCounts() {
+    val monday = LocalDate.of(2026, 10, 5)
+    val strip = buildWeekStrip(today, mapOf(monday to 2), DayOfWeek.MONDAY).associateBy { it.date }
+
+    assertEquals(2, strip.getValue(monday).count)
+    assertEquals(2, strip.getValue(monday).level)
+    assertEquals(true, strip.getValue(today).isToday)
+    assertEquals(false, strip.getValue(today).isFuture)
+    assertEquals(true, strip.getValue(today.plusDays(1)).isFuture)
+  }
 }
