@@ -59,6 +59,9 @@ interface SubscriptionRepository {
   /**
    * Removes a subscription. If it was the active one, no subscription is active afterwards.
    *
+   * Entries made with the subscription are kept, still tagged with its id, so the history stays
+   * intact.
+   *
    * @param id The identifier of the subscription to remove.
    */
   suspend fun deleteSubscription(id: String)
