@@ -19,7 +19,7 @@ navigationCompose = "2.9.8"
 kotlinxSerializationJson = "1.11.0"
 firebaseBom = "34.19.0"
 androidxCredentials = "1.3.0"
-googleid = "1.1.1"
+googleid = "1.2.1"
 workRuntime = "2.12.0"
 
 # Testing Unit
