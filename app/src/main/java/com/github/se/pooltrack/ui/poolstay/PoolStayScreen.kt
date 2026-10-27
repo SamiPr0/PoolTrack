@@ -46,6 +46,7 @@ import com.github.se.pooltrack.model.swim.changePoolLength
 import com.github.se.pooltrack.model.swim.metersToLengths
 import com.github.se.pooltrack.model.swim.parseSwimDistance
 import com.github.se.pooltrack.model.swim.stepLengths
+import com.github.se.pooltrack.ui.theme.LaneRope
 import com.github.se.pooltrack.ui.theme.Ripples
 import java.time.Duration
 import java.util.Locale
@@ -114,7 +115,11 @@ fun PoolStayContent(
 private fun CancelWindowContent(remaining: Duration, onCancelEntry: () -> Unit) {
   // Just dived in: the check sits in the middle of the ripples.
   Box(contentAlignment = Alignment.Center) {
-    Ripples(color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(160.dp))
+    Ripples(
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.size(180.dp),
+        spread = true,
+    )
     Icon(
         imageVector = Icons.Filled.Check,
         contentDescription = null,
@@ -224,8 +229,10 @@ private fun LengthCounter(
         )
       }
     }
+    // The counter swims in its own lane, between two lane ropes.
+    LaneRope(modifier = Modifier.padding(top = 20.dp))
     Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -260,6 +267,7 @@ private fun LengthCounter(
         Icon(Icons.Filled.Add, contentDescription = "One more length")
       }
     }
+    LaneRope()
   }
 }
 

@@ -267,7 +267,8 @@ private fun ConfirmScanSheet(onAccepted: () -> Unit) {
     ) {
       Ripples(
           color = MaterialTheme.colorScheme.primary,
-          modifier = Modifier.size(44.dp),
+          modifier = Modifier.size(56.dp),
+          spread = true,
       )
       Text(
           text = "Did the gate let you in?",
