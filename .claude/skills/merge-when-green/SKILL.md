@@ -17,15 +17,21 @@ editing the protection, weakening the Quality Gate or the JaCoCo thresholds, add
 
 ## 2. When the user asks to merge
 
-"Merge" means: only once CI **and** SonarCloud are green. It is the user's explicit go-ahead for
-that PR only, not for others.
+"Merge" means: only once CI **and** SonarCloud are green **and** a reviewer approved. It is the
+user's explicit go-ahead for that PR only, not for others.
 
 1. `get_status` and read the checks. Pending: wait for the monitor event, then look again.
-2. All four required checks pass: merge with a merge commit (`gh pr merge <n> --merge`), then
-   report what was merged. Never merge a PR the user did not ask to merge.
-3. Something failed: go to section 3, then wait for the new run. Repeat until green.
+2. Reviewer: a session that did not write the PR must have approved its current head. None yet, or
+   the head changed since the approval: start a reviewer session (read-only, `review-checklist`)
+   and wait for its verdict. After every round of requested changes, a brand-new reviewer session
+   reviews again, never the previous one, and without the earlier findings in its brief.
+3. All four required checks pass and a reviewer approved: merge with a merge commit
+   (`gh pr merge <n> --merge`), then report what was merged. Never merge a PR the user did not
+   ask to merge.
+4. Something failed: go to section 3, then wait for the new run. Repeat until green.
 
-If the user did not ask to merge, stop at green and say so. Do not merge.
+If the user did not ask to merge, stop at green and say so. Do not merge. If no reviewer approved,
+do not merge even when the user asked: start the review and say so.
 
 ## 3. A check failed
 
