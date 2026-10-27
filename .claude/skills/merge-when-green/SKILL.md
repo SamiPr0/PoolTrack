@@ -24,14 +24,23 @@ user's explicit go-ahead for that PR only, not for others.
 2. Reviewer: a session that did not write the PR must have approved its current head. None yet, or
    the head changed since the approval: start a reviewer session (read-only, `review-checklist`)
    and wait for its verdict. After every round of requested changes, a brand-new reviewer session
-   reviews again, never the previous one, and without the earlier findings in its brief.
+   reviews again, never the previous one, and without the earlier findings in its brief. Any new
+   push counts, a CI-only fix included: the new head needs a new reviewer.
+   The approval is the reviewer session's report to the session that started it (a read-only
+   reviewer cannot approve on GitHub, and the author cannot approve their own PR). Your final
+   report quotes it.
 3. All four required checks pass and a reviewer approved: merge with a merge commit
-   (`gh pr merge <n> --merge`), then report what was merged. Never merge a PR the user did not
-   ask to merge.
+   (`gh pr merge <n> --merge`), then report what was merged.
 4. Something failed: go to section 3, then wait for the new run. Repeat until green.
 
 If the user did not ask to merge, stop at green and say so. Do not merge. If no reviewer approved,
 do not merge even when the user asked: start the review and say so.
+
+Do not ask the user whether to merge until the PR is reviewed entirely: all findings addressed, a
+fresh reviewer approved the final head, CI and SonarCloud green. Until then only report status.
+
+Dependabot PRs get no `SONAR_TOKEN`, so the SonarCloud check may never appear. If it is absent on
+one, report it to the user and do not merge; do not work around it.
 
 ## 3. A check failed
 
@@ -53,7 +62,9 @@ Then decide:
 - **The fix would change behaviour** (what the app does for the user, a data format, a permission,
   a test expectation that encodes behaviour, dropping a feature to satisfy a rule): stop and ask the
   user, with the options and your recommendation. Do not push it unasked.
-- **Not caused by the PR** (outage, infra, a check broken on `main`): say so; do not hack around it.
+- **Not caused by the PR** (outage, infra, a check broken on `main`): tell the user, re-run once
+  with `gh run rerun --failed` (or wait for the outage to end), and do not hack around it. Do not
+  merge until all checks are green.
 
 ## 4. Report
 
