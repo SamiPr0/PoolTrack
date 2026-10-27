@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -72,6 +73,11 @@ import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import com.github.se.pooltrack.ui.subscription.formatCooldown
 import com.github.se.pooltrack.ui.subscription.rememberRemainingCooldown
+import com.github.se.pooltrack.ui.theme.DEPTH_MARKER_GUTTER
+import com.github.se.pooltrack.ui.theme.Ripples
+import com.github.se.pooltrack.ui.theme.WaterLevel
+import com.github.se.pooltrack.ui.theme.poolCaustics
+import com.github.se.pooltrack.ui.theme.poolDepthMarkers
 import java.time.LocalDate
 import java.time.Period
 import java.time.ZoneId
@@ -97,6 +103,7 @@ object HomeScreenTestTags {
   const val WEEKLY_CHART_LEGEND = "HomeScreenWeeklyChartLegend"
   const val WEEKLY_CHART_BAR = "HomeScreenWeeklyChartBar"
   const val OPEN_SUBSCRIPTION_FAB = "HomeScreenOpenSubscriptionFab"
+  const val PASS_WATER_LEVEL = "HomeScreenPassWaterLevel"
 }
 
 /** HomeScreen: the app's landing page, showing pool-visit stats. */
@@ -157,6 +164,7 @@ fun HomeScreen(
             contentColor =
                 if (cooldown != null) MaterialTheme.colorScheme.onSurfaceVariant
                 else contentColorFor(FloatingActionButtonDefaults.containerColor),
+            shape = CircleShape,
             modifier = Modifier.testTag(HomeScreenTestTags.OPEN_SUBSCRIPTION_FAB),
         ) {
           Icon(QrCodeIcon, contentDescription = "Open subscription")
@@ -168,7 +176,9 @@ fun HomeScreen(
             Modifier.fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .poolCaustics(MaterialTheme.colorScheme.primary.copy(alpha = 0.07f))
+                .poolDepthMarkers()
+                .padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = DEPTH_MARKER_GUTTER),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
       LastSwimHero(
@@ -304,21 +314,28 @@ private fun LastSwimHero(daysSinceLastSwim: Long?, modifier: Modifier = Modifier
               contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
           ),
   ) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-      Text(
-          text = lastSwimValueLabel(daysSinceLastSwim),
-          style = MaterialTheme.typography.displaySmall,
-          fontWeight = FontWeight.Bold,
-          textAlign = TextAlign.Center,
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+      // Rings on the water around the number, sized by the card rather than growing it.
+      Ripples(
+          color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.18f),
+          modifier = Modifier.matchParentSize(),
       )
-      Text(
-          text = "since your last swim",
-          style = MaterialTheme.typography.bodyMedium,
-          modifier = Modifier.padding(top = 4.dp),
-      )
+      Column(
+          modifier = Modifier.fillMaxWidth().padding(24.dp),
+          horizontalAlignment = Alignment.CenterHorizontally,
+      ) {
+        Text(
+            text = lastSwimValueLabel(daysSinceLastSwim),
+            style = MaterialTheme.typography.displaySmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = "since your last swim",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+      }
     }
   }
 }
@@ -363,25 +380,34 @@ private fun ExpirationBanner(
   val onBadgeColor =
       if (isUrgent) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onTertiary
 
+  // The pass is a pool: the water drains as its entries or days are used up.
   Card(
       modifier = modifier.fillMaxWidth(),
       colors =
           CardDefaults.cardColors(containerColor = containerColor, contentColor = contentColor),
   ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-      IconBadge(
-          icon = if (isUrgent) Icons.Filled.Lock else Icons.Outlined.Notifications,
-          containerColor = badgeColor,
-          contentColor = onBadgeColor,
+    Box(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+      WaterLevel(
+          level = passWaterLevel(subscription, usedCount),
+          color = badgeColor.copy(alpha = 0.22f),
+          modifier = Modifier.matchParentSize().testTag(HomeScreenTestTags.PASS_WATER_LEVEL),
       )
-      Text(
-          text = message,
-          style = MaterialTheme.typography.bodyMedium,
-          modifier = Modifier.padding(start = 12.dp),
-      )
+      Row(
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 20.dp),
+          verticalAlignment = Alignment.CenterVertically,
+      ) {
+        IconBadge(
+            icon = if (isUrgent) Icons.Filled.Lock else Icons.Outlined.Notifications,
+            containerColor = badgeColor,
+            contentColor = onBadgeColor,
+        )
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(start = 12.dp),
+        )
+      }
     }
   }
 }
