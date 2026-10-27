@@ -1,5 +1,6 @@
 package com.github.se.pooltrack.ui.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -52,7 +53,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
@@ -200,13 +203,13 @@ fun HomeScreen(
         )
       }
 
+      SectionHeader("Activity")
       Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         StatTile(
             icon = Icons.Outlined.DateRange,
             label = "This week",
             value = "${stats.entriesThisWeek}",
             accentColor = MaterialTheme.colorScheme.primary,
-            onAccentColor = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.THIS_WEEK_STAT),
         )
         StatTile(
@@ -214,7 +217,6 @@ fun HomeScreen(
             label = "This month",
             value = "${stats.entriesThisMonth}",
             accentColor = MaterialTheme.colorScheme.secondary,
-            onAccentColor = MaterialTheme.colorScheme.onSecondary,
             modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.THIS_MONTH_STAT),
         )
       }
@@ -224,7 +226,6 @@ fun HomeScreen(
             label = "Total entries",
             value = "${stats.totalEntries}",
             accentColor = MaterialTheme.colorScheme.tertiary,
-            onAccentColor = MaterialTheme.colorScheme.onTertiary,
             modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.TOTAL_ENTRIES_STAT),
         )
         StatTile(
@@ -232,7 +233,6 @@ fun HomeScreen(
             label = "Avg. per week",
             value = averagePerWeekLabel(stats.averageEntriesPerWeek),
             accentColor = MaterialTheme.colorScheme.primary,
-            onAccentColor = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.AVERAGE_PER_WEEK_STAT),
         )
       }
@@ -242,7 +242,6 @@ fun HomeScreen(
             label = "Week streak",
             value = streakLabel(stats.currentStreakWeeks),
             accentColor = MaterialTheme.colorScheme.secondary,
-            onAccentColor = MaterialTheme.colorScheme.onSecondary,
             modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.STREAK_STAT),
         )
         StatTile(
@@ -250,7 +249,6 @@ fun HomeScreen(
             label = "Best week",
             value = if (stats.bestWeekEntries == 0) "-" else "${stats.bestWeekEntries}",
             accentColor = MaterialTheme.colorScheme.tertiary,
-            onAccentColor = MaterialTheme.colorScheme.onTertiary,
             modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.BEST_WEEK_STAT),
         )
       }
@@ -259,13 +257,13 @@ fun HomeScreen(
           weekStarts = stats.weekStarts,
           modifier = Modifier.testTag(HomeScreenTestTags.WEEKLY_CHART),
       )
+      SectionHeader("Spending")
       Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         StatTile(
             icon = Icons.Outlined.ShoppingCart,
             label = "Total spent",
             value = amountLabel(totalSpent),
             accentColor = MaterialTheme.colorScheme.secondary,
-            onAccentColor = MaterialTheme.colorScheme.onSecondary,
             modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.TOTAL_SPENT_STAT),
         )
         StatTile(
@@ -273,7 +271,6 @@ fun HomeScreen(
             label = "Cost / entry",
             value = amountLabel(costPerEntry(totalSpent, stats.totalEntries)),
             accentColor = MaterialTheme.colorScheme.tertiary,
-            onAccentColor = MaterialTheme.colorScheme.onTertiary,
             modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.COST_PER_ENTRY_STAT),
         )
       }
@@ -306,15 +303,25 @@ fun HomeScreen(
 
 @Composable
 private fun LastSwimHero(daysSinceLastSwim: Long?, modifier: Modifier = Modifier) {
+  val scheme = MaterialTheme.colorScheme
+  // Lit from above, darker towards the bottom, like looking down into the water.
+  val water =
+      Brush.verticalGradient(
+          listOf(scheme.primaryContainer, lerp(scheme.primaryContainer, scheme.primary, 0.35f))
+      )
   Card(
       modifier = modifier.fillMaxWidth(),
+      shape = MaterialTheme.shapes.large,
       colors =
           CardDefaults.cardColors(
-              containerColor = MaterialTheme.colorScheme.primaryContainer,
-              contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+              containerColor = Color.Transparent,
+              contentColor = scheme.onPrimaryContainer,
           ),
   ) {
-    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier.fillMaxWidth().background(water),
+        contentAlignment = Alignment.Center,
+    ) {
       // Rings on the water around the number, sized by the card rather than growing it.
       Ripples(
           color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.18f),
@@ -324,6 +331,11 @@ private fun LastSwimHero(daysSinceLastSwim: Long?, modifier: Modifier = Modifier
           modifier = Modifier.fillMaxWidth().padding(24.dp),
           horizontalAlignment = Alignment.CenterHorizontally,
       ) {
+        Text(
+            text = "LAST SWIM",
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(bottom = 4.dp),
+        )
         Text(
             text = lastSwimValueLabel(daysSinceLastSwim),
             style = MaterialTheme.typography.displaySmall,
@@ -555,10 +567,12 @@ private fun WeeklyChartCard(
                 modifier =
                     Modifier.fillMaxWidth()
                         .fillMaxHeight(0.8f * count / maxCount)
-                        .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
                         .background(
-                            if (isCurrent || index == selected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                            barBrush(
+                                MaterialTheme.colorScheme.primary,
+                                highlighted = isCurrent || index == selected,
+                            )
                         )
             )
             Box(
@@ -583,6 +597,12 @@ private fun WeeklyChartCard(
   }
 }
 
+/** A bar's fill: the [color] fading slightly downwards, much softer unless [highlighted]. */
+internal fun barBrush(color: Color, highlighted: Boolean): Brush {
+  val top = if (highlighted) 1f else 0.45f
+  return Brush.verticalGradient(listOf(color.copy(alpha = top), color.copy(alpha = top * 0.6f)))
+}
+
 /** "12 Oct - 18 Oct: 3 entries" for the week starting on [weekStart] (a Monday). */
 internal fun weekLegend(
     weekStart: LocalDate,
@@ -594,35 +614,62 @@ internal fun weekLegend(
   return "$range: ${if (count == 1) "1 entry" else "$count entries"}"
 }
 
+/**
+ * One number on Home: a tinted icon chip in [accentColor], the [value] in large type and its
+ * [label] underneath, on a quiet outlined card.
+ */
 @Composable
 private fun StatTile(
     icon: ImageVector,
     label: String,
     value: String,
     accentColor: Color,
-    onAccentColor: Color,
     modifier: Modifier = Modifier,
 ) {
-  Card(modifier = modifier) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-      IconBadge(icon = icon, containerColor = accentColor, contentColor = onAccentColor)
+  Card(
+      modifier = modifier,
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+      border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+  ) {
+    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+      Box(
+          modifier =
+              Modifier.size(36.dp)
+                  .clip(MaterialTheme.shapes.small)
+                  .background(accentColor.copy(alpha = 0.16f)),
+          contentAlignment = Alignment.Center,
+      ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = accentColor,
+            modifier = Modifier.size(20.dp),
+        )
+      }
       Text(
           text = value,
-          style = MaterialTheme.typography.titleLarge,
+          style = MaterialTheme.typography.headlineSmall,
           fontWeight = FontWeight.Bold,
-          modifier = Modifier.padding(top = 8.dp),
+          modifier = Modifier.padding(top = 12.dp),
       )
       Text(
           text = label,
           style = MaterialTheme.typography.labelMedium,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
-          textAlign = TextAlign.Center,
       )
     }
   }
+}
+
+/** A small uppercase heading splitting Home into its sections. */
+@Composable
+private fun SectionHeader(text: String) {
+  Text(
+      text = text.uppercase(),
+      style = MaterialTheme.typography.labelSmall,
+      color = MaterialTheme.colorScheme.primary,
+      modifier = Modifier.padding(top = 4.dp),
+  )
 }
 
 /** A small colored circle behind an icon - the recurring "accent" element across Home's cards. */
