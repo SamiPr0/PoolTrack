@@ -2,6 +2,7 @@ package com.github.se.pooltrack.ui.poolstay
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.swim.MAX_SWIM_DISTANCE_METERS
+import com.github.se.pooltrack.ui.theme.Ripples
 import java.time.Duration
 import java.util.Locale
 
@@ -85,12 +87,16 @@ fun PoolStayContent(
 
 @Composable
 private fun CancelWindowContent(remaining: Duration, onCancelEntry: () -> Unit) {
-  Icon(
-      imageVector = Icons.Filled.Check,
-      contentDescription = null,
-      modifier = Modifier.size(72.dp),
-      tint = MaterialTheme.colorScheme.primary,
-  )
+  // Just dived in: the check sits in the middle of the ripples.
+  Box(contentAlignment = Alignment.Center) {
+    Ripples(color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(160.dp))
+    Icon(
+        imageVector = Icons.Filled.Check,
+        contentDescription = null,
+        modifier = Modifier.size(56.dp),
+        tint = MaterialTheme.colorScheme.primary,
+    )
+  }
   Text(
       text = "You're in. Enjoy your swim!",
       style = MaterialTheme.typography.headlineMedium,

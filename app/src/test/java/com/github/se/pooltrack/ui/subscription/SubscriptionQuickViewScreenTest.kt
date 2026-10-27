@@ -118,6 +118,17 @@ class SubscriptionQuickViewScreenTest {
   }
 
   @Test
+  fun quickViewScreen_asksWhetherTheGateLetUserIn_andExplainsDeclinedScans() {
+    show()
+
+    composeTestRule
+        .onNodeWithTag(SubscriptionQuickViewScreenTestTags.CONFIRM_SHEET)
+        .assertIsDisplayed()
+    composeTestRule.onNodeWithText("Did the gate let you in?").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Declined? Keep the pass up and scan again.").assertIsDisplayed()
+  }
+
+  @Test
   fun quickViewScreen_showsLoadingIndicator_whenPageNotRendered() {
     every { renderFirstPdfPage(any(), any()) } returns null
     show(awaitPass = false)
