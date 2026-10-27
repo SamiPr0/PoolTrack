@@ -73,3 +73,12 @@ val md_theme_dark_surfaceContainerLow = Color(0xFF072F43)
 val md_theme_dark_surfaceContainer = Color(0xFF08344A)
 val md_theme_dark_surfaceContainerHigh = Color(0xFF0A3850)
 val md_theme_dark_surfaceContainerHighest = Color(0xFF0B3D56)
+
+// The light theme's surfaces carry a touch of pool blue instead of Material's neutral greys.
+val md_theme_light_surfaceDim = Color(0xFFD5E2EA)
+val md_theme_light_surfaceBright = Color(0xFFF8FBFD)
+val md_theme_light_surfaceContainerLowest = Color(0xFFFFFFFF)
+val md_theme_light_surfaceContainerLow = Color(0xFFF1F7FB)
+val md_theme_light_surfaceContainer = Color(0xFFEAF3F9)
+val md_theme_light_surfaceContainerHigh = Color(0xFFE3EEF5)
+val md_theme_light_surfaceContainerHighest = Color(0xFFDCE9F1)

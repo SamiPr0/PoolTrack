@@ -1,13 +1,16 @@
 package com.github.se.pooltrack.ui.theme
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography as MaterialTypography
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import org.junit.Assert.assertEquals
@@ -161,14 +164,31 @@ class ThemeTest {
   }
 
   @Test
-  fun poolTrackTheme_usesMaterialDefaultTypography() {
-    lateinit var typography: MaterialTypography
-    composeRule.setContent {
-      PoolTrackTheme(darkTheme = false) { typography = MaterialTheme.typography }
-    }
+  fun poolTrackTheme_providesThePoolShapes() {
+    lateinit var shapes: Shapes
+    composeRule.setContent { PoolTrackTheme(darkTheme = false) { shapes = MaterialTheme.shapes } }
     composeRule.waitForIdle()
 
-    assertEquals(MaterialTypography().titleLarge, typography.titleLarge)
+    assertEquals(PoolShapes, shapes)
+  }
+
+  @Test
+  fun poolShapes_haveSofterCornersThanMaterial() {
+    assertEquals(RoundedCornerShape(10.dp), PoolShapes.small)
+    assertEquals(RoundedCornerShape(20.dp), PoolShapes.medium)
+    assertEquals(RoundedCornerShape(28.dp), PoolShapes.large)
+  }
+
+  @Test
+  fun lightTheme_tintsItsSurfacesWithPoolBlue() {
+    val scheme = resolveScheme(darkTheme = false)
+    assertEquals(Color(0xFFD5E2EA), scheme.surfaceDim)
+    assertEquals(Color(0xFFF8FBFD), scheme.surfaceBright)
+    assertEquals(Color(0xFFFFFFFF), scheme.surfaceContainerLowest)
+    assertEquals(Color(0xFFF1F7FB), scheme.surfaceContainerLow)
+    assertEquals(Color(0xFFEAF3F9), scheme.surfaceContainer)
+    assertEquals(Color(0xFFE3EEF5), scheme.surfaceContainerHigh)
+    assertEquals(Color(0xFFDCE9F1), scheme.surfaceContainerHighest)
   }
 
   @Test
@@ -188,8 +208,29 @@ class ThemeTest {
   }
 
   @Test
-  fun typography_keepsMaterialDefaults_forOtherStyles() {
+  fun typography_keepsMaterialDefaults_forBodyText() {
     assertEquals(MaterialTypography().bodyMedium, Typography.bodyMedium)
-    assertEquals(MaterialTypography().headlineSmall, Typography.headlineSmall)
+    assertEquals(MaterialTypography().bodySmall, Typography.bodySmall)
+    assertEquals(MaterialTypography().labelLarge, Typography.labelLarge)
+  }
+
+  @Test
+  fun typography_makesNumbersAndTitlesBolder() {
+    val base = MaterialTypography()
+    assertEquals(FontWeight.Bold, Typography.displaySmall.fontWeight)
+    assertEquals(FontWeight.Bold, Typography.displayMedium.fontWeight)
+    assertEquals(FontWeight.SemiBold, Typography.headlineMedium.fontWeight)
+    assertEquals(FontWeight.SemiBold, Typography.titleLarge.fontWeight)
+    assertEquals(FontWeight.SemiBold, Typography.titleSmall.fontWeight)
+    // Only the weight and spacing change, never the size.
+    assertEquals(base.displaySmall.fontSize, Typography.displaySmall.fontSize)
+    assertEquals(base.titleLarge.fontSize, Typography.titleLarge.fontSize)
+  }
+
+  @Test
+  fun typography_spacesOutSmallLabels() {
+    assertEquals(1.2.sp, Typography.labelSmall.letterSpacing)
+    assertEquals(FontWeight.SemiBold, Typography.labelSmall.fontWeight)
+    assertEquals(0.6.sp, Typography.labelMedium.letterSpacing)
   }
 }

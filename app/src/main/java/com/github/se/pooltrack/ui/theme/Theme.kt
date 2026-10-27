@@ -42,6 +42,13 @@ private val LightColorScheme =
         surfaceTint = md_theme_light_surfaceTint,
         outlineVariant = md_theme_light_outlineVariant,
         scrim = md_theme_light_scrim,
+        surfaceDim = md_theme_light_surfaceDim,
+        surfaceBright = md_theme_light_surfaceBright,
+        surfaceContainerLowest = md_theme_light_surfaceContainerLowest,
+        surfaceContainerLow = md_theme_light_surfaceContainerLow,
+        surfaceContainer = md_theme_light_surfaceContainer,
+        surfaceContainerHigh = md_theme_light_surfaceContainerHigh,
+        surfaceContainerHighest = md_theme_light_surfaceContainerHighest,
     )
 
 private val DarkColorScheme =
@@ -98,5 +105,10 @@ fun PoolTrackTheme(
     }
   }
 
-  MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+  MaterialTheme(
+      colorScheme = colorScheme,
+      typography = Typography,
+      shapes = PoolShapes,
+      content = content,
+  )
 }
