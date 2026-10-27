@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -77,10 +76,14 @@ import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import com.github.se.pooltrack.ui.subscription.formatCooldown
 import com.github.se.pooltrack.ui.subscription.rememberRemainingCooldown
 import com.github.se.pooltrack.ui.theme.DEPTH_MARKER_GUTTER
+import com.github.se.pooltrack.ui.theme.EntryFloats
+import com.github.se.pooltrack.ui.theme.LaneRope
 import com.github.se.pooltrack.ui.theme.Ripples
+import com.github.se.pooltrack.ui.theme.WaterColumnShape
 import com.github.se.pooltrack.ui.theme.WaterLevel
 import com.github.se.pooltrack.ui.theme.poolCaustics
 import com.github.se.pooltrack.ui.theme.poolDepthMarkers
+import com.github.se.pooltrack.ui.theme.poolFloorLines
 import java.time.LocalDate
 import java.time.Period
 import java.time.ZoneId
@@ -107,6 +110,7 @@ object HomeScreenTestTags {
   const val WEEKLY_CHART_BAR = "HomeScreenWeeklyChartBar"
   const val OPEN_SUBSCRIPTION_FAB = "HomeScreenOpenSubscriptionFab"
   const val PASS_WATER_LEVEL = "HomeScreenPassWaterLevel"
+  const val PASS_ENTRY_FLOATS = "HomeScreenPassEntryFloats"
 }
 
 /** HomeScreen: the app's landing page, showing pool-visit stats. */
@@ -318,8 +322,12 @@ private fun LastSwimHero(daysSinceLastSwim: Long?, modifier: Modifier = Modifier
               contentColor = scheme.onPrimaryContainer,
           ),
   ) {
+    // A lane seen from above: the floor's dark lines under the water, a lane rope at the edge.
     Box(
-        modifier = Modifier.fillMaxWidth().background(water),
+        modifier =
+            Modifier.fillMaxWidth()
+                .background(water)
+                .poolFloorLines(scheme.onPrimaryContainer.copy(alpha = 0.07f)),
         contentAlignment = Alignment.Center,
     ) {
       // Rings on the water around the number, sized by the card rather than growing it.
@@ -327,26 +335,29 @@ private fun LastSwimHero(daysSinceLastSwim: Long?, modifier: Modifier = Modifier
           color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.18f),
           modifier = Modifier.matchParentSize(),
       )
-      Column(
-          modifier = Modifier.fillMaxWidth().padding(24.dp),
-          horizontalAlignment = Alignment.CenterHorizontally,
-      ) {
-        Text(
-            text = "LAST SWIM",
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(bottom = 4.dp),
-        )
-        Text(
-            text = lastSwimValueLabel(daysSinceLastSwim),
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            text = "since your last swim",
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(top = 4.dp),
-        )
+      Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+          Text(
+              text = "LAST SWIM",
+              style = MaterialTheme.typography.labelSmall,
+              modifier = Modifier.padding(bottom = 4.dp),
+          )
+          Text(
+              text = lastSwimValueLabel(daysSinceLastSwim),
+              style = MaterialTheme.typography.displaySmall,
+              fontWeight = FontWeight.Bold,
+              textAlign = TextAlign.Center,
+          )
+          Text(
+              text = "since your last swim",
+              style = MaterialTheme.typography.bodyMedium,
+              modifier = Modifier.padding(top = 4.dp),
+          )
+        }
+        LaneRope(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 14.dp))
       }
     }
   }
@@ -413,12 +424,24 @@ private fun ExpirationBanner(
             containerColor = badgeColor,
             contentColor = onBadgeColor,
         )
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(start = 12.dp),
-        )
+        Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+          Text(
+              text = message,
+              style = MaterialTheme.typography.bodyMedium,
+              fontWeight = FontWeight.Medium,
+          )
+          // One float per entry of the pass, like the floats of a lane rope.
+          val maxEntries = subscription.maxEntries
+          if (subscription.expiresAt == null && maxEntries != null) {
+            EntryFloats(
+                usedCount = usedCount,
+                maxEntries = maxEntries,
+                color = badgeColor,
+                modifier =
+                    Modifier.padding(top = 10.dp).testTag(HomeScreenTestTags.PASS_ENTRY_FLOATS),
+            )
+          }
+        }
       }
     }
   }
@@ -567,7 +590,7 @@ private fun WeeklyChartCard(
                 modifier =
                     Modifier.fillMaxWidth()
                         .fillMaxHeight(0.8f * count / maxCount)
-                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                        .clip(WaterColumnShape())
                         .background(
                             barBrush(
                                 MaterialTheme.colorScheme.primary,
@@ -661,15 +684,20 @@ private fun StatTile(
   }
 }
 
-/** A small uppercase heading splitting Home into its sections. */
+/** A small uppercase heading splitting Home into its sections, followed by a lane rope. */
 @Composable
 private fun SectionHeader(text: String) {
-  Text(
-      text = text.uppercase(),
-      style = MaterialTheme.typography.labelSmall,
-      color = MaterialTheme.colorScheme.primary,
-      modifier = Modifier.padding(top = 4.dp),
-  )
+  Row(
+      modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+      verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Text(
+        text = text.uppercase(),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.primary,
+    )
+    LaneRope(modifier = Modifier.weight(1f).padding(start = 12.dp), height = 8.dp)
+  }
 }
 
 /** A small colored circle behind an icon - the recurring "accent" element across Home's cards. */

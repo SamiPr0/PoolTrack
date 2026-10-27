@@ -179,6 +179,26 @@ class HomeScreenTest {
   }
 
   @Test
+  fun homeScreen_showsAFloatPerEntry_forAnEntryLimitedPass() {
+    setContent(subscriptionRepository = activeSubscriptionRepo(pass(maxEntries = 10)))
+
+    composeRule
+        .onNodeWithTag(HomeScreenTestTags.PASS_ENTRY_FLOATS, useUnmergedTree = true)
+        .assertExists()
+  }
+
+  @Test
+  fun homeScreen_showsNoFloats_forADatedPass() {
+    val dated = pass(expiresAt = Instant.now().plus(Duration.ofDays(30)), maxEntries = 10)
+    setContent(subscriptionRepository = activeSubscriptionRepo(dated))
+
+    composeRule.onNodeWithTag(HomeScreenTestTags.EXPIRATION_BANNER).assertIsDisplayed()
+    composeRule
+        .onNodeWithTag(HomeScreenTestTags.PASS_ENTRY_FLOATS, useUnmergedTree = true)
+        .assertDoesNotExist()
+  }
+
+  @Test
   fun barBrush_isSolidAtTheTop_onlyForTheHighlightedBar() {
     val color = Color(0xFF00668A)
     assertEquals(
