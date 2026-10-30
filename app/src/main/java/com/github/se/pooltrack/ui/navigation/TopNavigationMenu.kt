@@ -6,14 +6,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 
 /**
  * Top bar shared by every screen, showing the current screen's name, a back button whenever that
@@ -30,8 +27,6 @@ fun TopNavigationMenu(
       title = {
         Text(
             text = currentScreen.name,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
             modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
         )
       },
@@ -46,11 +41,5 @@ fun TopNavigationMenu(
         }
       },
       actions = actions,
-      // Same color as the screen, so the bar reads as the top of the page rather than a band.
-      colors =
-          TopAppBarDefaults.topAppBarColors(
-              containerColor = MaterialTheme.colorScheme.background,
-              scrolledContainerColor = MaterialTheme.colorScheme.background,
-          ),
   )
 }
