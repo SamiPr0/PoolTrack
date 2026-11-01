@@ -403,11 +403,20 @@ class HistoryFlowTest : EndToEndTest() {
 
   // ---------- naming the days picked in the calendar ----------
 
-  /** Shows the month of [day] in the expanded month calendar, then taps [day]. */
+  /** The month the expanded month calendar is showing; it opens on the current one. */
+  private var shownMonth: YearMonth = YearMonth.from(today)
+
+  /**
+   * Shows the month of [day] in the expanded month calendar, then taps [day]. The calendar keeps
+   * its month between picks, so it moves from the month it shows (on the 1st, two picks cross
+   * months).
+   */
   private fun pickDayInMonthCalendar(day: java.time.LocalDate) {
-    val months =
-        java.time.temporal.ChronoUnit.MONTHS.between(YearMonth.from(day), YearMonth.from(today))
-    repeat(months.toInt()) { click(MonthCalendarTestTags.PREVIOUS) }
+    val target = YearMonth.from(day)
+    val months = java.time.temporal.ChronoUnit.MONTHS.between(target, shownMonth)
+    val step = if (months > 0) MonthCalendarTestTags.PREVIOUS else MonthCalendarTestTags.NEXT
+    repeat(kotlin.math.abs(months).toInt()) { click(step) }
+    shownMonth = target
     click(MonthCalendarTestTags.day(day))
   }
 
