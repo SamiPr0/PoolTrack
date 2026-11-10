@@ -2,7 +2,7 @@
 # Plugins
 agp = "9.3.0"
 kotlin = "2.3.0"
-ktfmt = "0.27.0"
+ktfmt = "0.28.0"
 googleServices = "4.5.0"
 sonarqube = "7.5.0.8588"
 
