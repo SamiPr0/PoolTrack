@@ -90,8 +90,8 @@ object PoolPalette {
   /** Accents for the stat tiles, like the colored tiles of a pool's mosaic. */
   val AccentTeal = Color(0xFF2BB3A3)
   val AccentSun = Color(0xFFF2B84B)
-  val AccentShallow = Color(0xFF2BA3CC)
-  val AccentDeep = Color(0xFF0E6C8F)
+  val AccentShallow = DeepLight.first()
+  val AccentDeep = DeepLight[1]
 
   /** The light spots that water casts on the floor. */
   val Caustic = Color(0x40B8ECFF)
