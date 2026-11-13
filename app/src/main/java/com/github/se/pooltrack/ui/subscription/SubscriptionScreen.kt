@@ -477,8 +477,9 @@ private fun SubscriptionRow(
               text = label,
               style = MaterialTheme.typography.bodySmall,
               color =
-                  if (subscription.isExpired) MaterialTheme.colorScheme.error
-                  else if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
+                  if (subscription.isExpired && isActive) PoolPalette.ExpiredOnDeep
+                  else if (subscription.isExpired) MaterialTheme.colorScheme.error
+                  else if (isActive) PoolPalette.OnDeepVariant
                   else MaterialTheme.colorScheme.onSurfaceVariant,
           )
         }

@@ -67,6 +67,9 @@ object PoolPalette {
   /** Secondary text on deep water. */
   val OnDeepVariant = Color(0xFFCBEFFC)
 
+  /** An expired date written on deep water, where the theme's error red is too dark to read. */
+  val ExpiredOnDeep = Color(0xFFFFB4AB)
+
   /** The water filling a card, from its surface to its bottom. */
   val Water = listOf(Color(0xFFBDE7F7), Color(0xFF8FD2EC))
 

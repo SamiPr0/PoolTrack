@@ -274,6 +274,18 @@ class SubscriptionScreenTest {
   }
 
   @Test
+  fun subscriptionScreen_activeRowShowsExpired_onDeepWater() {
+    val expiresAt = Instant.now().minus(Duration.ofDays(3)).toEpochMilli()
+    val expired = newer.copy(expiresAtEpochMilli = expiresAt)
+    setScreen(FakeSubscriptionRepository(listOf(expired), expired.id))
+
+    composeRule
+        .onNodeWithTag(SubscriptionScreenTestTags.ACTIVE_BADGE, useUnmergedTree = true)
+        .assertIsDisplayed()
+    composeRule.onNodeWithText("Expired ${formatted(expiresAt)}").assertIsDisplayed()
+  }
+
+  @Test
   fun subscriptionScreen_rowShowsRemainingEntries_usingOnlyThatSubscriptionsEntries() {
     val subscription = newer.copy(maxEntries = 10)
     val entries =
