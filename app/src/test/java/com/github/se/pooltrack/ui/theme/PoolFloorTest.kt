@@ -1,10 +1,7 @@
 package com.github.se.pooltrack.ui.theme
 
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import org.junit.Assert.assertEquals
 import org.junit.Test

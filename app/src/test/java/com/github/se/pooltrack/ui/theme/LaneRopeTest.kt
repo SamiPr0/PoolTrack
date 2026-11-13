@@ -1,7 +1,5 @@
 package com.github.se.pooltrack.ui.theme
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

@@ -1,8 +1,6 @@
 package com.github.se.pooltrack.ui.theme
 
 import android.provider.Settings
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
