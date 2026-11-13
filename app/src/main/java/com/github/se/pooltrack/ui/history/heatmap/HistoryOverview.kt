@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,7 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import com.github.se.pooltrack.ui.theme.poolTileColors
+import com.github.se.pooltrack.ui.theme.PoolTile
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -58,10 +57,7 @@ fun HistoryOverview(
         monthsBetween(YearMonth.from(countsByDay.keys.minOrNull() ?: today), YearMonth.from(today))
       }
 
-  Card(
-      modifier = modifier.fillMaxWidth().testTag(HistoryOverviewTestTags.CARD),
-      colors = poolTileColors(),
-  ) {
+  PoolTile(modifier = modifier.fillMaxWidth().testTag(HistoryOverviewTestTags.CARD)) {
     Column {
       Column(
           modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
