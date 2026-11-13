@@ -427,7 +427,7 @@ private fun SubscriptionRow(
                 contentColor = MaterialTheme.colorScheme.onSurface,
             )
           },
-      elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 4.dp else 2.dp),
+      elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
   ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
