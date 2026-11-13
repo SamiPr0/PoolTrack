@@ -19,16 +19,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.AddCircle
-import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Favorite
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
@@ -54,7 +48,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -71,6 +64,8 @@ import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import com.github.se.pooltrack.ui.subscription.formatCooldown
 import com.github.se.pooltrack.ui.subscription.rememberRemainingCooldown
 import com.github.se.pooltrack.ui.theme.DeepWater
+import com.github.se.pooltrack.ui.theme.DepthGauge
+import com.github.se.pooltrack.ui.theme.LaneRope
 import com.github.se.pooltrack.ui.theme.PoolPalette
 import com.github.se.pooltrack.ui.theme.deepWaterBrush
 import com.github.se.pooltrack.ui.theme.poolTiles
@@ -99,6 +94,10 @@ object HomeScreenTestTags {
   const val WEEKLY_CHART_LEGEND = "HomeScreenWeeklyChartLegend"
   const val WEEKLY_CHART_BAR = "HomeScreenWeeklyChartBar"
   const val OPEN_SUBSCRIPTION_FAB = "HomeScreenOpenSubscriptionFab"
+  const val DEPTH_GAUGE = "HomeScreenDepthGauge"
+  const val LANE_ROPE = "HomeScreenLaneRope"
+  const val PASS_WATER = "HomeScreenPassWater"
+  const val PASS_LEVEL = "HomeScreenPassLevel"
 }
 
 /** HomeScreen: the app's landing page, showing pool-visit stats. */
@@ -176,131 +175,148 @@ fun HomeScreen(
         }
       },
   ) { paddingValues ->
-    Column(
-        modifier =
-            Modifier.fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-      LastSwimHero(
-          daysSinceLastSwim = stats.daysSinceLastSwim,
-          modifier = Modifier.testTag(HomeScreenTestTags.LAST_SWIM_HERO),
+    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+      // The depth marks of the pool's wall, behind the content along the right edge.
+      DepthGauge(
+          modifier =
+              Modifier.align(Alignment.TopEnd)
+                  .fillMaxHeight()
+                  .width(14.dp)
+                  .padding(vertical = 12.dp)
+                  .testTag(HomeScreenTestTags.DEPTH_GAUGE),
       )
-
-      val subscription = activeSubscription
-      if (subscription != null) {
-        ExpirationBanner(
-            subscription = subscription,
-            usedCount = activeSubscriptionUsedEntries,
-            modifier = Modifier.testTag(HomeScreenTestTags.EXPIRATION_BANNER),
-        )
-      } else {
-        NoSubscriptionTodoCard(
-            onClick = { navigationActions?.navigateTo(Screen.Subscription) },
-            modifier = Modifier.testTag(HomeScreenTestTags.NO_SUBSCRIPTION_TODO),
-        )
-      }
-
-      Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        StatTile(
-            icon = Icons.Outlined.DateRange,
-            label = "This week",
-            value = "${stats.entriesThisWeek}",
-            accentColor = MaterialTheme.colorScheme.primary,
-            onAccentColor = MaterialTheme.colorScheme.onPrimary,
-            modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.THIS_WEEK_STAT),
-        )
-        StatTile(
-            icon = Icons.Outlined.DateRange,
-            label = "This month",
-            value = "${stats.entriesThisMonth}",
-            accentColor = MaterialTheme.colorScheme.secondary,
-            onAccentColor = MaterialTheme.colorScheme.onSecondary,
-            modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.THIS_MONTH_STAT),
-        )
-      }
-      Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        StatTile(
-            icon = Icons.Filled.CheckCircle,
-            label = "Total entries",
-            value = "${stats.totalEntries}",
-            accentColor = MaterialTheme.colorScheme.tertiary,
-            onAccentColor = MaterialTheme.colorScheme.onTertiary,
-            modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.TOTAL_ENTRIES_STAT),
-        )
-        StatTile(
-            icon = Icons.Filled.Star,
-            label = "Avg. per week",
-            value = averagePerWeekLabel(stats.averageEntriesPerWeek),
-            accentColor = MaterialTheme.colorScheme.primary,
-            onAccentColor = MaterialTheme.colorScheme.onPrimary,
-            modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.AVERAGE_PER_WEEK_STAT),
-        )
-      }
-      Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        StatTile(
-            icon = Icons.Outlined.Refresh,
-            label = "Week streak",
-            value = streakLabel(stats.currentStreakWeeks),
-            accentColor = MaterialTheme.colorScheme.secondary,
-            onAccentColor = MaterialTheme.colorScheme.onSecondary,
-            modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.STREAK_STAT),
-        )
-        StatTile(
-            icon = Icons.Filled.Star,
-            label = "Best week",
-            value = if (stats.bestWeekEntries == 0) "-" else "${stats.bestWeekEntries}",
-            accentColor = MaterialTheme.colorScheme.tertiary,
-            onAccentColor = MaterialTheme.colorScheme.onTertiary,
-            modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.BEST_WEEK_STAT),
-        )
-      }
-      WeeklyChartCard(
-          counts = stats.weeklyCounts,
-          weekStarts = stats.weekStarts,
-          modifier = Modifier.testTag(HomeScreenTestTags.WEEKLY_CHART),
+      HomeContent(
+          stats = stats,
+          activeSubscription = activeSubscription,
+          activeSubscriptionUsedEntries = activeSubscriptionUsedEntries,
+          totalSpent = totalSpent,
+          onAddSubscription = { navigationActions?.navigateTo(Screen.Subscription) },
       )
-      Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        StatTile(
-            icon = Icons.Outlined.ShoppingCart,
-            label = "Total spent",
-            value = amountLabel(totalSpent),
-            accentColor = MaterialTheme.colorScheme.secondary,
-            onAccentColor = MaterialTheme.colorScheme.onSecondary,
-            modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.TOTAL_SPENT_STAT),
-        )
-        StatTile(
-            icon = Icons.Outlined.Info,
-            label = "Cost / entry",
-            value = amountLabel(costPerEntry(totalSpent, stats.totalEntries)),
-            accentColor = MaterialTheme.colorScheme.tertiary,
-            onAccentColor = MaterialTheme.colorScheme.onTertiary,
-            modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.COST_PER_ENTRY_STAT),
-        )
-      }
+    }
+  }
+}
 
-      stats.favoriteDayOfWeek?.let { day ->
-        val dayName = day.getDisplayName(TextStyle.FULL, LocalLocale.current.platformLocale)
-        Card(
-            modifier = Modifier.fillMaxWidth().testTag(HomeScreenTestTags.FAVORITE_DAY_BANNER),
+/** Home's scrolling column of cards, over the pool floor. */
+@Composable
+private fun HomeContent(
+    stats: HomeStats,
+    activeSubscription: Subscription?,
+    activeSubscriptionUsedEntries: Int,
+    totalSpent: Double,
+    onAddSubscription: () -> Unit,
+) {
+  Column(
+      modifier =
+          Modifier.fillMaxSize()
+              .verticalScroll(rememberScrollState())
+              .padding(start = 16.dp, end = 20.dp, top = 8.dp, bottom = 88.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp),
+  ) {
+    LastSwimHero(
+        daysSinceLastSwim = stats.daysSinceLastSwim,
+        modifier = Modifier.testTag(HomeScreenTestTags.LAST_SWIM_HERO),
+    )
+
+    if (activeSubscription != null) {
+      ExpirationBanner(
+          subscription = activeSubscription,
+          usedCount = activeSubscriptionUsedEntries,
+          modifier = Modifier.testTag(HomeScreenTestTags.EXPIRATION_BANNER),
+      )
+    } else {
+      NoSubscriptionTodoCard(
+          onClick = onAddSubscription,
+          modifier = Modifier.testTag(HomeScreenTestTags.NO_SUBSCRIPTION_TODO),
+      )
+    }
+
+    LaneRope(
+        modifier = Modifier.padding(horizontal = 2.dp).testTag(HomeScreenTestTags.LANE_ROPE),
+        animated = true,
+    )
+
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      StatTile(
+          label = "This week",
+          value = "${stats.entriesThisWeek}",
+          accentColor = PoolPalette.AccentDeep,
+          modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.THIS_WEEK_STAT),
+      )
+      StatTile(
+          label = "This month",
+          value = "${stats.entriesThisMonth}",
+          accentColor = PoolPalette.AccentTeal,
+          modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.THIS_MONTH_STAT),
+      )
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      StatTile(
+          label = "Week streak",
+          value = streakLabel(stats.currentStreakWeeks),
+          accentColor = PoolPalette.AccentSun,
+          modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.STREAK_STAT),
+      )
+      StatTile(
+          label = "Total entries",
+          value = "${stats.totalEntries}",
+          accentColor = PoolPalette.AccentShallow,
+          modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.TOTAL_ENTRIES_STAT),
+      )
+    }
+    WeeklyChartCard(
+        counts = stats.weeklyCounts,
+        weekStarts = stats.weekStarts,
+        modifier = Modifier.testTag(HomeScreenTestTags.WEEKLY_CHART),
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      StatTile(
+          label = "Avg. per week",
+          value = averagePerWeekLabel(stats.averageEntriesPerWeek),
+          accentColor = PoolPalette.AccentShallow,
+          modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.AVERAGE_PER_WEEK_STAT),
+      )
+      StatTile(
+          label = "Best week",
+          value = if (stats.bestWeekEntries == 0) "-" else "${stats.bestWeekEntries}",
+          accentColor = PoolPalette.AccentSun,
+          modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.BEST_WEEK_STAT),
+      )
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      StatTile(
+          label = "Total spent",
+          value = amountLabel(totalSpent),
+          accentColor = PoolPalette.AccentTeal,
+          modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.TOTAL_SPENT_STAT),
+      )
+      StatTile(
+          label = "Cost / entry",
+          value = amountLabel(costPerEntry(totalSpent, stats.totalEntries)),
+          accentColor = PoolPalette.AccentDeep,
+          modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.COST_PER_ENTRY_STAT),
+      )
+    }
+
+    stats.favoriteDayOfWeek?.let { day ->
+      val dayName = day.getDisplayName(TextStyle.FULL, LocalLocale.current.platformLocale)
+      Card(
+          colors = tileColors(),
+          modifier = Modifier.fillMaxWidth().testTag(HomeScreenTestTags.FAVORITE_DAY_BANNER),
+      ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-          Row(
-              modifier = Modifier.fillMaxWidth().padding(12.dp),
-              verticalAlignment = Alignment.CenterVertically,
-          ) {
-            IconBadge(
-                icon = Icons.Outlined.Favorite,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            )
-            Text(
-                text = "You usually swim on $dayName",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(start = 12.dp),
-            )
-          }
+          IconBadge(
+              icon = Icons.Outlined.Favorite,
+              containerColor = MaterialTheme.colorScheme.primary,
+              contentColor = MaterialTheme.colorScheme.onPrimary,
+          )
+          Text(
+              text = "You usually swim on $dayName",
+              style = MaterialTheme.typography.bodyMedium,
+              modifier = Modifier.padding(start = 12.dp),
+          )
         }
       }
     }
@@ -576,33 +592,29 @@ internal fun weekLegend(
   return "$range: ${if (count == 1) "1 entry" else "$count entries"}"
 }
 
+/** One number of Home, on a white tile edged with [accentColor] like a mosaic tile. */
 @Composable
 private fun StatTile(
-    icon: ImageVector,
     label: String,
     value: String,
     accentColor: Color,
-    onAccentColor: Color,
     modifier: Modifier = Modifier,
 ) {
-  Card(modifier = modifier) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-      IconBadge(icon = icon, containerColor = accentColor, contentColor = onAccentColor)
-      Text(
-          text = value,
-          style = MaterialTheme.typography.titleLarge,
-          fontWeight = FontWeight.Bold,
-          modifier = Modifier.padding(top = 8.dp),
-      )
-      Text(
-          text = label,
-          style = MaterialTheme.typography.labelMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          textAlign = TextAlign.Center,
-      )
+  Card(modifier = modifier, shape = MaterialTheme.shapes.small, colors = tileColors()) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+      Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+      }
+      Box(modifier = Modifier.fillMaxWidth().height(3.dp).background(accentColor))
     }
   }
 }
