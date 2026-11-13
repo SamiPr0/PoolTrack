@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.test.junit4.createComposeRule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -40,5 +41,23 @@ class PoolPaletteTest {
     assertEquals(PoolPalette.DeepDark, dark)
     assertFalse(lightIsDark)
     assertTrue(darkIsDark)
+  }
+
+  @Test
+  fun poolTile_isWhiteInTheLightTheme_andLighterThanThePageInTheDarkTheme() {
+    var light = Color.Unspecified
+    var dark = Color.Unspecified
+    var darkPage = Color.Unspecified
+    composeRule.setContent {
+      PoolTrackTheme(darkTheme = false) { light = poolTileColor(MaterialTheme.colorScheme) }
+      PoolTrackTheme(darkTheme = true) {
+        dark = poolTileColor(MaterialTheme.colorScheme)
+        darkPage = MaterialTheme.colorScheme.background
+      }
+    }
+    composeRule.waitForIdle()
+
+    assertEquals(Color.White, light)
+    assertTrue(dark.luminance() > darkPage.luminance())
   }
 }

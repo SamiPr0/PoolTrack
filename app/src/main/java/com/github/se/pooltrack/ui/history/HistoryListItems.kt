@@ -24,6 +24,7 @@ import com.github.se.pooltrack.ui.history.heatmap.visitsLabel
 import com.github.se.pooltrack.ui.theme.LaneRope
 import com.github.se.pooltrack.ui.theme.PoolPalette
 import com.github.se.pooltrack.ui.theme.deepWaterBrush
+import com.github.se.pooltrack.ui.theme.poolTileColor
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -151,7 +152,7 @@ internal fun EntryRow(
       modifier = modifier.testTag(HistoryScreenTestTags.ENTRY_ITEM),
       color =
           if (highlighted) MaterialTheme.colorScheme.primaryContainer
-          else MaterialTheme.colorScheme.surfaceContainerLowest,
+          else poolTileColor(MaterialTheme.colorScheme),
   ) {
     Column {
       Row(

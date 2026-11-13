@@ -79,11 +79,18 @@ fun deepWaterColors(scheme: ColorScheme): List<Color> =
 /** A diagonal deep-water gradient, for heroes, main buttons and the in-pool screen. */
 fun deepWaterBrush(scheme: ColorScheme): Brush = Brush.linearGradient(deepWaterColors(scheme))
 
-/** A plain white tile of the pool floor: the colors of a card that sits on [poolTiles]. */
+/**
+ * The color of a tile laid on [poolTiles]: white in the light theme, and in the dark theme a step
+ * lighter than the page, so cards stand out from the water instead of sinking into it.
+ */
+fun poolTileColor(scheme: ColorScheme): Color =
+    if (isDarkScheme(scheme)) scheme.surfaceContainerHigh else scheme.surfaceContainerLowest
+
+/** The colors of a card that sits on [poolTiles], a tile of [poolTileColor]. */
 @Composable
 fun poolTileColors(): CardColors =
     CardDefaults.cardColors(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+        containerColor = poolTileColor(MaterialTheme.colorScheme),
         contentColor = MaterialTheme.colorScheme.onSurface,
     )
 
