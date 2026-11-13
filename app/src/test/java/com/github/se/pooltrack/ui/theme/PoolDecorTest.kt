@@ -1,10 +1,12 @@
 package com.github.se.pooltrack.ui.theme
 
+import android.provider.Settings
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -19,6 +21,22 @@ import org.robolectric.annotation.GraphicsMode
 class PoolDecorTest {
 
   @get:Rule val composeRule = createComposeRule()
+
+  private val resolver
+    get() = ApplicationProvider.getApplicationContext<android.content.Context>().contentResolver
+
+  private fun setAnimatorScale(scale: Float) {
+    Settings.Global.putFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, scale)
+  }
+
+  @Test
+  fun animationsEnabled_followsTheSystemAnimatorScale() {
+    setAnimatorScale(1f)
+    assertTrue(animationsEnabled(resolver))
+
+    setAnimatorScale(0f)
+    assertFalse(animationsEnabled(resolver))
+  }
 
   @Test
   fun deepWater_dependsOnTheTheme() {
