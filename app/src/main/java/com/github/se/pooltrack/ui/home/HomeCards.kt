@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.outlined.AddCircle
+import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -35,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -49,10 +51,12 @@ import com.github.se.pooltrack.ui.theme.WaterFill
 import com.github.se.pooltrack.ui.theme.deepWaterBrush
 import com.github.se.pooltrack.ui.theme.isDarkScheme
 import com.github.se.pooltrack.ui.theme.poolTileColors
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.Period
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 import java.util.Locale
 
 // The cards and tiles of Home, laid out by HomeScreen.
@@ -384,5 +388,28 @@ internal fun IconBadge(
         tint = contentColor,
         modifier = Modifier.size(size / 2),
     )
+  }
+}
+
+/** The weekday the user swims on most, e.g. "You usually swim on Tuesday". */
+@Composable
+internal fun FavoriteDayCard(day: DayOfWeek, modifier: Modifier = Modifier) {
+  val dayName = day.getDisplayName(TextStyle.FULL, LocalLocale.current.platformLocale)
+  Card(colors = poolTileColors(), modifier = modifier.fillMaxWidth()) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+      IconBadge(
+          icon = Icons.Outlined.Favorite,
+          containerColor = MaterialTheme.colorScheme.primary,
+          contentColor = MaterialTheme.colorScheme.onPrimary,
+      )
+      Text(
+          text = "You usually swim on $dayName",
+          style = MaterialTheme.typography.bodyMedium,
+          modifier = Modifier.padding(start = 12.dp),
+      )
+    }
   }
 }

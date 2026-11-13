@@ -6,21 +6,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Favorite
-import androidx.compose.material3.Card
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -30,7 +25,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -48,8 +42,6 @@ import com.github.se.pooltrack.ui.theme.LaneRope
 import com.github.se.pooltrack.ui.theme.PoolPalette
 import com.github.se.pooltrack.ui.theme.PoolScaffold
 import com.github.se.pooltrack.ui.theme.deepWater
-import com.github.se.pooltrack.ui.theme.poolTileColors
-import java.time.format.TextStyle
 import kotlinx.coroutines.launch
 
 object HomeScreenTestTags {
@@ -270,27 +262,7 @@ private fun HomeContent(
     }
 
     stats.favoriteDayOfWeek?.let { day ->
-      val dayName = day.getDisplayName(TextStyle.FULL, LocalLocale.current.platformLocale)
-      Card(
-          colors = poolTileColors(),
-          modifier = Modifier.fillMaxWidth().testTag(HomeScreenTestTags.FAVORITE_DAY_BANNER),
-      ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-          IconBadge(
-              icon = Icons.Outlined.Favorite,
-              containerColor = MaterialTheme.colorScheme.primary,
-              contentColor = MaterialTheme.colorScheme.onPrimary,
-          )
-          Text(
-              text = "You usually swim on $dayName",
-              style = MaterialTheme.typography.bodyMedium,
-              modifier = Modifier.padding(start = 12.dp),
-          )
-        }
-      }
+      FavoriteDayCard(day, Modifier.testTag(HomeScreenTestTags.FAVORITE_DAY_BANNER))
     }
   }
 }
