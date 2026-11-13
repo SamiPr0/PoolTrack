@@ -28,6 +28,7 @@ import com.github.se.pooltrack.ui.account.AccountViewModel
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.NavigationTestTags
 import com.github.se.pooltrack.ui.navigation.Screen
+import com.github.se.pooltrack.ui.theme.PoolTrackTheme
 import com.github.se.pooltrack.utils.FakeAuthRepository
 import com.github.se.pooltrack.utils.FakeEntryRepository
 import com.github.se.pooltrack.utils.FakeSubscriptionRepository
@@ -460,6 +461,48 @@ class HomeScreenTest {
     setContentWithActive(pass())
 
     composeRule.onNodeWithText("Your active pass has no expiration").assertIsDisplayed()
+  }
+
+  @Test
+  fun passWater_fillsTheBannerWithWhatIsLeft() {
+    val entryList = List(3) { entryAt(daysAgo(it + 1L), "a") }
+    setContentWithActive(pass(maxEntries = 10), entryList)
+
+    composeRule.onNodeWithTag(HomeScreenTestTags.PASS_WATER).assertExists()
+    composeRule.onNodeWithTag(HomeScreenTestTags.PASS_LEVEL).assertTextEquals("70%")
+  }
+
+  @Test
+  fun passWater_isAbsent_whenThePassHasNothingToMeasure() {
+    setContentWithActive(pass())
+
+    assertTagAbsent(HomeScreenTestTags.PASS_WATER)
+    assertTagAbsent(HomeScreenTestTags.PASS_LEVEL)
+  }
+
+  @Test
+  fun poolDecorations_areShown() {
+    setContent()
+
+    composeRule.onNodeWithTag(HomeScreenTestTags.DEPTH_GAUGE).assertExists()
+    composeRule.onNodeWithTag(HomeScreenTestTags.LANE_ROPE).assertExists()
+  }
+
+  @Test
+  fun passWater_onlyTintsTheBanner_inTheDarkTheme() {
+    val viewModel =
+        HomeViewModel(FakeEntryRepository(), activeSubscriptionRepo(pass(maxEntries = 1)))
+    val owner = TestViewModelOwner(auth)
+    composeRule.setContent {
+      PoolTrackTheme(darkTheme = true) {
+        CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
+          HomeScreen(viewModel, navigationActions)
+        }
+      }
+    }
+
+    composeRule.onNodeWithTag(HomeScreenTestTags.PASS_WATER).assertExists()
+    composeRule.onNodeWithTag(HomeScreenTestTags.PASS_LEVEL).assertTextEquals("100%")
   }
 
   // endregion

@@ -67,7 +67,9 @@ import com.github.se.pooltrack.ui.theme.DeepWater
 import com.github.se.pooltrack.ui.theme.DepthGauge
 import com.github.se.pooltrack.ui.theme.LaneRope
 import com.github.se.pooltrack.ui.theme.PoolPalette
+import com.github.se.pooltrack.ui.theme.WaterFill
 import com.github.se.pooltrack.ui.theme.deepWaterBrush
+import com.github.se.pooltrack.ui.theme.isDarkScheme
 import com.github.se.pooltrack.ui.theme.poolTiles
 import java.time.LocalDate
 import java.time.Period
@@ -379,36 +381,49 @@ private fun ExpirationBanner(
       subscription.isExpired ||
           (days != null && days in 0..7) ||
           (remainingEntries != null && remainingEntries <= 2)
-  val containerColor =
-      if (isUrgent) MaterialTheme.colorScheme.errorContainer
-      else MaterialTheme.colorScheme.tertiaryContainer
-  val contentColor =
-      if (isUrgent) MaterialTheme.colorScheme.onErrorContainer
-      else MaterialTheme.colorScheme.onTertiaryContainer
   val badgeColor =
       if (isUrgent) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
   val onBadgeColor =
       if (isUrgent) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onTertiary
+  val level = passWaterLevel(subscription, usedCount)
+  val water = if (isUrgent) PoolPalette.WaterUrgent else PoolPalette.Water
+  // In the dark theme the water only tints the card, so the light text stays readable on it.
+  val waterColors =
+      if (isDarkScheme(MaterialTheme.colorScheme)) water.map { it.copy(alpha = 0.3f) } else water
 
-  Card(
-      modifier = modifier.fillMaxWidth(),
-      colors =
-          CardDefaults.cardColors(containerColor = containerColor, contentColor = contentColor),
-  ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-      IconBadge(
-          icon = if (isUrgent) Icons.Filled.Lock else Icons.Outlined.Notifications,
-          containerColor = badgeColor,
-          contentColor = onBadgeColor,
-      )
-      Text(
-          text = message,
-          style = MaterialTheme.typography.bodyMedium,
-          modifier = Modifier.padding(start = 12.dp),
-      )
+  Card(modifier = modifier.fillMaxWidth(), colors = tileColors()) {
+    Box {
+      if (level != null) {
+        WaterFill(
+            level = level,
+            colors = waterColors,
+            modifier = Modifier.matchParentSize().testTag(HomeScreenTestTags.PASS_WATER),
+        )
+      }
+      Row(
+          modifier = Modifier.fillMaxWidth().padding(12.dp),
+          verticalAlignment = Alignment.CenterVertically,
+      ) {
+        IconBadge(
+            icon = if (isUrgent) Icons.Filled.Lock else Icons.Outlined.Notifications,
+            containerColor = badgeColor,
+            contentColor = onBadgeColor,
+            size = 32.dp,
+        )
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f).padding(start = 12.dp),
+        )
+        if (level != null) {
+          Text(
+              text = passWaterLabel(level),
+              style = MaterialTheme.typography.titleMedium,
+              fontWeight = FontWeight.Bold,
+              modifier = Modifier.padding(start = 8.dp).testTag(HomeScreenTestTags.PASS_LEVEL),
+          )
+        }
+      }
     }
   }
 }
