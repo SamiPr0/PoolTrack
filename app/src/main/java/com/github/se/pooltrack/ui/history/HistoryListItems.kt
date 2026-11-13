@@ -15,11 +15,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.github.se.pooltrack.ui.history.heatmap.visitsLabel
+import com.github.se.pooltrack.ui.theme.PoolPalette
+import com.github.se.pooltrack.ui.theme.deepWaterBrush
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -101,8 +105,8 @@ private fun DateBlock(day: LocalDate, isToday: Boolean, locale: Locale = Locale.
       modifier =
           Modifier.width(48.dp)
               .background(
-                  if (isToday) scheme.primaryContainer
-                  else scheme.surfaceVariant.copy(alpha = 0.5f),
+                  if (isToday) deepWaterBrush(scheme)
+                  else SolidColor(scheme.surfaceVariant.copy(alpha = 0.5f)),
                   RoundedCornerShape(10.dp),
               )
               .padding(vertical = 6.dp),
@@ -110,14 +114,14 @@ private fun DateBlock(day: LocalDate, isToday: Boolean, locale: Locale = Locale.
     Text(
         text = day.format(DateTimeFormatter.ofPattern("EEE", locale)).uppercase(locale),
         style = MaterialTheme.typography.labelSmall,
-        color = if (isToday) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
+        color = if (isToday) PoolPalette.OnDeepVariant else scheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
     )
     Text(
         text = day.dayOfMonth.toString(),
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold,
-        color = if (isToday) scheme.onPrimaryContainer else scheme.onSurface,
+        color = if (isToday) PoolPalette.OnDeep else scheme.onSurface,
     )
   }
 }
