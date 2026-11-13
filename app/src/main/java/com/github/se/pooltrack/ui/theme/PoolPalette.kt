@@ -42,15 +42,27 @@ object PoolPalette {
   /** The rope the lane floats are threaded on. */
   val Rope = Color(0xFF6E95A5)
 
-  /** A float's lit side and its shaded side. */
+  /** A red end float of a lane rope: its lit side, then its shaded side. */
   val FloatRed = Color(0xFFF26A5E) to Color(0xFFC9362C)
+
+  /** A blue float of a lane rope: its lit side, then its shaded side. */
   val FloatBlue = Color(0xFF3DB2DA) to Color(0xFF0E6C8F)
+
+  /** A white float of a lane rope: its lit side, then its shaded side. */
   val FloatWhite = Color(0xFFFFFFFF) to Color(0xFFCFE3EB)
 
-  /** Accents for the stat tiles, like the colored tiles of a pool's mosaic. */
+  // Accents for the stat tiles, like the colored tiles of a pool's mosaic.
+
+  /** A teal mosaic tile. */
   val AccentTeal = Color(0xFF2BB3A3)
+
+  /** A sunny yellow mosaic tile, like the light on the water. */
   val AccentSun = Color(0xFFF2B84B)
+
+  /** A tile of shallow water: the lightest of [DeepLight]. */
   val AccentShallow = DeepLight.first()
+
+  /** A tile of deep water: the middle of [DeepLight]. */
   val AccentDeep = DeepLight[1]
 
   /** The light spots that water casts on the floor. */
