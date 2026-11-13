@@ -44,9 +44,9 @@ import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import com.github.se.pooltrack.ui.subscription.formatCooldown
 import com.github.se.pooltrack.ui.subscription.rememberRemainingCooldown
 import com.github.se.pooltrack.ui.theme.DepthTags
-import com.github.se.pooltrack.ui.theme.LaneRope
 import com.github.se.pooltrack.ui.theme.PoolPalette
 import com.github.se.pooltrack.ui.theme.PoolScaffold
+import com.github.se.pooltrack.ui.theme.SectionHeader
 import com.github.se.pooltrack.ui.theme.deepWater
 import kotlinx.coroutines.launch
 
@@ -68,7 +68,8 @@ object HomeScreenTestTags {
   const val WEEKLY_CHART_BAR = "HomeScreenWeeklyChartBar"
   const val OPEN_SUBSCRIPTION_FAB = "HomeScreenOpenSubscriptionFab"
   const val DEPTH_TAGS = "HomeScreenDepthTags"
-  const val LANE_ROPE = "HomeScreenLaneRope"
+  const val ACTIVITY_SECTION = "HomeScreenActivitySection"
+  const val SPENDING_SECTION = "HomeScreenSpendingSection"
   const val PASS_WATER = "HomeScreenPassWater"
   const val PASS_LEVEL = "HomeScreenPassLevel"
 }
@@ -203,10 +204,7 @@ private fun HomeContent(
       )
     }
 
-    LaneRope(
-        modifier = Modifier.padding(horizontal = 2.dp).testTag(HomeScreenTestTags.LANE_ROPE),
-        animated = true,
-    )
+    SectionHeader("ACTIVITY", Modifier.testTag(HomeScreenTestTags.ACTIVITY_SECTION))
 
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
       StatTile(
@@ -261,6 +259,7 @@ private fun HomeContent(
           modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.BEST_WEEK_STAT),
       )
     }
+    SectionHeader("SPENDING", Modifier.testTag(HomeScreenTestTags.SPENDING_SECTION))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
       StatTile(
           label = "Total spent",

@@ -485,7 +485,8 @@ class HomeScreenTest {
     setContent()
 
     composeRule.onNodeWithTag(HomeScreenTestTags.DEPTH_TAGS).assertExists()
-    composeRule.onNodeWithTag(HomeScreenTestTags.LANE_ROPE).assertExists()
+    composeRule.onNodeWithTag(HomeScreenTestTags.ACTIVITY_SECTION).assertExists()
+    composeRule.onNodeWithTag(HomeScreenTestTags.SPENDING_SECTION).assertExists()
   }
 
   @Test
