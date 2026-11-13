@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -149,6 +150,46 @@ class PoolDecorTest {
     composeRule.mainClock.advanceTimeBy(1_000)
     val image = composeRule.onNodeWithTag("all").captureToImage()
     assertEquals(300f, image.width / composeRule.density.density, 1f)
+  }
+
+  /**
+   * Recomposes every decoration, first with the same arguments (so Compose may skip them) and then
+   * with new ones (so it must redraw them), and draws each state.
+   */
+  @Test
+  fun decorations_redraw_whenTheirArgumentsChange_andSkip_whenTheyDoNot() {
+    setAnimatorScale(0f)
+    var tick by mutableIntStateOf(0)
+    var variant by mutableIntStateOf(0)
+    composeRule.setContent {
+      PoolTrackTheme(darkTheme = false) {
+        @Suppress("UNUSED_EXPRESSION") tick
+        val second = variant == 1
+        val size = if (second) Modifier.size(120.dp, 60.dp) else Modifier.size(100.dp, 50.dp)
+        Column(Modifier.testTag("redraw")) {
+          Caustics(size)
+          LaneRope(size, animated = second)
+          DepthGauge(size)
+          WaterFill(
+              if (second) 0.2f else 0.8f,
+              if (second) PoolPalette.WaterUrgent else PoolPalette.Water,
+              size,
+          )
+          RippleRings(size)
+          Bubbles(size)
+          LaneMarker(size)
+        }
+      }
+    }
+    composeRule.onNodeWithTag("redraw").captureToImage()
+
+    tick++
+    composeRule.waitForIdle()
+    composeRule.onNodeWithTag("redraw").captureToImage()
+
+    variant = 1
+    composeRule.waitForIdle()
+    composeRule.onNodeWithTag("redraw").captureToImage()
   }
 
   @Test
