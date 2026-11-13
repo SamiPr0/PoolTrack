@@ -85,7 +85,7 @@ import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import com.github.se.pooltrack.ui.theme.PoolPalette
-import com.github.se.pooltrack.ui.theme.deepWaterBrush
+import com.github.se.pooltrack.ui.theme.deepWater
 import com.github.se.pooltrack.ui.theme.poolTiles
 import java.math.BigDecimal
 import java.time.Instant
@@ -420,7 +420,7 @@ private fun SubscriptionRow(
           Modifier.fillMaxWidth()
               .then(
                   if (isActive) {
-                    Modifier.background(deepWaterBrush(MaterialTheme.colorScheme), shape)
+                    Modifier.deepWater(MaterialTheme.colorScheme, shape)
                   } else {
                     Modifier
                   }

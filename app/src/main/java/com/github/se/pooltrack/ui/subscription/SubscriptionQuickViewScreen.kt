@@ -4,7 +4,6 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,7 +58,7 @@ import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import com.github.se.pooltrack.ui.theme.PoolPalette
 import com.github.se.pooltrack.ui.theme.RippleRings
-import com.github.se.pooltrack.ui.theme.deepWaterBrush
+import com.github.se.pooltrack.ui.theme.deepWater
 import com.github.se.pooltrack.ui.theme.poolTiles
 import java.time.Duration
 
@@ -271,7 +270,7 @@ private fun PassDisplayAndAccept(
                 ),
             contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp),
             modifier =
-                Modifier.background(deepWaterBrush(MaterialTheme.colorScheme), CircleShape)
+                Modifier.deepWater(MaterialTheme.colorScheme, CircleShape)
                     .testTag(SubscriptionQuickViewScreenTestTags.ACCEPT_BUTTON),
         ) {
           Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp))

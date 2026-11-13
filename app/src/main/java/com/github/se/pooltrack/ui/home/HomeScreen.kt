@@ -70,6 +70,7 @@ import com.github.se.pooltrack.ui.theme.DepthGauge
 import com.github.se.pooltrack.ui.theme.LaneRope
 import com.github.se.pooltrack.ui.theme.PoolPalette
 import com.github.se.pooltrack.ui.theme.WaterFill
+import com.github.se.pooltrack.ui.theme.deepWater
 import com.github.se.pooltrack.ui.theme.deepWaterBrush
 import com.github.se.pooltrack.ui.theme.isDarkScheme
 import com.github.se.pooltrack.ui.theme.poolTiles
@@ -170,8 +171,7 @@ fun HomeScreen(
             modifier =
                 Modifier.then(
                         if (cooldown != null) Modifier
-                        else
-                            Modifier.background(deepWaterBrush(MaterialTheme.colorScheme), fabShape)
+                        else Modifier.deepWater(MaterialTheme.colorScheme, fabShape)
                     )
                     .testTag(HomeScreenTestTags.OPEN_SUBSCRIPTION_FAB),
         ) {

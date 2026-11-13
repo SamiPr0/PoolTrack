@@ -1,6 +1,5 @@
 package com.github.se.pooltrack.ui.history
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -49,7 +48,7 @@ import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import com.github.se.pooltrack.ui.theme.PoolPalette
-import com.github.se.pooltrack.ui.theme.deepWaterBrush
+import com.github.se.pooltrack.ui.theme.deepWater
 import com.github.se.pooltrack.ui.theme.poolTiles
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -155,7 +154,7 @@ fun HistoryScreen(
             contentColor = PoolPalette.OnDeep,
             elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
             modifier =
-                Modifier.background(deepWaterBrush(MaterialTheme.colorScheme), fabShape)
+                Modifier.deepWater(MaterialTheme.colorScheme, fabShape)
                     .testTag(HistoryScreenTestTags.ADD_PAST_ENTRY_BUTTON),
         )
       },

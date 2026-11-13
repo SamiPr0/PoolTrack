@@ -105,6 +105,10 @@ fun deepWaterColors(scheme: ColorScheme): List<Color> =
 /** A diagonal deep-water gradient, for heroes, main buttons and the in-pool screen. */
 fun deepWaterBrush(scheme: ColorScheme): Brush = Brush.linearGradient(deepWaterColors(scheme))
 
+/** Fills the element with [deepWaterBrush] in [shape], e.g. a button made transparent for it. */
+fun Modifier.deepWater(scheme: ColorScheme, shape: Shape): Modifier =
+    background(deepWaterBrush(scheme), shape)
+
 /** Whether the system lets apps animate (the developer option "Animator duration scale"). */
 fun animationsEnabled(resolver: ContentResolver): Boolean =
     Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
@@ -205,7 +209,7 @@ fun DeepWater(
     caustics: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
 ) {
-  Box(modifier.clip(shape).background(deepWaterBrush(MaterialTheme.colorScheme), shape)) {
+  Box(modifier.clip(shape).deepWater(MaterialTheme.colorScheme, shape)) {
     if (caustics) Caustics(Modifier.matchParentSize())
     CompositionLocalProvider(LocalContentColor provides PoolPalette.OnDeep) { content() }
   }
