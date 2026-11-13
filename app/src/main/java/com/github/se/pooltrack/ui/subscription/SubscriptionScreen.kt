@@ -82,6 +82,8 @@ import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
+import com.github.se.pooltrack.ui.theme.PoolPalette
+import com.github.se.pooltrack.ui.theme.deepWaterBrush
 import com.github.se.pooltrack.ui.theme.poolTiles
 import java.math.BigDecimal
 import java.time.Instant
@@ -409,17 +411,26 @@ private fun SubscriptionRow(
     usedCount: Int,
     onClick: () -> Unit,
 ) {
+  val shape = RoundedCornerShape(16.dp)
+  // The active pass is deep water, the others plain white tiles.
   Card(
       modifier =
           Modifier.fillMaxWidth()
+              .then(
+                  if (isActive) {
+                    Modifier.background(deepWaterBrush(MaterialTheme.colorScheme), shape)
+                  } else {
+                    Modifier
+                  }
+              )
               .clickable(onClick = onClick)
               .testTag(SubscriptionScreenTestTags.SUBSCRIPTION_ITEM),
-      shape = RoundedCornerShape(16.dp),
+      shape = shape,
       colors =
           if (isActive) {
             CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                containerColor = Color.Transparent,
+                contentColor = PoolPalette.OnDeep,
             )
           } else {
             CardDefaults.cardColors(
@@ -437,7 +448,7 @@ private fun SubscriptionRow(
         Icon(
             imageVector = Icons.Filled.CheckCircle,
             contentDescription = "Active",
-            tint = MaterialTheme.colorScheme.primary,
+            tint = PoolPalette.OnDeep,
             modifier = Modifier.size(28.dp).testTag(SubscriptionScreenTestTags.ACTIVE_BADGE),
         )
       } else {
@@ -458,7 +469,7 @@ private fun SubscriptionRow(
             text = "Added ${addedDateFormatter().format(subscription.addedAt)}",
             style = MaterialTheme.typography.bodySmall,
             color =
-                if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
+                if (isActive) PoolPalette.OnDeepVariant
                 else MaterialTheme.colorScheme.onSurfaceVariant,
         )
         rowDetailLine(subscription, usedCount)?.let { label ->
