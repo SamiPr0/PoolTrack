@@ -57,18 +57,17 @@ fun Caustics(modifier: Modifier) {
 }
 
 /**
- * A surface of deep water, with [Caustics] moving on it when [caustics] is true. Its content is
- * drawn in [PoolPalette.OnDeep] by default.
+ * A surface of deep water with [Caustics] moving on it. Its content is drawn in
+ * [PoolPalette.OnDeep] by default.
  */
 @Composable
 fun DeepWater(
     modifier: Modifier = Modifier,
     shape: Shape = RectangleShape,
-    caustics: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
 ) {
   Box(modifier.clip(shape).deepWater(MaterialTheme.colorScheme, shape)) {
-    if (caustics) Caustics(Modifier.matchParentSize())
+    Caustics(Modifier.matchParentSize())
     CompositionLocalProvider(LocalContentColor provides PoolPalette.OnDeep) { content() }
   }
 }

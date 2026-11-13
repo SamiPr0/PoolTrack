@@ -35,6 +35,6 @@ fun SectionHeader(title: String, modifier: Modifier = Modifier, detail: String? 
           color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
     }
-    LaneRope(modifier = Modifier.weight(1f), animated = true)
+    LaneRope(modifier = Modifier.weight(1f))
   }
 }

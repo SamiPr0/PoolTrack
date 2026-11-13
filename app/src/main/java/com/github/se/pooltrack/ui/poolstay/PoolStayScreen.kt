@@ -314,7 +314,7 @@ private fun LengthCounter(
         Icon(Icons.Filled.Add, contentDescription = "One more length")
       }
     }
-    LaneRope(modifier = Modifier, animated = true)
+    LaneRope(modifier = Modifier)
   }
 }
 

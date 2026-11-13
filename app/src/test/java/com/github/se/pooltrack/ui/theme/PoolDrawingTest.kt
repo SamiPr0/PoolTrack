@@ -68,9 +68,7 @@ class PoolDrawingTest {
         Box(Modifier.size(300.dp, 900.dp).poolWaves(MaterialTheme.colorScheme).testTag("all")) {
           Column {
             DeepWater(Modifier.size(200.dp, 80.dp)) {}
-            DeepWater(Modifier.size(200.dp, 40.dp), caustics = false) {}
-            LaneRope(Modifier, animated = true)
-            LaneRope(Modifier, animated = false)
+            LaneRope(Modifier)
             WaterFill(0.6f, PoolPalette.Water, Modifier.size(200.dp, 60.dp))
             WaterFill(2f, PoolPalette.WaterUrgent, Modifier.size(200.dp, 60.dp))
             Box(Modifier.size(150.dp, 50.dp)) { RippleRings(Modifier.fillMaxSize()) }
@@ -103,7 +101,7 @@ class PoolDrawingTest {
         val size = if (second) Modifier.size(120.dp, 60.dp) else Modifier.size(100.dp, 50.dp)
         Column(Modifier.testTag("redraw")) {
           Caustics(size)
-          LaneRope(size, animated = second)
+          LaneRope(size)
           DepthTags(size)
           WaterFill(
               if (second) 0.2f else 0.8f,

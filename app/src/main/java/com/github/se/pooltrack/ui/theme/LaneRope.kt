@@ -62,12 +62,12 @@ fun laneFloatCount(width: Float, floatLength: Float, gap: Float): Int =
 
 /**
  * A lane rope across the screen: capsule-shaped floats threaded on a thin rope, centred so both
- * ends match. When [animated], each float bobs a little after its neighbour, so a gentle wave runs
- * along the rope.
+ * ends match. Each float bobs a little after its neighbour, so a gentle wave runs along the rope.
+ * It holds still when the system's animations are turned off.
  */
 @Composable
-fun LaneRope(modifier: Modifier, animated: Boolean) {
-  val phase = loopingFraction(2_800, animated && rememberAnimationsEnabled(), "laneRope")
+fun LaneRope(modifier: Modifier) {
+  val phase = loopingFraction(2_800, rememberAnimationsEnabled(), "laneRope")
   Canvas(modifier.fillMaxWidth().height(14.dp)) {
     val middle = size.height / 2
     drawLine(PoolPalette.Rope, Offset(0f, middle), Offset(size.width, middle), 1.dp.toPx())
