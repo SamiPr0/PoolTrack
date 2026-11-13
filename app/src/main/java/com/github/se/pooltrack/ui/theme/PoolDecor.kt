@@ -11,6 +11,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.LocalContentColor
@@ -24,7 +25,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -209,3 +212,36 @@ fun laneFloatColors(kind: LaneFloat): Pair<Color, Color> =
 
 private const val LANE_END_FLOATS = 3
 private const val LANE_FLOATS = 22
+
+/**
+ * A lane rope across the screen: a row of floats on a thin rope. When [animated], each float bobs a
+ * little after its neighbour, so a gentle wave runs along the rope.
+ */
+@Composable
+fun LaneRope(modifier: Modifier, animated: Boolean) {
+  val floatCount = LANE_FLOATS
+  val phase = loopingFraction(2_800, animated && rememberAnimationsEnabled(), "laneRope")
+  Canvas(modifier.fillMaxWidth().height(14.dp)) {
+    val middle = size.height / 2
+    drawLine(PoolPalette.Rope, Offset(0f, middle), Offset(size.width, middle), 1.dp.toPx())
+    val floatWidth = 9.dp.toPx()
+    val floatHeight = 10.dp.toPx()
+    val step = (size.width - floatWidth) / (floatCount - 1)
+    val amplitude = 1.5.dp.toPx()
+    repeat(floatCount) { index ->
+      val (lit, shade) = laneFloatColors(laneFloatAt(index, floatCount))
+      val bob = -amplitude * sin((phase.value + index * 0.04f) * TWO_PI)
+      val topLeft = Offset(index * step, middle - floatHeight / 2 + bob)
+      drawRoundRect(
+          Brush.radialGradient(
+              listOf(lit, shade),
+              center = topLeft + Offset(floatWidth * 0.35f, floatHeight * 0.3f),
+              radius = floatWidth,
+          ),
+          topLeft = topLeft,
+          size = Size(floatWidth, floatHeight),
+          cornerRadius = CornerRadius(floatWidth / 2),
+      )
+    }
+  }
+}
