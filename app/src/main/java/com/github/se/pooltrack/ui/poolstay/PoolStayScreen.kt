@@ -6,36 +6,54 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.swim.MAX_SWIM_DISTANCE_METERS
+import com.github.se.pooltrack.model.swim.POOL_LENGTHS_METERS
+import com.github.se.pooltrack.model.swim.changePoolLength
+import com.github.se.pooltrack.model.swim.metersToLengths
+import com.github.se.pooltrack.model.swim.parseSwimDistance
+import com.github.se.pooltrack.model.swim.stepLengths
 import com.github.se.pooltrack.ui.theme.Bubbles
 import com.github.se.pooltrack.ui.theme.DeepWater
 import com.github.se.pooltrack.ui.theme.LaneMarker
@@ -55,6 +73,12 @@ object PoolStayScreenTestTags {
   const val LOG_TITLE = "PoolStayScreenLogTitle"
   const val DISTANCE_INPUT = "PoolStayScreenDistanceInput"
   const val SAVE_BUTTON = "PoolStayScreenSaveButton"
+  const val LENGTHS_COUNT = "PoolStayScreenLengthsCount"
+  const val LENGTHS_PLUS = "PoolStayScreenLengthsPlus"
+  const val LENGTHS_MINUS = "PoolStayScreenLengthsMinus"
+
+  /** The chip that picks a pool [meters] long. */
+  fun poolLength(meters: Int) = "PoolStayScreenPoolLength_$meters"
 }
 
 /**
@@ -97,9 +121,13 @@ fun PoolStayContent(
                 .padding(vertical = 56.dp)
                 .alpha(0.35f)
     )
+    // Centred, yet scrollable so the keyboard never hides the Save button on a small phone.
     Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
-        verticalArrangement = Arrangement.Center,
+        modifier =
+            Modifier.align(Alignment.Center)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
       when (state) {
@@ -166,7 +194,6 @@ private fun LogContent(
 ) {
   // The user has to log a distance to get back to the app, so there is no way out with Back.
   BackHandler(enabled = true) {}
-  LaneRope(modifier = Modifier.padding(bottom = 24.dp), animated = true)
   Card(
       modifier = Modifier.fillMaxWidth(),
       shape = MaterialTheme.shapes.large,
@@ -181,6 +208,11 @@ private fun LogContent(
           style = MaterialTheme.typography.headlineSmall,
           textAlign = TextAlign.Center,
           modifier = Modifier.testTag(PoolStayScreenTestTags.LOG_TITLE),
+      )
+      LengthCounter(
+          distanceInput = distanceInput,
+          onDistanceChanged = onDistanceChanged,
+          modifier = Modifier.padding(top = 16.dp),
       )
       OutlinedTextField(
           value = distanceInput,
@@ -208,6 +240,79 @@ private fun LogContent(
         Text("Save")
       }
     }
+  }
+}
+
+/**
+ * Counts the swim in lengths of a 25 m or 50 m pool, the way swimmers count it, between two lane
+ * ropes, and writes the matching metres into the distance field. That field stays the one source of
+ * truth, so the user can still type the metres instead; a distance that is not a whole number of
+ * lengths shows a dash.
+ */
+@Composable
+private fun LengthCounter(
+    distanceInput: String,
+    onDistanceChanged: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+  var poolLength by rememberSaveable { mutableIntStateOf(POOL_LENGTHS_METERS.first()) }
+  val meters = parseSwimDistance(distanceInput)
+  val lengths = metersToLengths(meters, poolLength)
+  val write = { newMeters: Int? ->
+    onDistanceChanged(if (newMeters == null || newMeters <= 0) "" else newMeters.toString())
+  }
+  Column(modifier = modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      POOL_LENGTHS_METERS.forEach { length ->
+        FilterChip(
+            selected = poolLength == length,
+            onClick = {
+              write(changePoolLength(meters, fromPoolLength = poolLength, toPoolLength = length))
+              poolLength = length
+            },
+            label = { Text("$length m pool") },
+            modifier = Modifier.testTag(PoolStayScreenTestTags.poolLength(length)),
+        )
+      }
+    }
+    LaneRope(modifier = Modifier.padding(top = 16.dp), animated = false)
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+      OutlinedIconButton(
+          onClick = { write(stepLengths(meters, poolLength, -1)) },
+          modifier = Modifier.size(52.dp).testTag(PoolStayScreenTestTags.LENGTHS_MINUS),
+      ) {
+        // The core icon set has no minus sign.
+        Text(
+            text = "−",
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.semantics { contentDescription = "One length less" },
+        )
+      }
+      Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = lengths?.toString() ?: if (meters == null) "0" else "–",
+            style = MaterialTheme.typography.displayMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.testTag(PoolStayScreenTestTags.LENGTHS_COUNT),
+        )
+        Text(
+            text = "lengths",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+      }
+      FilledIconButton(
+          onClick = { write(stepLengths(meters, poolLength, 1)) },
+          modifier = Modifier.size(52.dp).testTag(PoolStayScreenTestTags.LENGTHS_PLUS),
+      ) {
+        Icon(Icons.Filled.Add, contentDescription = "One more length")
+      }
+    }
+    LaneRope(modifier = Modifier, animated = false)
   }
 }
 
