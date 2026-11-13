@@ -39,7 +39,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
@@ -70,6 +69,8 @@ import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import com.github.se.pooltrack.ui.subscription.formatCooldown
 import com.github.se.pooltrack.ui.subscription.rememberRemainingCooldown
+import com.github.se.pooltrack.ui.theme.PoolPalette
+import com.github.se.pooltrack.ui.theme.deepWaterBrush
 import com.github.se.pooltrack.ui.theme.poolTiles
 import java.time.LocalDate
 import java.time.Period
@@ -140,6 +141,7 @@ fun HomeScreen(
         // Stays clickable even while "locked" (rather than enabled = false) so tapping it can
         // explain why, instead of silently doing nothing.
         val cooldown = remainingCooldown
+        val fabShape = MaterialTheme.shapes.large
         FloatingActionButton(
             onClick = {
               if (cooldown != null) {
@@ -152,13 +154,21 @@ fun HomeScreen(
                 navigationActions?.navigateTo(Screen.SubscriptionQuickView)
               }
             },
+            shape = fabShape,
             containerColor =
                 if (cooldown != null) MaterialTheme.colorScheme.surfaceVariant
-                else FloatingActionButtonDefaults.containerColor,
+                else Color.Transparent,
             contentColor =
                 if (cooldown != null) MaterialTheme.colorScheme.onSurfaceVariant
-                else contentColorFor(FloatingActionButtonDefaults.containerColor),
-            modifier = Modifier.testTag(HomeScreenTestTags.OPEN_SUBSCRIPTION_FAB),
+                else PoolPalette.OnDeep,
+            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+            modifier =
+                Modifier.then(
+                        if (cooldown != null) Modifier
+                        else
+                            Modifier.background(deepWaterBrush(MaterialTheme.colorScheme), fabShape)
+                    )
+                    .testTag(HomeScreenTestTags.OPEN_SUBSCRIPTION_FAB),
         ) {
           Icon(QrCodeIcon, contentDescription = "Open subscription")
         }
