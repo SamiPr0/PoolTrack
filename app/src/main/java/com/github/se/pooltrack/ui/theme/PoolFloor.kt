@@ -103,6 +103,22 @@ fun DepthGauge(modifier: Modifier) {
   }
 }
 
+/**
+ * The lane lines painted on a pool floor, seen from above through the water: two stripes across the
+ * element in [color], each ending in the "T" that warns swimmers the wall is coming.
+ */
+fun Modifier.laneLines(color: Color): Modifier = drawBehind {
+  val stripe = 5.dp.toPx()
+  val margin = 28.dp.toPx()
+  val bar = 22.dp.toPx()
+  for (lane in 1..2) {
+    val y = size.height * lane / 3
+    drawRect(color, Offset(margin, y - stripe / 2), Size(size.width - margin * 2, stripe))
+    drawRect(color, Offset(margin - stripe, y - bar / 2), Size(stripe, bar))
+    drawRect(color, Offset(size.width - margin, y - bar / 2), Size(stripe, bar))
+  }
+}
+
 /** The near-black of the lane line, like the dark tiles on a pool floor. */
 private val LANE_MARKER_COLOR = Color(0xFF04293A)
 

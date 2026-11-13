@@ -76,6 +76,8 @@ class PoolDrawingTest {
             Box(Modifier.size(150.dp, 50.dp)) { RippleRings(Modifier.fillMaxSize()) }
             Bubbles(Modifier.size(200.dp, 120.dp))
             LaneMarker(Modifier.size(60.dp, 120.dp))
+            DiveRipples(Modifier.size(200.dp, 120.dp))
+            Box(Modifier.size(200.dp, 80.dp).laneLines(Color.White)) {}
             DepthGauge(Modifier.width(14.dp).height(200.dp))
           }
         }
@@ -112,6 +114,7 @@ class PoolDrawingTest {
           RippleRings(size)
           Bubbles(size)
           LaneMarker(size)
+          DiveRipples(size)
         }
       }
     }

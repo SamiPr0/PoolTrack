@@ -101,6 +101,26 @@ fun WaterFill(level: Float, colors: List<Color>, modifier: Modifier) {
   }
 }
 
+/** Rings spreading slowly from the middle of the element, as after a dive, fading as they grow. */
+@Composable
+fun DiveRipples(modifier: Modifier) {
+  val phase = loopingFraction(6_000, rememberAnimationsEnabled(), "diveRipples")
+  Canvas(modifier) {
+    val largest = size.minDimension * 0.8f
+    repeat(DIVE_RIPPLES) { ring ->
+      val progress = (phase.value + ring.toFloat() / DIVE_RIPPLES) % 1f
+      drawCircle(
+          color = PoolPalette.OnDeep.copy(alpha = 0.18f * (1f - progress)),
+          radius = largest * (0.2f + 0.8f * progress),
+          style = Stroke(width = 1.5.dp.toPx()),
+      )
+    }
+  }
+}
+
+/** How many rings [DiveRipples] shows at once. */
+private const val DIVE_RIPPLES = 3
+
 /** The horizontal step, in pixels, between two points of a wave's outline. */
 private const val WAVE_STEP_PX = 4f
 

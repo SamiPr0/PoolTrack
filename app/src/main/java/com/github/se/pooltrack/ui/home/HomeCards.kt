@@ -33,14 +33,18 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.github.se.pooltrack.model.subscription.Subscription
 import com.github.se.pooltrack.model.subscription.daysUntilExpiration
 import com.github.se.pooltrack.model.subscription.expiresAt
 import com.github.se.pooltrack.model.subscription.isExpired
 import com.github.se.pooltrack.ui.theme.DeepWater
+import com.github.se.pooltrack.ui.theme.DiveRipples
+import com.github.se.pooltrack.ui.theme.LaneRope
 import com.github.se.pooltrack.ui.theme.PoolPalette
 import com.github.se.pooltrack.ui.theme.WaterFill
 import com.github.se.pooltrack.ui.theme.isDarkScheme
+import com.github.se.pooltrack.ui.theme.laneLines
 import com.github.se.pooltrack.ui.theme.poolTileColors
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -51,15 +55,29 @@ import java.util.Locale
 
 // The cards and tiles of Home, laid out by HomeScreen.
 
-/** How long since the last swim, in big type on deep water. */
+/** How long since the last swim, in big type on deep water over a lane seen from above. */
 @Composable
 internal fun LastSwimHero(daysSinceLastSwim: Long?, modifier: Modifier = Modifier) {
   DeepWater(modifier = modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 22.dp)) {
+    DiveRipples(Modifier.matchParentSize())
+    Column(
+        modifier =
+            Modifier.fillMaxWidth()
+                .laneLines(PoolPalette.OnDeep.copy(alpha = 0.08f))
+                .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+      Text(
+          text = "LAST SWIM",
+          style = MaterialTheme.typography.labelMedium,
+          letterSpacing = 2.sp,
+          color = PoolPalette.OnDeepVariant,
+      )
       Text(
           text = lastSwimValueLabel(daysSinceLastSwim),
           style = MaterialTheme.typography.displaySmall,
           fontWeight = FontWeight.Bold,
+          modifier = Modifier.padding(top = 4.dp),
       )
       Text(
           text = "since your last swim",
@@ -67,6 +85,7 @@ internal fun LastSwimHero(daysSinceLastSwim: Long?, modifier: Modifier = Modifie
           color = PoolPalette.OnDeepVariant,
           modifier = Modifier.padding(top = 4.dp),
       )
+      LaneRope(modifier = Modifier.padding(top = 18.dp), animated = true)
     }
   }
 }
