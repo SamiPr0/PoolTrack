@@ -1,5 +1,6 @@
 package com.github.se.pooltrack.ui.history
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -44,6 +46,8 @@ import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
+import com.github.se.pooltrack.ui.theme.PoolPalette
+import com.github.se.pooltrack.ui.theme.deepWaterBrush
 import com.github.se.pooltrack.ui.theme.poolTiles
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -138,12 +142,19 @@ fun HistoryScreen(
       topBar = { TopNavigationMenu(Screen.History) },
       snackbarHost = { SnackbarHost(snackbarHostState) },
       floatingActionButton = {
+        val fabShape = MaterialTheme.shapes.large
         ExtendedFloatingActionButton(
             onClick = { showAddSheet = true },
             icon = { Icon(Icons.Filled.Add, contentDescription = null) },
             text = { Text("Add past entry") },
             expanded = listState.firstVisibleItemIndex == 0,
-            modifier = Modifier.testTag(HistoryScreenTestTags.ADD_PAST_ENTRY_BUTTON),
+            shape = fabShape,
+            containerColor = Color.Transparent,
+            contentColor = PoolPalette.OnDeep,
+            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+            modifier =
+                Modifier.background(deepWaterBrush(MaterialTheme.colorScheme), fabShape)
+                    .testTag(HistoryScreenTestTags.ADD_PAST_ENTRY_BUTTON),
         )
       },
       bottomBar = {
