@@ -69,6 +69,7 @@ import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import com.github.se.pooltrack.ui.subscription.formatCooldown
 import com.github.se.pooltrack.ui.subscription.rememberRemainingCooldown
+import com.github.se.pooltrack.ui.theme.DeepWater
 import com.github.se.pooltrack.ui.theme.PoolPalette
 import com.github.se.pooltrack.ui.theme.deepWaterBrush
 import com.github.se.pooltrack.ui.theme.poolTiles
@@ -307,27 +308,17 @@ fun HomeScreen(
 
 @Composable
 private fun LastSwimHero(daysSinceLastSwim: Long?, modifier: Modifier = Modifier) {
-  Card(
-      modifier = modifier.fillMaxWidth(),
-      colors =
-          CardDefaults.cardColors(
-              containerColor = MaterialTheme.colorScheme.primaryContainer,
-              contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-          ),
-  ) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
+  DeepWater(modifier = modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 22.dp)) {
       Text(
           text = lastSwimValueLabel(daysSinceLastSwim),
           style = MaterialTheme.typography.displaySmall,
           fontWeight = FontWeight.Bold,
-          textAlign = TextAlign.Center,
       )
       Text(
           text = "since your last swim",
           style = MaterialTheme.typography.bodyMedium,
+          color = PoolPalette.OnDeepVariant,
           modifier = Modifier.padding(top = 4.dp),
       )
     }
