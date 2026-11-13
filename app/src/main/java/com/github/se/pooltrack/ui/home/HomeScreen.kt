@@ -42,12 +42,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,6 +70,7 @@ import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import com.github.se.pooltrack.ui.subscription.formatCooldown
 import com.github.se.pooltrack.ui.subscription.rememberRemainingCooldown
+import com.github.se.pooltrack.ui.theme.poolTiles
 import java.time.LocalDate
 import java.time.Period
 import java.time.ZoneId
@@ -116,6 +115,8 @@ fun HomeScreen(
   val coroutineScope = rememberCoroutineScope()
 
   Scaffold(
+      modifier = Modifier.poolTiles(MaterialTheme.colorScheme),
+      containerColor = Color.Transparent,
       topBar = {
         TopNavigationMenu(
             Screen.Home,
