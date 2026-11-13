@@ -12,6 +12,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 
@@ -46,11 +47,11 @@ fun TopNavigationMenu(
         }
       },
       actions = actions,
-      // Same color as the screen, so the bar reads as the top of the page rather than a band.
+      // See-through, so the bar reads as the top of the page (and of its tiles) rather than a band.
       colors =
           TopAppBarDefaults.topAppBarColors(
-              containerColor = MaterialTheme.colorScheme.background,
-              scrolledContainerColor = MaterialTheme.colorScheme.background,
+              containerColor = Color.Transparent,
+              scrolledContainerColor = Color.Transparent,
           ),
   )
 }
