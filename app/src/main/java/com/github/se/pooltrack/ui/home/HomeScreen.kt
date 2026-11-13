@@ -14,8 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.DateRange
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -245,35 +243,14 @@ private fun HomeContent(
     WeeklyChartCard(
         counts = stats.weeklyCounts,
         weekStarts = stats.weekStarts,
+        bestWeekEntries = stats.bestWeekEntries,
+        favoriteDay = stats.favoriteDayOfWeek,
         modifier = Modifier.testTag(HomeScreenTestTags.WEEKLY_CHART),
     )
-    StatTile(
-        label = "Best week",
-        icon = Icons.Filled.Star,
-        value = if (stats.bestWeekEntries == 0) "-" else "${stats.bestWeekEntries}",
-        accentColor = PoolPalette.AccentSun,
-        modifier = Modifier.testTag(HomeScreenTestTags.BEST_WEEK_STAT),
-    )
     SectionHeader("SPENDING", Modifier.testTag(HomeScreenTestTags.SPENDING_SECTION))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-      StatTile(
-          label = "Total spent",
-          icon = Icons.Outlined.ShoppingCart,
-          value = amountLabel(totalSpent),
-          accentColor = PoolPalette.AccentTeal,
-          modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.TOTAL_SPENT_STAT),
-      )
-      StatTile(
-          label = "Cost / entry",
-          icon = Icons.Outlined.Info,
-          value = amountLabel(costPerEntry(totalSpent, stats.totalEntries)),
-          accentColor = PoolPalette.AccentDeep,
-          modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.COST_PER_ENTRY_STAT),
-      )
-    }
-
-    stats.favoriteDayOfWeek?.let { day ->
-      FavoriteDayCard(day, Modifier.testTag(HomeScreenTestTags.FAVORITE_DAY_BANNER))
-    }
+    SpendingCard(
+        totalSpent = amountLabel(totalSpent),
+        costPerEntry = amountLabel(costPerEntry(totalSpent, stats.totalEntries)),
+    )
   }
 }

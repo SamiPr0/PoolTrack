@@ -4,9 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -14,12 +16,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddCircle
-import androidx.compose.material.icons.outlined.Favorite
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,7 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -36,8 +40,6 @@ import com.github.se.pooltrack.ui.theme.DeepWater
 import com.github.se.pooltrack.ui.theme.DiveRipples
 import com.github.se.pooltrack.ui.theme.PoolPalette
 import com.github.se.pooltrack.ui.theme.PoolTile
-import java.time.DayOfWeek
-import java.time.format.TextStyle
 import java.util.Locale
 
 // The cards and tiles of Home, laid out by HomeScreen.
@@ -200,25 +202,54 @@ internal fun IconBadge(
   }
 }
 
-/** The weekday the user swims on most, e.g. "You usually swim on Tuesday". */
+/** What the swims cost: [totalSpent] and the [costPerEntry], side by side on one tile. */
 @Composable
-internal fun FavoriteDayCard(day: DayOfWeek, modifier: Modifier = Modifier) {
-  val dayName = day.getDisplayName(TextStyle.FULL, LocalLocale.current.platformLocale)
+internal fun SpendingCard(totalSpent: String, costPerEntry: String, modifier: Modifier = Modifier) {
   PoolTile(modifier = modifier.fillMaxWidth()) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(12.dp),
+        modifier = Modifier.height(IntrinsicSize.Min),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-      IconBadge(
-          icon = Icons.Outlined.Favorite,
-          containerColor = MaterialTheme.colorScheme.primary,
-          contentColor = MaterialTheme.colorScheme.onPrimary,
+      SpendingHalf(
+          label = "Total spent",
+          value = totalSpent,
+          icon = Icons.Outlined.ShoppingCart,
+          modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.TOTAL_SPENT_STAT),
       )
-      Text(
-          text = "You usually swim on $dayName",
-          style = MaterialTheme.typography.bodyMedium,
-          modifier = Modifier.padding(start = 12.dp),
+      VerticalDivider(
+          modifier = Modifier.padding(vertical = 12.dp),
+          color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+      )
+      SpendingHalf(
+          label = "Cost / entry",
+          value = costPerEntry,
+          icon = Icons.Outlined.Info,
+          modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.COST_PER_ENTRY_STAT),
       )
     }
+  }
+}
+
+/** One amount of [SpendingCard]: a small [icon], the [value] and its [label]. */
+@Composable
+private fun SpendingHalf(label: String, value: String, icon: ImageVector, modifier: Modifier) {
+  Column(modifier = modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+    Icon(
+        imageVector = icon,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.size(18.dp),
+    )
+    Text(
+        text = value,
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(top = 4.dp),
+    )
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
   }
 }
