@@ -4,6 +4,7 @@ import android.content.ContentResolver
 import android.provider.Settings
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -29,6 +30,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -66,6 +68,9 @@ object PoolPalette {
 
   /** The water filling a card, from its surface to its bottom. */
   val Water = listOf(Color(0xFFBDE7F7), Color(0xFF8FD2EC))
+
+  /** The water of a pass that is about to run out. */
+  val WaterUrgent = listOf(Color(0xFFFFD9D3), Color(0xFFF7B4AA))
 
   /** The rope the lane floats are threaded on. */
   val Rope = Color(0xFF6E95A5)
@@ -298,4 +303,34 @@ fun DepthGauge(modifier: Modifier) {
     }
   }
 }
+
+/**
+ * Water filling its container up to [level] (0 to 1), with a slow wave on its surface. The level
+ * itself animates when it changes.
+ */
+@Composable
+fun WaterFill(level: Float, colors: List<Color>, modifier: Modifier) {
+  val phase = loopingFraction(7_000, rememberAnimationsEnabled(), "waterFill")
+  val animatedLevel by animateFloatAsState(level.coerceIn(0f, 1f), tween(900), label = "waterLevel")
+  Canvas(modifier) {
+    val surface = size.height * (1f - animatedLevel)
+    val amplitude = 3.dp.toPx()
+    val wavelength = 50.dp.toPx()
+    val path =
+        Path().apply {
+          moveTo(0f, size.height)
+          var x = 0f
+          while (x <= size.width) {
+            lineTo(x, surface + amplitude * sin((x / wavelength + phase.value) * TWO_PI))
+            x += WAVE_STEP_PX
+          }
+          lineTo(size.width, surface + amplitude * sin((size.width / wavelength) * TWO_PI))
+          lineTo(size.width, size.height)
+          close()
+        }
+    drawPath(path, Brush.verticalGradient(colors, startY = surface, endY = size.height))
+  }
+}
+
+private const val WAVE_STEP_PX = 4f
 
