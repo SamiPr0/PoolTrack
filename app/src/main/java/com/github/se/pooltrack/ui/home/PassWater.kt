@@ -2,6 +2,7 @@ package com.github.se.pooltrack.ui.home
 
 import com.github.se.pooltrack.model.subscription.Subscription
 import java.time.Instant
+import kotlin.math.roundToInt
 
 /**
  * How much of [subscription] is left, from 1 (all of it) to 0 (none), shown as the water level of
@@ -25,3 +26,5 @@ fun passWaterLevel(
   return ((max - usedEntries).toFloat() / max).coerceIn(0f, 1f)
 }
 
+/** "68%": a [passWaterLevel] as a whole percentage. */
+fun passWaterLabel(level: Float): String = "${(level * 100).roundToInt()}%"

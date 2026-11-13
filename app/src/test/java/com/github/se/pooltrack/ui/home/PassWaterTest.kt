@@ -67,4 +67,10 @@ class PassWaterTest {
     assertNull(passWaterLevel(pass(), usedEntries = 4, now = now))
   }
 
+  @Test
+  fun passWaterLabel_roundsToAWholePercentage() {
+    assertEquals("68%", passWaterLabel(0.676f))
+    assertEquals("0%", passWaterLabel(0f))
+    assertEquals("100%", passWaterLabel(1f))
+  }
 }
