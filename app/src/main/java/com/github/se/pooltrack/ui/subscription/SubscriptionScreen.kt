@@ -46,7 +46,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -60,6 +59,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
@@ -83,6 +83,10 @@ import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
+import com.github.se.pooltrack.ui.theme.PoolPalette
+import com.github.se.pooltrack.ui.theme.PoolScaffold
+import com.github.se.pooltrack.ui.theme.deepWater
+import com.github.se.pooltrack.ui.theme.poolTileColors
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
@@ -316,7 +320,7 @@ fun SubscriptionScreen(
     )
   }
 
-  Scaffold(
+  PoolScaffold(
       topBar = {
         TopNavigationMenu(
             Screen.Subscription,
@@ -407,25 +411,31 @@ private fun SubscriptionRow(
     usedCount: Int,
     onClick: () -> Unit,
 ) {
+  val shape = RoundedCornerShape(16.dp)
+  // The active pass is deep water, the others plain white tiles.
   Card(
       modifier =
           Modifier.fillMaxWidth()
+              .then(
+                  if (isActive) {
+                    Modifier.deepWater(MaterialTheme.colorScheme, shape)
+                  } else {
+                    Modifier
+                  }
+              )
               .clickable(onClick = onClick)
               .testTag(SubscriptionScreenTestTags.SUBSCRIPTION_ITEM),
-      shape = RoundedCornerShape(16.dp),
+      shape = shape,
       colors =
           if (isActive) {
             CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                containerColor = Color.Transparent,
+                contentColor = PoolPalette.OnDeep,
             )
           } else {
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-            )
+            poolTileColors()
           },
-      elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 4.dp else 2.dp),
+      elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
   ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -435,7 +445,7 @@ private fun SubscriptionRow(
         Icon(
             imageVector = Icons.Filled.CheckCircle,
             contentDescription = "Active",
-            tint = MaterialTheme.colorScheme.primary,
+            tint = PoolPalette.OnDeep,
             modifier = Modifier.size(28.dp).testTag(SubscriptionScreenTestTags.ACTIVE_BADGE),
         )
       } else {
@@ -456,7 +466,7 @@ private fun SubscriptionRow(
             text = "Added ${addedDateFormatter().format(subscription.addedAt)}",
             style = MaterialTheme.typography.bodySmall,
             color =
-                if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
+                if (isActive) PoolPalette.OnDeepVariant
                 else MaterialTheme.colorScheme.onSurfaceVariant,
         )
         rowDetailLine(subscription, usedCount)?.let { label ->
@@ -464,9 +474,12 @@ private fun SubscriptionRow(
               text = label,
               style = MaterialTheme.typography.bodySmall,
               color =
-                  if (subscription.isExpired) MaterialTheme.colorScheme.error
-                  else if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
-                  else MaterialTheme.colorScheme.onSurfaceVariant,
+                  when {
+                    subscription.isExpired && isActive -> PoolPalette.ExpiredOnDeep
+                    subscription.isExpired -> MaterialTheme.colorScheme.error
+                    isActive -> PoolPalette.OnDeepVariant
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                  },
           )
         }
       }

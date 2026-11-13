@@ -28,6 +28,7 @@ import com.github.se.pooltrack.ui.account.AccountViewModel
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.NavigationTestTags
 import com.github.se.pooltrack.ui.navigation.Screen
+import com.github.se.pooltrack.ui.theme.PoolTrackTheme
 import com.github.se.pooltrack.utils.FakeAuthRepository
 import com.github.se.pooltrack.utils.FakeEntryRepository
 import com.github.se.pooltrack.utils.FakeSubscriptionRepository
@@ -193,6 +194,19 @@ class HomeScreenTest {
   }
 
   @Test
+  fun weeklyChart_showsTheWeekOfAnOlderTappedBar() {
+    val monday = LocalDate.now(zone).with(DayOfWeek.MONDAY)
+    val olderMonday = monday.minusWeeks(RECENT_WEEKS - 1L)
+    setContent(entryRepository = FakeEntryRepository(listOf(entryAt(noonOf(olderMonday)))))
+
+    composeRule.onAllNodesWithTag(HomeScreenTestTags.WEEKLY_CHART_BAR)[0].performClick()
+
+    composeRule
+        .onNodeWithTag(HomeScreenTestTags.WEEKLY_CHART_LEGEND)
+        .assertTextEquals(weekLegend(olderMonday, 1, Locale.US))
+  }
+
+  @Test
   fun weekLegend_spansMondayToSunday_andPluralizesEntries() {
     val monday = LocalDate.of(2026, 10, 12)
 
@@ -216,7 +230,7 @@ class HomeScreenTest {
     assertTile(HomeScreenTestTags.THIS_MONTH_STAT, "0", "This month")
     assertTile(HomeScreenTestTags.TOTAL_ENTRIES_STAT, "0", "Total entries")
     assertTile(HomeScreenTestTags.AVERAGE_PER_WEEK_STAT, "-", "Avg. per week")
-    assertTile(HomeScreenTestTags.STREAK_STAT, "-", "Week streak")
+    assertTile(HomeScreenTestTags.STREAK_STAT, "0", "Week streak")
     assertTile(HomeScreenTestTags.BEST_WEEK_STAT, "-", "Best week")
     composeRule.onNodeWithTag(HomeScreenTestTags.WEEKLY_CHART).assertIsDisplayed()
     composeRule.onNodeWithText("Last 8 weeks").assertIsDisplayed()
@@ -284,7 +298,7 @@ class HomeScreenTest {
     assertTile(HomeScreenTestTags.THIS_MONTH_STAT, "2")
     assertTile(HomeScreenTestTags.TOTAL_ENTRIES_STAT, "3")
     assertTile(HomeScreenTestTags.AVERAGE_PER_WEEK_STAT, "0.5")
-    assertTile(HomeScreenTestTags.STREAK_STAT, "1 week", "Week streak")
+    assertTile(HomeScreenTestTags.STREAK_STAT, "1", "Week streak")
     assertTile(HomeScreenTestTags.BEST_WEEK_STAT, "2", "Best week")
     assertTile(HomeScreenTestTags.TOTAL_SPENT_STAT, "89.90")
     assertTile(HomeScreenTestTags.COST_PER_ENTRY_STAT, "29.97")
@@ -447,6 +461,57 @@ class HomeScreenTest {
     setContentWithActive(pass())
 
     composeRule.onNodeWithText("Your active pass has no expiration").assertIsDisplayed()
+  }
+
+  @Test
+  fun passWater_fillsTheBannerWithWhatIsLeft() {
+    val entryList = List(3) { entryAt(daysAgo(it + 1L), "a") }
+    setContentWithActive(pass(maxEntries = 10), entryList)
+
+    composeRule.onNodeWithTag(HomeScreenTestTags.PASS_WATER).assertExists()
+    composeRule.onNodeWithTag(HomeScreenTestTags.PASS_LEVEL).assertTextEquals("70%")
+    composeRule.onNodeWithTag(HomeScreenTestTags.PASS_ENTRY_CAPSULES).assertExists()
+  }
+
+  @Test
+  fun passCard_showsNoEntryCapsules_forADatedPass() {
+    setContentWithActive(pass(expiresAt = Instant.now().plus(Duration.ofDays(40))))
+
+    assertTagAbsent(HomeScreenTestTags.PASS_ENTRY_CAPSULES)
+  }
+
+  @Test
+  fun passWater_isAbsent_whenThePassHasNothingToMeasure() {
+    setContentWithActive(pass())
+
+    assertTagAbsent(HomeScreenTestTags.PASS_WATER)
+    assertTagAbsent(HomeScreenTestTags.PASS_LEVEL)
+  }
+
+  @Test
+  fun poolDecorations_areShown() {
+    setContent()
+
+    composeRule.onNodeWithTag(HomeScreenTestTags.DEPTH_TAGS).assertExists()
+    composeRule.onNodeWithTag(HomeScreenTestTags.ACTIVITY_SECTION).assertExists()
+    composeRule.onNodeWithTag(HomeScreenTestTags.SPENDING_SECTION).assertExists()
+  }
+
+  @Test
+  fun passWater_onlyTintsTheBanner_inTheDarkTheme() {
+    val viewModel =
+        HomeViewModel(FakeEntryRepository(), activeSubscriptionRepo(pass(maxEntries = 1)))
+    val owner = TestViewModelOwner(auth)
+    composeRule.setContent {
+      PoolTrackTheme(darkTheme = true) {
+        CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
+          HomeScreen(viewModel, navigationActions)
+        }
+      }
+    }
+
+    composeRule.onNodeWithTag(HomeScreenTestTags.PASS_WATER).assertExists()
+    composeRule.onNodeWithTag(HomeScreenTestTags.PASS_LEVEL).assertTextEquals("100%")
   }
 
   // endregion

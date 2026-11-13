@@ -1,5 +1,6 @@
 package com.github.se.pooltrack.ui.history
 
+import com.github.se.pooltrack.model.entry.Entry
 import com.github.se.pooltrack.ui.history.heatmap.visitsLabel
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -62,5 +63,28 @@ class HistoryListItemsTest {
     assertEquals("1 visit", visitsLabel(1))
     assertEquals("2 visits", visitsLabel(2))
     assertEquals("0 visits", visitsLabel(0))
+  }
+
+  private fun item(day: Int) =
+      HistoryRow.Item(LocalDate.of(2026, 10, day), Entry(LocalDate.of(2026, 10, day).toEpochDay()))
+
+  private fun week(day: Int) = HistoryRow.Week(LocalDate.of(2026, 10, day), 1, 0, 0)
+
+  @Test
+  fun entryEdges_roundTheFirstAndLastEntryOfEachWeek() {
+    val rows = listOf(week(5), item(7), item(6), item(5), week(28), item(30))
+
+    assertEquals(EntryEdges(first = true, last = false), entryEdges(rows, 1))
+    assertEquals(EntryEdges(first = false, last = false), entryEdges(rows, 2))
+    assertEquals(EntryEdges(first = false, last = true), entryEdges(rows, 3))
+    assertEquals(EntryEdges(first = true, last = true), entryEdges(rows, 5))
+  }
+
+  @Test
+  fun entryEdges_treatTheEndsOfTheListAsWeekEdges() {
+    val rows = listOf(item(7), item(6))
+
+    assertEquals(EntryEdges(first = true, last = false), entryEdges(rows, 0))
+    assertEquals(EntryEdges(first = false, last = true), entryEdges(rows, 1))
   }
 }

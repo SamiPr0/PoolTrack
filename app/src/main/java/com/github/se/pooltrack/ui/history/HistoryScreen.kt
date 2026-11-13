@@ -15,9 +15,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -33,6 +33,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -45,6 +46,9 @@ import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
+import com.github.se.pooltrack.ui.theme.PoolPalette
+import com.github.se.pooltrack.ui.theme.PoolScaffold
+import com.github.se.pooltrack.ui.theme.deepWater
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -132,16 +136,23 @@ fun HistoryScreen(
     )
   }
 
-  Scaffold(
+  PoolScaffold(
       topBar = { TopNavigationMenu(Screen.History) },
       snackbarHost = { SnackbarHost(snackbarHostState) },
       floatingActionButton = {
+        val fabShape = MaterialTheme.shapes.large
         ExtendedFloatingActionButton(
             onClick = { showAddSheet = true },
             icon = { Icon(Icons.Filled.Add, contentDescription = null) },
             text = { Text("Add past entry") },
             expanded = listState.firstVisibleItemIndex == 0,
-            modifier = Modifier.testTag(HistoryScreenTestTags.ADD_PAST_ENTRY_BUTTON),
+            shape = fabShape,
+            containerColor = Color.Transparent,
+            contentColor = PoolPalette.OnDeep,
+            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+            modifier =
+                Modifier.deepWater(MaterialTheme.colorScheme, fabShape)
+                    .testTag(HistoryScreenTestTags.ADD_PAST_ENTRY_BUTTON),
         )
       },
       bottomBar = {
@@ -248,7 +259,7 @@ fun HistoryScreen(
             )
           }
         }
-        rows.forEach { row ->
+        rows.forEachIndexed { index, row ->
           when (row) {
             is HistoryRow.Week ->
                 stickyHeader(key = row.key) {
@@ -270,6 +281,7 @@ fun HistoryScreen(
                               entryTimeFormatter().format(row.entry.timestamp),
                           ),
                       highlighted = row.day == highlightedDate,
+                      edges = entryEdges(rows, index),
                       onClick = {
                         navigationActions?.navigateToEntryDetails(row.entry.timestampEpochMilli)
                       },

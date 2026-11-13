@@ -19,7 +19,7 @@ class HomeStatsFlowTest : EndToEndTest() {
 
     assertShows(HomeScreenTestTags.LAST_SWIM_HERO, "No entries yet")
     assertShows(HomeScreenTestTags.AVERAGE_PER_WEEK_STAT, "-")
-    assertShows(HomeScreenTestTags.STREAK_STAT, "-")
+    assertShows(HomeScreenTestTags.STREAK_STAT, "0")
     assertShows(HomeScreenTestTags.BEST_WEEK_STAT, "-")
     assertShows(HomeScreenTestTags.TOTAL_SPENT_STAT, "-")
     assertShows(HomeScreenTestTags.COST_PER_ENTRY_STAT, "-")
@@ -37,7 +37,7 @@ class HomeStatsFlowTest : EndToEndTest() {
 
     assertShows(HomeScreenTestTags.LAST_SWIM_HERO, "Today")
     assertShows(HomeScreenTestTags.TOTAL_ENTRIES_STAT, "4")
-    assertShows(HomeScreenTestTags.STREAK_STAT, "4 weeks")
+    assertShows(HomeScreenTestTags.STREAK_STAT, "4")
     assertShows(HomeScreenTestTags.BEST_WEEK_STAT, "1")
     assertShows(HomeScreenTestTags.AVERAGE_PER_WEEK_STAT, "1.0")
     assertShows(HomeScreenTestTags.TOTAL_SPENT_STAT, "100.00")

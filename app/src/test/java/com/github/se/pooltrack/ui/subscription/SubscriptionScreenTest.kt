@@ -48,6 +48,7 @@ import java.time.Period
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.util.Collections
 import java.util.Locale
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -67,7 +68,8 @@ class SubscriptionScreenTest {
 
   private lateinit var previousLocale: Locale
 
-  private val renderedUris = mutableListOf<String>()
+  // Thumbnails render on Dispatchers.IO, so the stub below can be called from two threads at once.
+  private val renderedUris: MutableList<String> = Collections.synchronizedList(mutableListOf())
   private var renderedBitmap: Bitmap? = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)
 
   private lateinit var pdfUri: Uri
@@ -270,6 +272,18 @@ class SubscriptionScreenTest {
     val expiresAt = Instant.now().minus(Duration.ofDays(3)).toEpochMilli()
     setScreen(FakeSubscriptionRepository(listOf(newer.copy(expiresAtEpochMilli = expiresAt))))
 
+    composeRule.onNodeWithText("Expired ${formatted(expiresAt)}").assertIsDisplayed()
+  }
+
+  @Test
+  fun subscriptionScreen_activeRowShowsExpired_onDeepWater() {
+    val expiresAt = Instant.now().minus(Duration.ofDays(3)).toEpochMilli()
+    val expired = newer.copy(expiresAtEpochMilli = expiresAt)
+    setScreen(FakeSubscriptionRepository(listOf(expired), expired.id))
+
+    composeRule
+        .onNodeWithTag(SubscriptionScreenTestTags.ACTIVE_BADGE, useUnmergedTree = true)
+        .assertIsDisplayed()
     composeRule.onNodeWithText("Expired ${formatted(expiresAt)}").assertIsDisplayed()
   }
 

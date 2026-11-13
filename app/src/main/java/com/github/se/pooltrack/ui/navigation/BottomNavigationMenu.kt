@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.github.se.pooltrack.ui.theme.poolTileColor
 
 /** One of the app's top-level, always-reachable destinations. */
 sealed class Tab(
@@ -59,7 +60,7 @@ fun BottomNavigationMenu(
     // A hairline instead of a shadow between the page and the bar.
     HorizontalDivider(thickness = 1.dp, color = scheme.outlineVariant.copy(alpha = 0.5f))
     NavigationBar(
-        containerColor = scheme.surfaceContainerLow,
+        containerColor = poolTileColor(scheme),
         tonalElevation = 0.dp,
         modifier = Modifier.fillMaxWidth().testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU),
     ) {
@@ -70,10 +71,11 @@ fun BottomNavigationMenu(
             selected = tab == selectedTab,
             onClick = { onTabSelected(tab) },
             colors =
+                // A pale pill of shallow water behind the selected tab.
                 NavigationBarItemDefaults.colors(
-                    selectedIconColor = scheme.onPrimary,
+                    selectedIconColor = scheme.primary,
                     selectedTextColor = scheme.primary,
-                    indicatorColor = scheme.primary,
+                    indicatorColor = scheme.primaryContainer,
                 ),
             modifier = Modifier.testTag(tab.testTag),
         )
