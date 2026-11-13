@@ -1,11 +1,16 @@
 package com.github.se.pooltrack.ui.theme
 
 import android.provider.Settings
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -60,5 +65,21 @@ class PoolDecorTest {
     assertEquals(PoolPalette.DeepDark, dark)
     assertFalse(lightIsDark)
     assertTrue(darkIsDark)
+  }
+
+  @Test
+  fun deepWater_drawsItsContentInTheOnDeepColor() {
+    var contentColor = Color.Unspecified
+    composeRule.setContent {
+      PoolTrackTheme(darkTheme = false) {
+        DeepWater(shape = RoundedCornerShape(20.dp)) {
+          contentColor = LocalContentColor.current
+          Text("Deep")
+        }
+      }
+    }
+
+    composeRule.onNodeWithText("Deep").assertExists()
+    assertEquals(PoolPalette.OnDeep, contentColor)
   }
 }

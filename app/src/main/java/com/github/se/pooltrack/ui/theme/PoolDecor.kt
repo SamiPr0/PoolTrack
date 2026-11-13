@@ -9,18 +9,26 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -147,5 +155,22 @@ fun Caustics(modifier: Modifier) {
           center = center,
       )
     }
+  }
+}
+
+/**
+ * A surface of deep water, with [Caustics] moving on it when [caustics] is true. Its content is
+ * drawn in [PoolPalette.OnDeep] by default.
+ */
+@Composable
+fun DeepWater(
+    modifier: Modifier = Modifier,
+    shape: Shape = RectangleShape,
+    caustics: Boolean = true,
+    content: @Composable BoxScope.() -> Unit,
+) {
+  Box(modifier.clip(shape).background(deepWaterBrush(MaterialTheme.colorScheme), shape)) {
+    if (caustics) Caustics(Modifier.matchParentSize())
+    CompositionLocalProvider(LocalContentColor provides PoolPalette.OnDeep) { content() }
   }
 }
