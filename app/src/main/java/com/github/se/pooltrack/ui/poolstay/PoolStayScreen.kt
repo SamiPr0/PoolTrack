@@ -1,7 +1,9 @@
 package com.github.se.pooltrack.ui.poolstay
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -23,6 +26,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -32,8 +36,13 @@ import com.github.se.pooltrack.model.swim.MAX_SWIM_DISTANCE_METERS
 import com.github.se.pooltrack.ui.theme.Bubbles
 import com.github.se.pooltrack.ui.theme.DeepWater
 import com.github.se.pooltrack.ui.theme.LaneMarker
+import com.github.se.pooltrack.ui.theme.PoolPalette
+import com.github.se.pooltrack.ui.theme.loopingFraction
+import com.github.se.pooltrack.ui.theme.rememberAnimationsEnabled
 import java.time.Duration
 import java.util.Locale
+import kotlin.math.PI
+import kotlin.math.sin
 
 object PoolStayScreenTestTags {
   const val ENJOY_MESSAGE = "PoolStayScreenEnjoyMessage"
@@ -102,12 +111,22 @@ fun PoolStayContent(
 
 @Composable
 private fun CancelWindowContent(remaining: Duration, onCancelEntry: () -> Unit) {
-  Icon(
-      imageVector = Icons.Filled.Check,
-      contentDescription = null,
-      modifier = Modifier.size(72.dp),
-      tint = MaterialTheme.colorScheme.primary,
-  )
+  // The check floats on the surface, bobbing gently.
+  val bob = loopingFraction(3_000, rememberAnimationsEnabled(), "checkBob")
+  Box(
+      modifier =
+          Modifier.graphicsLayer { translationY = -3.dp.toPx() * sin(bob.value * 2 * PI.toFloat()) }
+              .size(88.dp)
+              .background(PoolPalette.OnDeep, CircleShape),
+      contentAlignment = Alignment.Center,
+  ) {
+    Icon(
+        imageVector = Icons.Filled.Check,
+        contentDescription = null,
+        modifier = Modifier.size(52.dp),
+        tint = PoolPalette.AccentDeep,
+    )
+  }
   Text(
       text = "You're in. Enjoy your swim!",
       style = MaterialTheme.typography.headlineMedium,
