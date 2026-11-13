@@ -1,13 +1,22 @@
 package com.github.se.pooltrack.ui.theme
 
 import android.provider.Settings
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
@@ -116,4 +125,39 @@ class PoolDecorTest {
     assertEquals(PoolPalette.OnDeep, contentColor)
   }
 
+  /** Draws every decoration once, so their drawing code runs, with [animatorScale] set. */
+  private fun drawAllDecorations(animatorScale: Float, darkTheme: Boolean) {
+    setAnimatorScale(animatorScale)
+    composeRule.setContent {
+      PoolTrackTheme(darkTheme = darkTheme) {
+        Box(Modifier.size(300.dp, 900.dp).poolTiles(MaterialTheme.colorScheme).testTag("all")) {
+          Column {
+            DeepWater(Modifier.size(200.dp, 80.dp)) {}
+            DeepWater(Modifier.size(200.dp, 40.dp), caustics = false) {}
+            LaneRope(Modifier, animated = true)
+            LaneRope(Modifier, animated = false)
+            WaterFill(0.6f, PoolPalette.Water, Modifier.size(200.dp, 60.dp))
+            WaterFill(2f, PoolPalette.WaterUrgent, Modifier.size(200.dp, 60.dp))
+            Box(Modifier.size(150.dp, 50.dp)) { RippleRings(Modifier.fillMaxSize()) }
+            Bubbles(Modifier.size(200.dp, 120.dp))
+            LaneMarker(Modifier.size(60.dp, 120.dp))
+            DepthGauge(Modifier.width(14.dp).height(200.dp))
+          }
+        }
+      }
+    }
+    composeRule.mainClock.advanceTimeBy(1_000)
+    val image = composeRule.onNodeWithTag("all").captureToImage()
+    assertEquals(300f, image.width / composeRule.density.density, 1f)
+  }
+
+  @Test
+  fun decorations_drawWithAnimationsInTheLightTheme() {
+    drawAllDecorations(animatorScale = 1f, darkTheme = false)
+  }
+
+  @Test
+  fun decorations_drawStillWhenAnimationsAreOffInTheDarkTheme() {
+    drawAllDecorations(animatorScale = 0f, darkTheme = true)
+  }
 }
