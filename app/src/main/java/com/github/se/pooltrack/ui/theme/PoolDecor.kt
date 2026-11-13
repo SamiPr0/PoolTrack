@@ -31,9 +31,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.cos
@@ -57,6 +63,9 @@ object PoolPalette {
 
   /** Secondary text on deep water. */
   val OnDeepVariant = Color(0xFFCBEFFC)
+
+  /** The water filling a card, from its surface to its bottom. */
+  val Water = listOf(Color(0xFFBDE7F7), Color(0xFF8FD2EC))
 
   /** The rope the lane floats are threaded on. */
   val Rope = Color(0xFF6E95A5)
@@ -251,4 +260,42 @@ val PoolDepths = listOf(0.8, 1.2, 1.5, 1.8, 2.2)
 
 /** "1.5 m": how a depth is written on the wall. */
 fun depthLabel(meters: Double): String = String.format(Locale.ROOT, "%.1f m", meters)
+
+/**
+ * The depth marks painted along a pool's wall, drawn down the right edge of a screen: a line that
+ * darkens with depth, a tick for each of [PoolDepths] and its label written vertically next to it.
+ * It is meant to sit behind the content, in a narrow strip.
+ */
+@Composable
+fun DepthGauge(modifier: Modifier) {
+  val depths = PoolDepths
+  val measurer = rememberTextMeasurer()
+  val deep = deepWaterColors(MaterialTheme.colorScheme)
+  val shallow = PoolPalette.Water.last()
+  Canvas(modifier) {
+    val lineX = size.width - 10.dp.toPx()
+    drawLine(
+        Brush.verticalGradient(listOf(shallow, deep[1], deep[2])),
+        Offset(lineX, 0f),
+        Offset(lineX, size.height),
+        strokeWidth = 1.5.dp.toPx(),
+    )
+    val last = (depths.size - 1).coerceAtLeast(1)
+    depths.forEachIndexed { index, depth ->
+      val fraction = index.toFloat() / last
+      val color = lerp(shallow, deep[2], fraction)
+      val y = size.height * fraction
+      drawLine(color, Offset(lineX, y), Offset(lineX + 4.dp.toPx(), y), 1.5.dp.toPx())
+      val text =
+          measurer.measure(
+              depthLabel(depth),
+              style = TextStyle(color = color, fontSize = 9.sp, letterSpacing = 0.5.sp),
+          )
+      // Written downwards along the line, just below its tick (just above it for the last one).
+      val labelY = if (index == depths.lastIndex) y - text.size.width - 4f else y + 4f
+      val anchor = Offset(lineX + 2.dp.toPx(), labelY)
+      rotate(90f, pivot = anchor) { drawText(text, topLeft = anchor) }
+    }
+  }
+}
 
