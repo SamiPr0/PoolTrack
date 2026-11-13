@@ -19,7 +19,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -35,6 +34,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -245,3 +245,10 @@ fun LaneRope(modifier: Modifier, animated: Boolean) {
     }
   }
 }
+
+/** The depths marked along the wall, from the shallow end to the deep end, in metres. */
+val PoolDepths = listOf(0.8, 1.2, 1.5, 1.8, 2.2)
+
+/** "1.5 m": how a depth is written on the wall. */
+fun depthLabel(meters: Double): String = String.format(Locale.ROOT, "%.1f m", meters)
+

@@ -1,12 +1,11 @@
 package com.github.se.pooltrack.ui.theme
 
 import android.provider.Settings
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -57,6 +56,18 @@ class PoolDecorTest {
   }
 
   @Test
+  fun depthLabel_writesOneDecimalAndTheUnit() {
+    assertEquals("0.8 m", depthLabel(0.8))
+    assertEquals("2.0 m", depthLabel(2.0))
+  }
+
+  @Test
+  fun poolDepths_goFromShallowToDeep() {
+    assertEquals(PoolDepths.sorted(), PoolDepths)
+    assertEquals(5, PoolDepths.size)
+  }
+
+  @Test
   fun animationsEnabled_followsTheSystemAnimatorScale() {
     setAnimatorScale(1f)
     assertTrue(animationsEnabled(resolver))
@@ -104,4 +115,5 @@ class PoolDecorTest {
     composeRule.onNodeWithText("Deep").assertExists()
     assertEquals(PoolPalette.OnDeep, contentColor)
   }
+
 }
