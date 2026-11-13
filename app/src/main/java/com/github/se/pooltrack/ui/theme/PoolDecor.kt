@@ -388,3 +388,22 @@ private val BUBBLES =
         Triple(0.85f, 0.2f, 2.5f),
     )
 
+private val LANE_MARKER_COLOR = Color(0xFF04293A)
+
+/** The black line on the floor of a lane, ending in a T at the wall, seen from above. */
+@Composable
+fun LaneMarker(modifier: Modifier) {
+  val color = LANE_MARKER_COLOR
+  Canvas(modifier) {
+    val width = 8.dp.toPx()
+    val x = size.width / 2 - width / 2
+    drawRoundRect(color, Offset(x, 0f), Size(width, size.height), CornerRadius(width / 2))
+    val barWidth = 44.dp.toPx()
+    drawRoundRect(
+        color,
+        Offset(size.width / 2 - barWidth / 2, size.height - width),
+        Size(barWidth, width),
+        CornerRadius(width / 2),
+    )
+  }
+}
