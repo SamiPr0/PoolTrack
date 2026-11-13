@@ -13,7 +13,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
 
 // The pool look shared by every screen, drawn with Compose itself (no images, fonts or libraries):
-// its colors here, and its floor, water, lane rope and motion in the other Pool*.kt files.
+// its colors here; its water, tiles, sections, lane rope and motion in the other files of this
+// package.
 
 /** The fixed colors of the pool, besides the theme's own [ColorScheme]. */
 object PoolPalette {
