@@ -79,13 +79,13 @@ fun deepWaterColors(scheme: ColorScheme): List<Color> =
 fun deepWaterBrush(scheme: ColorScheme): Brush = Brush.linearGradient(deepWaterColors(scheme))
 
 /**
- * The color of a tile laid on [poolTiles]: white in the light theme, and in the dark theme a step
+ * The color of a tile laid on [poolWaves]: white in the light theme, and in the dark theme a step
  * lighter than the page, so cards stand out from the water instead of sinking into it.
  */
 fun poolTileColor(scheme: ColorScheme): Color =
     if (isDarkScheme(scheme)) scheme.surfaceContainerHigh else scheme.surfaceContainerLowest
 
-/** The colors of a card that sits on [poolTiles], a tile of [poolTileColor]. */
+/** The colors of a card that sits on [poolWaves], a tile of [poolTileColor]. */
 @Composable
 fun poolTileColors(): CardColors =
     CardDefaults.cardColors(

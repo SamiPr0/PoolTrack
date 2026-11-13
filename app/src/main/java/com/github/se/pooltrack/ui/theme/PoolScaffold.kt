@@ -8,8 +8,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 
 /**
- * A [Scaffold] laid on the pool floor ([poolTiles]): the bars and the content of a screen sit on
- * the tiles rather than on a plain page.
+ * A [Scaffold] laid on the pool ([poolWaves]): the bars and the content of a screen sit on the
+ * water rather than on a plain page.
  */
 @Composable
 fun PoolScaffold(
@@ -20,7 +20,7 @@ fun PoolScaffold(
     content: @Composable (PaddingValues) -> Unit,
 ) {
   Scaffold(
-      modifier = Modifier.poolTiles(MaterialTheme.colorScheme),
+      modifier = Modifier.poolWaves(MaterialTheme.colorScheme),
       topBar = topBar,
       bottomBar = bottomBar,
       snackbarHost = snackbarHost,

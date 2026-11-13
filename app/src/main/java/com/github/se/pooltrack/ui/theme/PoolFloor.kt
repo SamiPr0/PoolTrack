@@ -11,7 +11,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.TextStyle
@@ -21,39 +23,51 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
 
-// The floor and walls of the pool: tiles, depth marks and lane lines.
+// The water and walls of the pool: waves, depth marks and lane lines.
 
 /**
- * Paints the pool floor behind a screen: [scheme]'s page color, a grid of tiles, and a gradient
- * that gets slightly deeper toward the bottom, like the water above the tiles.
+ * Paints the pool behind a screen: [scheme]'s page color, faint waves rolling across it, and a
+ * gradient that gets slightly deeper toward the bottom, like the water getting deeper.
  */
-fun Modifier.poolTiles(scheme: ColorScheme): Modifier = drawBehind {
+fun Modifier.poolWaves(scheme: ColorScheme): Modifier = drawBehind {
   drawRect(scheme.background)
-  val tile = TILE_SIZE.toPx()
-  val line = scheme.primary.copy(alpha = TILE_LINE_ALPHA)
-  var x = 0f
-  while (x <= size.width) {
-    drawLine(line, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
-    x += tile
-  }
-  var y = 0f
-  while (y <= size.height) {
-    drawLine(line, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
-    y += tile
+  val spacing = WAVE_SPACING.toPx()
+  val amplitude = 4.dp.toPx()
+  val half = WAVE_LENGTH.toPx() / 2
+  val stroke = Stroke(width = 2.dp.toPx())
+  var y = spacing / 2
+  var row = 0
+  while (y < size.height) {
+    // Every other wave is shifted by half a wavelength, so they don't look stacked.
+    var x = if (row % 2 == 0) 0f else -half
+    val wave = Path().apply { moveTo(x, y) }
+    var up = true
+    while (x < size.width) {
+      wave.quadraticTo(x + half / 2, if (up) y - amplitude else y + amplitude, x + half, y)
+      x += half
+      up = !up
+    }
+    drawPath(wave, scheme.primary.copy(alpha = WAVE_ALPHA), style = stroke)
+    y += spacing
+    row++
   }
   drawRect(
       Brush.verticalGradient(
           0f to Color.Transparent,
-          0.55f to scheme.primary.copy(alpha = 0.06f),
-          1f to scheme.primary.copy(alpha = 0.16f),
+          0.55f to scheme.primary.copy(alpha = 0.05f),
+          1f to scheme.primary.copy(alpha = 0.12f),
       )
   )
 }
 
-/** The side of one tile of the floor. */
-private val TILE_SIZE = 24.dp
-/** How strongly the lines between the tiles show. */
-private const val TILE_LINE_ALPHA = 0.07f
+/** The distance between two waves of [poolWaves]. */
+private val WAVE_SPACING = 110.dp
+
+/** The length of one wave of [poolWaves], crest to crest. */
+private val WAVE_LENGTH = 124.dp
+
+/** How strongly the waves of [poolWaves] show. */
+private const val WAVE_ALPHA = 0.08f
 
 /** The depths marked along the wall, from the shallow end to the deep end, in metres. */
 val PoolDepths = listOf(0.8, 1.2, 1.5, 1.8, 2.2)

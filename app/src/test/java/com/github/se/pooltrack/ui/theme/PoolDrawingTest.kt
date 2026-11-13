@@ -65,7 +65,7 @@ class PoolDrawingTest {
     setAnimatorScale(animatorScale)
     composeRule.setContent {
       PoolTrackTheme(darkTheme = darkTheme) {
-        Box(Modifier.size(300.dp, 900.dp).poolTiles(MaterialTheme.colorScheme).testTag("all")) {
+        Box(Modifier.size(300.dp, 900.dp).poolWaves(MaterialTheme.colorScheme).testTag("all")) {
           Column {
             DeepWater(Modifier.size(200.dp, 80.dp)) {}
             DeepWater(Modifier.size(200.dp, 40.dp), caustics = false) {}
