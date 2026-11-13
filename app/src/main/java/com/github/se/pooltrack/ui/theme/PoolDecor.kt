@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
@@ -339,4 +340,24 @@ fun WaterFill(level: Float, colors: List<Color>, modifier: Modifier) {
 }
 
 private const val WAVE_STEP_PX = 4f
+
+/** Rings spreading from a button like ripples on water. Put it behind the button, same size. */
+@Composable
+fun RippleRings(modifier: Modifier) {
+  val phase = loopingFraction(2_400, rememberAnimationsEnabled(), "rippleRings")
+  Canvas(modifier) {
+    listOf(0f, 0.5f).forEach { offset ->
+      val progress = (phase.value + offset) % 1f
+      val scale = 1f + 0.35f * progress
+      val ringSize = Size(size.width * scale, size.height * scale)
+      drawRoundRect(
+          color = PoolPalette.AccentShallow.copy(alpha = 0.7f * (1f - progress)),
+          topLeft = Offset((size.width - ringSize.width) / 2, (size.height - ringSize.height) / 2),
+          size = ringSize,
+          cornerRadius = CornerRadius(ringSize.height / 2),
+          style = Stroke(width = 2.dp.toPx()),
+      )
+    }
+  }
+}
 
