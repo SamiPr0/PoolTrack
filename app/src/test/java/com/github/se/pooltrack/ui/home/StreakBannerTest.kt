@@ -1,12 +1,18 @@
 package com.github.se.pooltrack.ui.home
 
+import android.content.Context
+import android.provider.Settings
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.test.core.app.ApplicationProvider
 import com.github.se.pooltrack.ui.theme.PoolTrackTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -14,6 +20,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w400dp-h2000dp")
@@ -63,5 +70,32 @@ class StreakBannerTest {
     composeRule.onNodeWithText("Swim this week to light it").assertIsDisplayed()
     composeRule.onNodeWithText("Top flame reached").assertIsDisplayed()
     composeRule.onNodeWithText("75").assertIsDisplayed()
+  }
+
+  /** Draws a banner at every tier, so the halo, light sweep and sparkles really get drawn. */
+  private fun drawEveryTier(animatorScale: Float) {
+    val resolver = ApplicationProvider.getApplicationContext<Context>().contentResolver
+    Settings.Global.putFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, animatorScale)
+    composeRule.setContent {
+      PoolTrackTheme(darkTheme = false) {
+        Column(Modifier.testTag("tiers")) {
+          listOf(0, 3, 5, 10, 20, 50, 75, 100).forEach { StreakBanner(weeks = it) }
+        }
+      }
+    }
+    composeRule.mainClock.advanceTimeBy(1_500)
+    composeRule.onNodeWithTag("tiers").captureToImage()
+  }
+
+  @Test
+  @GraphicsMode(GraphicsMode.Mode.NATIVE)
+  fun streakBanner_drawsEveryTier_withAnimations() {
+    drawEveryTier(animatorScale = 1f)
+  }
+
+  @Test
+  @GraphicsMode(GraphicsMode.Mode.NATIVE)
+  fun streakBanner_drawsEveryTier_stillWhenAnimationsAreOff() {
+    drawEveryTier(animatorScale = 0f)
   }
 }
