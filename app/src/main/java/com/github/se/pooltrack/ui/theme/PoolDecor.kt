@@ -234,9 +234,9 @@ enum class LaneFloat {
 }
 
 /** The float at [index] of a rope of [count] floats: red ends, then blue and white alternating. */
-fun laneFloatAt(index: Int, count: Int, endFloats: Int = LANE_END_FLOATS): LaneFloat =
+fun laneFloatAt(index: Int, count: Int): LaneFloat =
     when {
-      index < endFloats || index >= count - endFloats -> LaneFloat.End
+      index < LANE_END_FLOATS || index >= count - LANE_END_FLOATS -> LaneFloat.End
       index % 2 == 0 -> LaneFloat.Blue
       else -> LaneFloat.White
     }
@@ -258,17 +258,16 @@ private const val LANE_FLOATS = 22
  */
 @Composable
 fun LaneRope(modifier: Modifier, animated: Boolean) {
-  val floatCount = LANE_FLOATS
   val phase = loopingFraction(2_800, animated && rememberAnimationsEnabled(), "laneRope")
   Canvas(modifier.fillMaxWidth().height(14.dp)) {
     val middle = size.height / 2
     drawLine(PoolPalette.Rope, Offset(0f, middle), Offset(size.width, middle), 1.dp.toPx())
     val floatWidth = 9.dp.toPx()
     val floatHeight = 10.dp.toPx()
-    val step = (size.width - floatWidth) / (floatCount - 1)
+    val step = (size.width - floatWidth) / (LANE_FLOATS - 1)
     val amplitude = 1.5.dp.toPx()
-    repeat(floatCount) { index ->
-      val (lit, shade) = laneFloatColors(laneFloatAt(index, floatCount))
+    repeat(LANE_FLOATS) { index ->
+      val (lit, shade) = laneFloatColors(laneFloatAt(index, LANE_FLOATS))
       val bob = -amplitude * sin((phase.value + index * 0.04f) * TWO_PI)
       val topLeft = Offset(index * step, middle - floatHeight / 2 + bob)
       drawRoundRect(
@@ -298,7 +297,6 @@ fun depthLabel(meters: Double): String = String.format(Locale.ROOT, "%.1f m", me
  */
 @Composable
 fun DepthGauge(modifier: Modifier) {
-  val depths = PoolDepths
   val measurer = rememberTextMeasurer()
   val deep = deepWaterColors(MaterialTheme.colorScheme)
   val shallow = PoolPalette.Water.last()
@@ -310,9 +308,8 @@ fun DepthGauge(modifier: Modifier) {
         Offset(lineX, size.height),
         strokeWidth = 1.5.dp.toPx(),
     )
-    val last = (depths.size - 1).coerceAtLeast(1)
-    depths.forEachIndexed { index, depth ->
-      val fraction = index.toFloat() / last
+    PoolDepths.forEachIndexed { index, depth ->
+      val fraction = index.toFloat() / PoolDepths.lastIndex
       val color = lerp(shallow, deep[2], fraction)
       val y = size.height * fraction
       drawLine(color, Offset(lineX, y), Offset(lineX + 4.dp.toPx(), y), 1.5.dp.toPx())
@@ -322,7 +319,7 @@ fun DepthGauge(modifier: Modifier) {
               style = TextStyle(color = color, fontSize = 9.sp, letterSpacing = 0.5.sp),
           )
       // Written downwards along the line, just below its tick (just above it for the last one).
-      val labelY = if (index == depths.lastIndex) y - text.size.width - 4f else y + 4f
+      val labelY = if (index == PoolDepths.lastIndex) y - text.size.width - 4f else y + 4f
       val anchor = Offset(lineX + 2.dp.toPx(), labelY)
       rotate(90f, pivot = anchor) { drawText(text, topLeft = anchor) }
     }
@@ -411,14 +408,18 @@ private val LANE_MARKER_COLOR = Color(0xFF04293A)
 /** The black line on the floor of a lane, ending in a T at the wall, seen from above. */
 @Composable
 fun LaneMarker(modifier: Modifier) {
-  val color = LANE_MARKER_COLOR
   Canvas(modifier) {
     val width = 8.dp.toPx()
     val x = size.width / 2 - width / 2
-    drawRoundRect(color, Offset(x, 0f), Size(width, size.height), CornerRadius(width / 2))
+    drawRoundRect(
+        LANE_MARKER_COLOR,
+        Offset(x, 0f),
+        Size(width, size.height),
+        CornerRadius(width / 2),
+    )
     val barWidth = 44.dp.toPx()
     drawRoundRect(
-        color,
+        LANE_MARKER_COLOR,
         Offset(size.width / 2 - barWidth / 2, size.height - width),
         Size(barWidth, width),
         CornerRadius(width / 2),
