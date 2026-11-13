@@ -49,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
@@ -539,17 +540,14 @@ private fun WeeklyChartCard(
                 modifier =
                     Modifier.fillMaxWidth()
                         .fillMaxHeight(0.8f * count / maxCount)
-                        .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                        .clip(RoundedCornerShape(6.dp))
                         .background(
-                            if (isCurrent || index == selected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                            if (isCurrent || index == selected) {
+                              deepWaterBrush(MaterialTheme.colorScheme)
+                            } else {
+                              SolidColor(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                            }
                         )
-            )
-            Box(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .height(2.dp)
-                        .background(MaterialTheme.colorScheme.outlineVariant)
             )
           }
         }

@@ -193,6 +193,19 @@ class HomeScreenTest {
   }
 
   @Test
+  fun weeklyChart_showsTheWeekOfAnOlderTappedBar() {
+    val monday = LocalDate.now(zone).with(DayOfWeek.MONDAY)
+    val olderMonday = monday.minusWeeks(RECENT_WEEKS - 1L)
+    setContent(entryRepository = FakeEntryRepository(listOf(entryAt(noonOf(olderMonday)))))
+
+    composeRule.onAllNodesWithTag(HomeScreenTestTags.WEEKLY_CHART_BAR)[0].performClick()
+
+    composeRule
+        .onNodeWithTag(HomeScreenTestTags.WEEKLY_CHART_LEGEND)
+        .assertTextEquals(weekLegend(olderMonday, 1, Locale.US))
+  }
+
+  @Test
   fun weekLegend_spansMondayToSunday_andPluralizesEntries() {
     val monday = LocalDate.of(2026, 10, 12)
 
