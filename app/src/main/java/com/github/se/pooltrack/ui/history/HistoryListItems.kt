@@ -150,8 +150,8 @@ internal fun EntryRow(
       onClick = onClick,
       modifier = modifier.testTag(HistoryScreenTestTags.ENTRY_ITEM),
       color =
-          if (highlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-          else MaterialTheme.colorScheme.background,
+          if (highlighted) MaterialTheme.colorScheme.primaryContainer
+          else MaterialTheme.colorScheme.surfaceContainerLowest,
   ) {
     Column {
       Row(
