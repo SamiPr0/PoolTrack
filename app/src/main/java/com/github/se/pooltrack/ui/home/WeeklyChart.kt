@@ -12,13 +12,11 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -168,12 +166,7 @@ private fun FavoriteDayRow(day: DayOfWeek, modifier: Modifier = Modifier) {
         modifier = Modifier.padding(top = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-      Icon(
-          imageVector = Icons.Outlined.Favorite,
-          contentDescription = null,
-          tint = MaterialTheme.colorScheme.primary,
-          modifier = Modifier.size(18.dp),
-      )
+      InlineIcon(Icons.Outlined.Favorite)
       Text(
           text = "You usually swim on $dayName",
           style = MaterialTheme.typography.bodyMedium,

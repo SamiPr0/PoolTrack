@@ -234,12 +234,7 @@ internal fun SpendingCard(totalSpent: String, costPerEntry: String, modifier: Mo
 @Composable
 private fun SpendingHalf(label: String, value: String, icon: ImageVector, modifier: Modifier) {
   Column(modifier = modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-    Icon(
-        imageVector = icon,
-        contentDescription = null,
-        tint = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.size(18.dp),
-    )
+    InlineIcon(icon)
     Text(
         text = value,
         style = MaterialTheme.typography.titleLarge,
@@ -252,4 +247,15 @@ private fun SpendingHalf(label: String, value: String, icon: ImageVector, modifi
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
   }
+}
+
+/** A small icon in the primary color, leading a line or a figure inside a tile. */
+@Composable
+internal fun InlineIcon(icon: ImageVector, modifier: Modifier = Modifier) {
+  Icon(
+      imageVector = icon,
+      contentDescription = null,
+      tint = MaterialTheme.colorScheme.primary,
+      modifier = modifier.size(18.dp),
+  )
 }
