@@ -18,7 +18,11 @@ import kotlin.math.sin
 enum class LaneFloat {
   /** The red floats at both ends of a lane, warning that the wall is close. */
   End,
+
+  /** The blue floats of the middle of the lane, every other one. */
   Blue,
+
+  /** The white floats between the blue ones. */
   White,
 }
 

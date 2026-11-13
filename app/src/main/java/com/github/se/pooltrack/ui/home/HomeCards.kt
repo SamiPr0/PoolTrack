@@ -57,6 +57,7 @@ import java.util.Locale
 
 // The cards and tiles of Home, laid out by HomeScreen.
 
+/** How long since the last swim, in big type on deep water. */
 @Composable
 internal fun LastSwimHero(daysSinceLastSwim: Long?, modifier: Modifier = Modifier) {
   DeepWater(modifier = modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
@@ -76,6 +77,7 @@ internal fun LastSwimHero(daysSinceLastSwim: Long?, modifier: Modifier = Modifie
   }
 }
 
+/** "Today", "1 day", "5 days", or "No entries yet" before the first swim. */
 private fun lastSwimValueLabel(daysSinceLastSwim: Long?): String =
     when (daysSinceLastSwim) {
       null -> "No entries yet"
@@ -84,7 +86,10 @@ private fun lastSwimValueLabel(daysSinceLastSwim: Long?): String =
       else -> "$daysSinceLastSwim days"
     }
 
-/** Draws attention to the active subscription's expiration, in red once it's urgent or past. */
+/**
+ * The active pass: its expiration or remaining entries, and water filling the card up to what is
+ * left of it ([passWaterLevel]). Red once it's urgent or past.
+ */
 @Composable
 internal fun ExpirationBanner(
     subscription: Subscription,
@@ -239,10 +244,12 @@ internal fun costPerEntry(totalSpent: Double, totalEntries: Int): Double? =
 internal fun amountLabel(amount: Double?): String =
     if (amount == null || amount == 0.0) "-" else String.format(Locale.getDefault(), "%.2f", amount)
 
+/** "2.5" entries per week, or "-" before there is anything to average. */
 internal fun averagePerWeekLabel(averageEntriesPerWeek: Double?): String =
     if (averageEntriesPerWeek == null) "-"
     else String.format(Locale.getDefault(), "%.1f", averageEntriesPerWeek)
 
+/** "1 week", "3 weeks", or "-" without a streak. */
 internal fun streakLabel(weeks: Int): String =
     when (weeks) {
       0 -> "-"
