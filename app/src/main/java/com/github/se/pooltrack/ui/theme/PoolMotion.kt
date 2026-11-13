@@ -54,6 +54,7 @@ fun Modifier.bobbing(phase: State<Float>, amplitude: Dp): Modifier = graphicsLay
   translationY = -amplitude.toPx() * sin(phase.value * TWO_PI)
 }
 
+/** Where a still [loopingFraction] holds: halfway, so waves and floats rest mid-motion. */
 private const val STILL_FRACTION = 0.5f
 
 /** A full turn, in radians: one loop of [loopingFraction] as an angle. */

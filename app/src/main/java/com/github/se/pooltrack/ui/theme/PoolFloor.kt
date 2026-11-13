@@ -52,7 +52,9 @@ fun Modifier.poolTiles(scheme: ColorScheme): Modifier = drawBehind {
   )
 }
 
+/** The side of one tile of the floor. */
 private val TILE_SIZE = 24.dp
+/** How strongly the lines between the tiles show. */
 private const val TILE_LINE_ALPHA = 0.07f
 
 /** The depths marked along the wall, from the shallow end to the deep end, in metres. */
@@ -97,6 +99,7 @@ fun DepthGauge(modifier: Modifier) {
   }
 }
 
+/** The near-black of the lane line, like the dark tiles on a pool floor. */
 private val LANE_MARKER_COLOR = Color(0xFF04293A)
 
 /** The black line on the floor of a lane, ending in a T at the wall, seen from above. */

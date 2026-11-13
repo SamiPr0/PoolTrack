@@ -102,6 +102,7 @@ fun WaterFill(level: Float, colors: List<Color>, modifier: Modifier) {
   }
 }
 
+/** The horizontal step, in pixels, between two points of a wave's outline. */
 private const val WAVE_STEP_PX = 4f
 
 /** Rings spreading from a button like ripples on water. Put it behind the button, same size. */

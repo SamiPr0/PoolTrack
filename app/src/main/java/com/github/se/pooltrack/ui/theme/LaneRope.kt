@@ -42,7 +42,9 @@ fun laneFloatColors(kind: LaneFloat): Pair<Color, Color> =
       LaneFloat.White -> PoolPalette.FloatWhite
     }
 
+/** How many red floats sit at each end of a rope. */
 private const val LANE_END_FLOATS = 3
+/** How many floats a rope has across the screen. */
 private const val LANE_FLOATS = 22
 
 /**
