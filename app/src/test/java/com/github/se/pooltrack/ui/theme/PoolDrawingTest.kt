@@ -77,8 +77,7 @@ class PoolDrawingTest {
             Bubbles(Modifier.size(200.dp, 120.dp))
             LaneMarker(Modifier.size(60.dp, 120.dp))
             DiveRipples(Modifier.size(200.dp, 120.dp))
-            Box(Modifier.size(200.dp, 80.dp).laneLines(Color.White)) {}
-            DepthGauge(Modifier.width(14.dp).height(200.dp))
+            DepthTags(Modifier.width(40.dp).height(200.dp))
           }
         }
       }
@@ -105,7 +104,7 @@ class PoolDrawingTest {
         Column(Modifier.testTag("redraw")) {
           Caustics(size)
           LaneRope(size, animated = second)
-          DepthGauge(size)
+          DepthTags(size)
           WaterFill(
               if (second) 0.2f else 0.8f,
               if (second) PoolPalette.WaterUrgent else PoolPalette.Water,

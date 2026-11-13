@@ -484,7 +484,7 @@ class HomeScreenTest {
   fun poolDecorations_areShown() {
     setContent()
 
-    composeRule.onNodeWithTag(HomeScreenTestTags.DEPTH_GAUGE).assertExists()
+    composeRule.onNodeWithTag(HomeScreenTestTags.DEPTH_TAGS).assertExists()
     composeRule.onNodeWithTag(HomeScreenTestTags.LANE_ROPE).assertExists()
   }
 

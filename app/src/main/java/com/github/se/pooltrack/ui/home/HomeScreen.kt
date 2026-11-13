@@ -43,7 +43,7 @@ import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import com.github.se.pooltrack.ui.subscription.formatCooldown
 import com.github.se.pooltrack.ui.subscription.rememberRemainingCooldown
-import com.github.se.pooltrack.ui.theme.DepthGauge
+import com.github.se.pooltrack.ui.theme.DepthTags
 import com.github.se.pooltrack.ui.theme.LaneRope
 import com.github.se.pooltrack.ui.theme.PoolPalette
 import com.github.se.pooltrack.ui.theme.PoolScaffold
@@ -67,7 +67,7 @@ object HomeScreenTestTags {
   const val WEEKLY_CHART_LEGEND = "HomeScreenWeeklyChartLegend"
   const val WEEKLY_CHART_BAR = "HomeScreenWeeklyChartBar"
   const val OPEN_SUBSCRIPTION_FAB = "HomeScreenOpenSubscriptionFab"
-  const val DEPTH_GAUGE = "HomeScreenDepthGauge"
+  const val DEPTH_TAGS = "HomeScreenDepthTags"
   const val LANE_ROPE = "HomeScreenLaneRope"
   const val PASS_WATER = "HomeScreenPassWater"
   const val PASS_LEVEL = "HomeScreenPassLevel"
@@ -146,14 +146,14 @@ fun HomeScreen(
       },
   ) { paddingValues ->
     Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-      // The depth marks of the pool's wall, behind the content along the right edge.
-      DepthGauge(
+      // The depths written on the pool's wall, behind the content along the right edge.
+      DepthTags(
           modifier =
               Modifier.align(Alignment.TopEnd)
                   .fillMaxHeight()
-                  .width(14.dp)
+                  .width(DEPTH_STRIP)
                   .padding(vertical = 12.dp)
-                  .testTag(HomeScreenTestTags.DEPTH_GAUGE),
+                  .testTag(HomeScreenTestTags.DEPTH_TAGS),
       )
       HomeContent(
           stats = stats,
@@ -166,7 +166,10 @@ fun HomeScreen(
   }
 }
 
-/** Home's scrolling column of cards, over the pool floor. */
+/** The strip along Home's right edge kept for the [DepthTags], beside the content. */
+private val DEPTH_STRIP = 40.dp
+
+/** Home's scrolling column of cards, over the pool. */
 @Composable
 private fun HomeContent(
     stats: HomeStats,
@@ -179,7 +182,7 @@ private fun HomeContent(
       modifier =
           Modifier.fillMaxSize()
               .verticalScroll(rememberScrollState())
-              .padding(start = 16.dp, end = 20.dp, top = 8.dp, bottom = 88.dp),
+              .padding(start = 16.dp, end = DEPTH_STRIP, top = 8.dp, bottom = 88.dp),
       verticalArrangement = Arrangement.spacedBy(12.dp),
   ) {
     LastSwimHero(

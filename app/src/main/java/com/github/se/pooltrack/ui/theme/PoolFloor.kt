@@ -8,14 +8,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -23,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
 
-// The water and walls of the pool: waves, depth marks and lane lines.
+// The water and walls of the pool: waves, depth tags and the lane line.
 
 /**
  * Paints the pool behind a screen: [scheme]'s page color, faint waves rolling across it, and a
@@ -76,88 +75,39 @@ val PoolDepths = listOf(0.8, 1.2, 1.5, 1.8, 2.2)
 fun depthLabel(meters: Double): String = String.format(Locale.ROOT, "%.1f m", meters)
 
 /**
- * The color of the deepest depth mark: the light theme's deepest water, and in the dark theme its
- * lightest step, since the darkest one would vanish into the dark page.
- */
-fun deepestMarkColor(scheme: ColorScheme): Color =
-    if (isDarkScheme(scheme)) PoolPalette.DeepDark.first() else PoolPalette.DeepLight.last()
-
-/**
- * The depth marks painted along a pool's wall, drawn down the right edge of a screen: a line that
- * darkens with depth, a tick for each of [PoolDepths] and its label written vertically next to it.
- * It is meant to sit behind the content, in a narrow strip.
+ * The depths written on a pool's wall, down the right edge of a screen: a small tag for each of
+ * [PoolDepths], spread from top to bottom and flush with the edge. It sits behind the content, in a
+ * strip wide enough for a tag.
  */
 @Composable
-fun DepthGauge(modifier: Modifier) {
+fun DepthTags(modifier: Modifier) {
   val measurer = rememberTextMeasurer()
-  val shallow = PoolPalette.Water.last()
-  val deepest = deepestMarkColor(MaterialTheme.colorScheme)
+  val tagColor = MaterialTheme.colorScheme.primaryContainer
+  val style = TextStyle(color = MaterialTheme.colorScheme.onPrimaryContainer, fontSize = 10.sp)
   Canvas(modifier) {
-    val lineX = size.width - 10.dp.toPx()
-    drawLine(
-        Brush.verticalGradient(listOf(shallow, deepest)),
-        Offset(lineX, 0f),
-        Offset(lineX, size.height),
-        strokeWidth = 1.5.dp.toPx(),
-    )
+    val padX = 6.dp.toPx()
+    val padY = 2.dp.toPx()
+    val corner = CornerRadius(4.dp.toPx())
     PoolDepths.forEachIndexed { index, depth ->
-      val fraction = index.toFloat() / PoolDepths.lastIndex
-      val color = lerp(shallow, deepest, fraction)
-      val y = size.height * fraction
-      drawLine(color, Offset(lineX, y), Offset(lineX + 4.dp.toPx(), y), 1.5.dp.toPx())
-      val text =
-          measurer.measure(
-              depthLabel(depth),
-              style = TextStyle(color = color, fontSize = 9.sp, letterSpacing = 0.5.sp),
-          )
-      // Written downwards along the line, just below its tick (just above it for the last one).
-      val labelY = if (index == PoolDepths.lastIndex) y - text.size.width - 4f else y + 4f
-      val anchor = Offset(lineX + 2.dp.toPx(), labelY)
-      rotate(90f, pivot = anchor) { drawText(text, topLeft = anchor) }
+      val text = measurer.measure(depthLabel(depth), style)
+      val tag = Size(text.size.width + padX * 2, text.size.height + padY * 2)
+      val top = (size.height - tag.height) * index / PoolDepths.lastIndex
+      val left = size.width - tag.width
+      // Rounded on the content side only, so the tag looks stuck to the wall.
+      drawPath(
+          Path().apply {
+            addRoundRect(
+                RoundRect(
+                    rect = Rect(Offset(left, top), tag),
+                    topLeft = corner,
+                    bottomLeft = corner,
+                )
+            )
+          },
+          tagColor,
+      )
+      drawText(text, topLeft = Offset(left + padX, top + padY))
     }
-  }
-}
-
-/**
- * The lane lines painted on a pool floor, seen from above through the water: two stripes across the
- * element in [color], each ending in the "T" that warns swimmers the wall is coming.
- */
-fun Modifier.laneLines(color: Color): Modifier = drawBehind {
-  val margin = 28.dp.toPx()
-  for (lane in 1..2) {
-    val y = size.height * lane / 3
-    drawLaneLine(
-        from = Offset(margin, y),
-        to = Offset(size.width - margin, y),
-        width = 5.dp.toPx(),
-        barLength = 22.dp.toPx(),
-        color = color,
-        barAtStart = true,
-    )
-  }
-}
-
-/**
- * One lane line, horizontal or vertical, from [from] to [to]: a stripe [width] wide ending in a T
- * bar [barLength] long at [to], and at [from] too when [barAtStart].
- */
-private fun DrawScope.drawLaneLine(
-    from: Offset,
-    to: Offset,
-    width: Float,
-    barLength: Float,
-    color: Color,
-    barAtStart: Boolean,
-) {
-  val horizontal = from.y == to.y
-  val corner = CornerRadius(width / 2)
-  val stripe = if (horizontal) Size(to.x - from.x, width) else Size(width, to.y - from.y)
-  val halfWidth = if (horizontal) Offset(0f, width / 2) else Offset(width / 2, 0f)
-  drawRoundRect(color, from - halfWidth, stripe, corner)
-  val bar = if (horizontal) Size(width, barLength) else Size(barLength, width)
-  val ends = if (barAtStart) listOf(from, to) else listOf(to)
-  ends.forEach { end ->
-    drawRoundRect(color, end - Offset(bar.width / 2, bar.height / 2), bar, corner)
   }
 }
 
@@ -169,13 +119,19 @@ private val LANE_MARKER_COLOR = Color(0xFF04293A)
 fun LaneMarker(modifier: Modifier) {
   Canvas(modifier) {
     val width = 8.dp.toPx()
-    drawLaneLine(
-        from = Offset(size.width / 2, 0f),
-        to = Offset(size.width / 2, size.height - width / 2),
-        width = width,
-        barLength = 44.dp.toPx(),
-        color = LANE_MARKER_COLOR,
-        barAtStart = false,
+    val corner = CornerRadius(width / 2)
+    drawRoundRect(
+        LANE_MARKER_COLOR,
+        Offset(size.width / 2 - width / 2, 0f),
+        Size(width, size.height),
+        corner,
+    )
+    val bar = 44.dp.toPx()
+    drawRoundRect(
+        LANE_MARKER_COLOR,
+        Offset(size.width / 2 - bar / 2, size.height - width),
+        Size(bar, width),
+        corner,
     )
   }
 }

@@ -42,11 +42,9 @@ import com.github.se.pooltrack.model.subscription.expiresAt
 import com.github.se.pooltrack.model.subscription.isExpired
 import com.github.se.pooltrack.ui.theme.DeepWater
 import com.github.se.pooltrack.ui.theme.DiveRipples
-import com.github.se.pooltrack.ui.theme.LaneRope
 import com.github.se.pooltrack.ui.theme.PoolPalette
 import com.github.se.pooltrack.ui.theme.WaterFill
 import com.github.se.pooltrack.ui.theme.isDarkScheme
-import com.github.se.pooltrack.ui.theme.laneLines
 import com.github.se.pooltrack.ui.theme.poolTileColors
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -57,16 +55,15 @@ import java.util.Locale
 
 // The cards and tiles of Home, laid out by HomeScreen.
 
-/** How long since the last swim, in big type on deep water over a lane seen from above. */
+/**
+ * How long since the last swim, in big type on deep water, with rings spreading as after a dive.
+ */
 @Composable
 internal fun LastSwimHero(daysSinceLastSwim: Long?, modifier: Modifier = Modifier) {
   DeepWater(modifier = modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
     DiveRipples(Modifier.matchParentSize())
     Column(
-        modifier =
-            Modifier.fillMaxWidth()
-                .laneLines(PoolPalette.OnDeep.copy(alpha = 0.08f))
-                .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 14.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
       Text(
@@ -87,7 +84,6 @@ internal fun LastSwimHero(daysSinceLastSwim: Long?, modifier: Modifier = Modifie
           color = PoolPalette.OnDeepVariant,
           modifier = Modifier.padding(top = 4.dp),
       )
-      LaneRope(modifier = Modifier.padding(top = 18.dp), animated = true)
     }
   }
 }
