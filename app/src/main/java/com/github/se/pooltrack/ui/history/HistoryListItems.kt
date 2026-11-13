@@ -1,28 +1,27 @@
 package com.github.se.pooltrack.ui.history
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.github.se.pooltrack.ui.history.heatmap.visitsLabel
-import com.github.se.pooltrack.ui.theme.LaneRope
 import com.github.se.pooltrack.ui.theme.PoolPalette
+import com.github.se.pooltrack.ui.theme.SectionHeader
 import com.github.se.pooltrack.ui.theme.deepWaterBrush
 import com.github.se.pooltrack.ui.theme.poolTileColor
 import java.time.DayOfWeek
@@ -65,7 +64,7 @@ internal fun weekLabel(
   }
 }
 
-/** The sticky title above the entries of one week, with how many visits it had. */
+/** The sticky title above the entries of one week, with its totals and a lane rope. */
 @Composable
 internal fun WeekHeader(
     label: String,
@@ -74,26 +73,16 @@ internal fun WeekHeader(
     loggedVisits: Int,
     modifier: Modifier = Modifier,
 ) {
+  // Opaque, since the header sticks on top of the entries scrolling under it.
   Surface(
       modifier = modifier.fillMaxWidth().testTag(HistoryScreenTestTags.WEEK_HEADER),
       color = MaterialTheme.colorScheme.background,
   ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Bottom,
-    ) {
-      Text(
-          text = label,
-          style = MaterialTheme.typography.titleMedium,
-          fontWeight = FontWeight.Bold,
-      )
-      Text(
-          text = weekTotals(visits, meters, loggedVisits),
-          style = MaterialTheme.typography.labelMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-      )
-    }
+    SectionHeader(
+        title = label,
+        detail = weekTotals(visits, meters, loggedVisits),
+        modifier = Modifier.padding(top = 16.dp, bottom = 6.dp),
+    )
   }
 }
 
@@ -128,14 +117,29 @@ private fun DateBlock(day: LocalDate, isToday: Boolean, locale: Locale = Locale.
 }
 
 /**
+ * Whether the entry at [index] of [rows] opens its week ([first]) and closes it ([last]): the
+ * entries of a week share one tile, rounded only at its two ends.
+ */
+internal data class EntryEdges(val first: Boolean, val last: Boolean)
+
+/** The [EntryEdges] of the entry at [index] of [rows], from the rows around it. */
+internal fun entryEdges(rows: List<HistoryRow>, index: Int): EntryEdges =
+    EntryEdges(
+        first = index == 0 || rows[index - 1] is HistoryRow.Week,
+        last = index == rows.lastIndex || rows[index + 1] is HistoryRow.Week,
+    )
+
+/**
  * A flat, compact row for one entry: the day it happened on, then its time and swim details. Tap it
- * to open the entry. Deleting is done from the entry's own screen, never from the list, so
- * scrolling can't delete a visit by accident.
+ * to open the entry. The rows of a week share one tile: the row rounds the tile's corners at the
+ * [edges] it is on, and draws a fine line under itself unless it closes the week. Deleting is done
+ * from the entry's own screen, never from the list, so scrolling can't delete a visit by accident.
  *
  * @param day The day of the entry, shown in the date block.
  * @param isToday Whether [day] is today.
  * @param texts What the row says, see [entryRowTexts].
  * @param highlighted Whether to tint the row, e.g. because its day was picked in the calendar.
+ * @param edges Where the row sits in its week's tile.
  * @param onClick Called when the row is tapped.
  */
 @Composable
@@ -144,19 +148,28 @@ internal fun EntryRow(
     isToday: Boolean,
     texts: EntryRowTexts,
     highlighted: Boolean,
+    edges: EntryEdges,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+  val corner = 16.dp
   Surface(
       onClick = onClick,
       modifier = modifier.testTag(HistoryScreenTestTags.ENTRY_ITEM),
+      shape =
+          RoundedCornerShape(
+              topStart = if (edges.first) corner else 0.dp,
+              topEnd = if (edges.first) corner else 0.dp,
+              bottomStart = if (edges.last) corner else 0.dp,
+              bottomEnd = if (edges.last) corner else 0.dp,
+          ),
       color =
           if (highlighted) MaterialTheme.colorScheme.primaryContainer
           else poolTileColor(MaterialTheme.colorScheme),
   ) {
     Column {
       Row(
-          modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 4.dp),
+          modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 12.dp),
           verticalAlignment = Alignment.CenterVertically,
       ) {
         DateBlock(day = day, isToday = isToday)
@@ -175,11 +188,12 @@ internal fun EntryRow(
           }
         }
       }
-      // A lane rope between two swims, faint and still so a long list stays calm.
-      LaneRope(
-          animated = false,
-          modifier = Modifier.padding(horizontal = 8.dp).alpha(0.45f),
-      )
+      if (!edges.last) {
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 12.dp),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+        )
+      }
     }
   }
 }

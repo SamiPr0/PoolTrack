@@ -259,7 +259,7 @@ fun HistoryScreen(
             )
           }
         }
-        rows.forEach { row ->
+        rows.forEachIndexed { index, row ->
           when (row) {
             is HistoryRow.Week ->
                 stickyHeader(key = row.key) {
@@ -281,6 +281,7 @@ fun HistoryScreen(
                               entryTimeFormatter().format(row.entry.timestamp),
                           ),
                       highlighted = row.day == highlightedDate,
+                      edges = entryEdges(rows, index),
                       onClick = {
                         navigationActions?.navigateToEntryDetails(row.entry.timestampEpochMilli)
                       },
