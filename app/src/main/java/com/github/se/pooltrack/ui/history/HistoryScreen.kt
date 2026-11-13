@@ -26,13 +26,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -45,6 +44,7 @@ import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
+import com.github.se.pooltrack.ui.theme.poolTiles
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -133,6 +133,8 @@ fun HistoryScreen(
   }
 
   Scaffold(
+      modifier = Modifier.poolTiles(MaterialTheme.colorScheme),
+      containerColor = Color.Transparent,
       topBar = { TopNavigationMenu(Screen.History) },
       snackbarHost = { SnackbarHost(snackbarHostState) },
       floatingActionButton = {
