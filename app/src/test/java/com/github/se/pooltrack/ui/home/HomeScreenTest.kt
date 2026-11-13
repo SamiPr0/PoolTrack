@@ -470,6 +470,14 @@ class HomeScreenTest {
 
     composeRule.onNodeWithTag(HomeScreenTestTags.PASS_WATER).assertExists()
     composeRule.onNodeWithTag(HomeScreenTestTags.PASS_LEVEL).assertTextEquals("70%")
+    composeRule.onNodeWithTag(HomeScreenTestTags.PASS_ENTRY_CAPSULES).assertExists()
+  }
+
+  @Test
+  fun passCard_showsNoEntryCapsules_forADatedPass() {
+    setContentWithActive(pass(expiresAt = Instant.now().plus(Duration.ofDays(40))))
+
+    assertTagAbsent(HomeScreenTestTags.PASS_ENTRY_CAPSULES)
   }
 
   @Test

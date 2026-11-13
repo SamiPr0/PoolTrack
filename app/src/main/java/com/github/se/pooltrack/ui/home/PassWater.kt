@@ -28,3 +28,20 @@ fun passWaterLevel(
 
 /** "68%": a [passWaterLevel] as a whole percentage. */
 fun passWaterLabel(level: Float): String = "${(level * 100).roundToInt()}%"
+
+/** The most entries a pass can have and still show them one by one as [entryCapsules]. */
+const val MAX_ENTRY_CAPSULES = 30
+
+/**
+ * A pass's entries as capsules, oldest first: `false` for each of the [usedEntries] already used,
+ * `true` for each still available. Only an entry-limited pass without a date gets them, and only
+ * while it holds at most [MAX_ENTRY_CAPSULES]; otherwise the list is empty.
+ */
+fun entryCapsules(subscription: Subscription, usedEntries: Int): List<Boolean> {
+  val max = subscription.maxEntries ?: return emptyList()
+  if (subscription.expiresAtEpochMilli != null || max <= 0 || max > MAX_ENTRY_CAPSULES) {
+    return emptyList()
+  }
+  val used = usedEntries.coerceIn(0, max)
+  return List(max) { it >= used }
+}

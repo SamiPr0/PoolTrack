@@ -72,6 +72,7 @@ object HomeScreenTestTags {
   const val SPENDING_SECTION = "HomeScreenSpendingSection"
   const val PASS_WATER = "HomeScreenPassWater"
   const val PASS_LEVEL = "HomeScreenPassLevel"
+  const val PASS_ENTRY_CAPSULES = "HomeScreenPassEntryCapsules"
 }
 
 /** HomeScreen: the app's landing page, showing pool-visit stats. */
@@ -192,7 +193,7 @@ private fun HomeContent(
     )
 
     if (activeSubscription != null) {
-      ExpirationBanner(
+      PassCard(
           subscription = activeSubscription,
           usedCount = activeSubscriptionUsedEntries,
           modifier = Modifier.testTag(HomeScreenTestTags.EXPIRATION_BANNER),

@@ -73,4 +73,26 @@ class PassWaterTest {
     assertEquals("0%", passWaterLabel(0f))
     assertEquals("100%", passWaterLabel(1f))
   }
+
+  @Test
+  fun entryCapsules_marksUsedEntriesFirst_thenTheAvailableOnes() {
+    assertEquals(
+        listOf(false, false, true, true),
+        entryCapsules(pass(maxEntries = 4), usedEntries = 2),
+    )
+  }
+
+  @Test
+  fun entryCapsules_neverGoesPastTheLimitOrBelowZero() {
+    assertEquals(List(3) { false }, entryCapsules(pass(maxEntries = 3), usedEntries = 9))
+    assertEquals(List(3) { true }, entryCapsules(pass(maxEntries = 3), usedEntries = -1))
+  }
+
+  @Test
+  fun entryCapsules_isEmpty_forADatedOrUnlimitedOrTooBigOrEmptyPass() {
+    assertEquals(emptyList<Boolean>(), entryCapsules(pass(expires = 5, maxEntries = 4), 0))
+    assertEquals(emptyList<Boolean>(), entryCapsules(pass(), 0))
+    assertEquals(emptyList<Boolean>(), entryCapsules(pass(maxEntries = MAX_ENTRY_CAPSULES + 1), 0))
+    assertEquals(emptyList<Boolean>(), entryCapsules(pass(maxEntries = 0), 0))
+  }
 }
