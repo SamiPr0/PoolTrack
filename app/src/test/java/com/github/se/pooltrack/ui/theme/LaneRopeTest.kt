@@ -21,6 +21,18 @@ class LaneRopeTest {
   }
 
   @Test
+  fun laneFloatCount_fitsAsManyFloatsAsTheRopeHoldsWithTheirGaps() {
+    // 5 floats of 16 with 4 gaps of 4 take exactly 96.
+    assertEquals(5, laneFloatCount(width = 96f, floatLength = 16f, gap = 4f))
+    assertEquals(5, laneFloatCount(width = 110f, floatLength = 16f, gap = 4f))
+  }
+
+  @Test
+  fun laneFloatCount_keepsOneFloat_onARopeTooShortForIt() {
+    assertEquals(1, laneFloatCount(width = 5f, floatLength = 16f, gap = 4f))
+  }
+
+  @Test
   fun laneFloatColors_givesEachKindItsOwnColors() {
     assertEquals(PoolPalette.FloatRed, laneFloatColors(LaneFloat.End))
     assertEquals(PoolPalette.FloatBlue, laneFloatColors(LaneFloat.Blue))
