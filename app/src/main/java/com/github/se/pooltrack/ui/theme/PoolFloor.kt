@@ -64,6 +64,13 @@ val PoolDepths = listOf(0.8, 1.2, 1.5, 1.8, 2.2)
 fun depthLabel(meters: Double): String = String.format(Locale.ROOT, "%.1f m", meters)
 
 /**
+ * The color of the deepest depth mark: the light theme's deepest water, and in the dark theme its
+ * lightest step, since the darkest one would vanish into the dark page.
+ */
+fun deepestMarkColor(scheme: ColorScheme): Color =
+    if (isDarkScheme(scheme)) PoolPalette.DeepDark.first() else PoolPalette.DeepLight.last()
+
+/**
  * The depth marks painted along a pool's wall, drawn down the right edge of a screen: a line that
  * darkens with depth, a tick for each of [PoolDepths] and its label written vertically next to it.
  * It is meant to sit behind the content, in a narrow strip.
@@ -71,19 +78,19 @@ fun depthLabel(meters: Double): String = String.format(Locale.ROOT, "%.1f m", me
 @Composable
 fun DepthGauge(modifier: Modifier) {
   val measurer = rememberTextMeasurer()
-  val deep = deepWaterColors(MaterialTheme.colorScheme)
   val shallow = PoolPalette.Water.last()
+  val deepest = deepestMarkColor(MaterialTheme.colorScheme)
   Canvas(modifier) {
     val lineX = size.width - 10.dp.toPx()
     drawLine(
-        Brush.verticalGradient(listOf(shallow, deep[1], deep[2])),
+        Brush.verticalGradient(listOf(shallow, deepest)),
         Offset(lineX, 0f),
         Offset(lineX, size.height),
         strokeWidth = 1.5.dp.toPx(),
     )
     PoolDepths.forEachIndexed { index, depth ->
       val fraction = index.toFloat() / PoolDepths.lastIndex
-      val color = lerp(shallow, deep[2], fraction)
+      val color = lerp(shallow, deepest, fraction)
       val y = size.height * fraction
       drawLine(color, Offset(lineX, y), Offset(lineX + 4.dp.toPx(), y), 1.5.dp.toPx())
       val text =
