@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -178,7 +177,7 @@ internal fun EntryRow(
       // A lane rope between two swims, faint and still so a long list stays calm.
       LaneRope(
           animated = false,
-          modifier = Modifier.padding(horizontal = 8.dp).height(8.dp).alpha(0.45f),
+          modifier = Modifier.padding(horizontal = 8.dp).alpha(0.45f),
       )
     }
   }
