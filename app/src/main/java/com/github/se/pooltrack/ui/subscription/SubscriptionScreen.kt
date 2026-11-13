@@ -86,6 +86,7 @@ import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import com.github.se.pooltrack.ui.theme.PoolPalette
 import com.github.se.pooltrack.ui.theme.deepWater
+import com.github.se.pooltrack.ui.theme.poolTileColors
 import com.github.se.pooltrack.ui.theme.poolTiles
 import java.math.BigDecimal
 import java.time.Instant
@@ -435,10 +436,7 @@ private fun SubscriptionRow(
                 contentColor = PoolPalette.OnDeep,
             )
           } else {
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-            )
+            poolTileColors()
           },
       elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
   ) {

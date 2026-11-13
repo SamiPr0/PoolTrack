@@ -73,6 +73,7 @@ import com.github.se.pooltrack.ui.theme.WaterFill
 import com.github.se.pooltrack.ui.theme.deepWater
 import com.github.se.pooltrack.ui.theme.deepWaterBrush
 import com.github.se.pooltrack.ui.theme.isDarkScheme
+import com.github.se.pooltrack.ui.theme.poolTileColors
 import com.github.se.pooltrack.ui.theme.poolTiles
 import java.time.LocalDate
 import java.time.Period
@@ -304,7 +305,7 @@ private fun HomeContent(
     stats.favoriteDayOfWeek?.let { day ->
       val dayName = day.getDisplayName(TextStyle.FULL, LocalLocale.current.platformLocale)
       Card(
-          colors = tileColors(),
+          colors = poolTileColors(),
           modifier = Modifier.fillMaxWidth().testTag(HomeScreenTestTags.FAVORITE_DAY_BANNER),
       ) {
         Row(
@@ -326,14 +327,6 @@ private fun HomeContent(
     }
   }
 }
-
-/** The plain white tile every card of Home sits on, like a tile of the pool's floor. */
-@Composable
-private fun tileColors() =
-    CardDefaults.cardColors(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-    )
 
 @Composable
 private fun LastSwimHero(daysSinceLastSwim: Long?, modifier: Modifier = Modifier) {
@@ -393,7 +386,7 @@ private fun ExpirationBanner(
   val waterColors =
       if (isDarkScheme(MaterialTheme.colorScheme)) water.map { it.copy(alpha = 0.3f) } else water
 
-  Card(modifier = modifier.fillMaxWidth(), colors = tileColors()) {
+  Card(modifier = modifier.fillMaxWidth(), colors = poolTileColors()) {
     Box {
       if (level != null) {
         WaterFill(
@@ -540,7 +533,7 @@ private fun WeeklyChartCard(
 ) {
   var selected by rememberSaveable { mutableStateOf<Int?>(null) }
   val maxCount = (counts.maxOrNull() ?: 0).coerceAtLeast(1)
-  Card(modifier = modifier.fillMaxWidth(), colors = tileColors()) {
+  Card(modifier = modifier.fillMaxWidth(), colors = poolTileColors()) {
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
       Text(
           text = "Last $RECENT_WEEKS weeks",
@@ -617,7 +610,7 @@ private fun StatTile(
     accentColor: Color,
     modifier: Modifier = Modifier,
 ) {
-  Card(modifier = modifier, shape = MaterialTheme.shapes.small, colors = tileColors()) {
+  Card(modifier = modifier, shape = MaterialTheme.shapes.small, colors = poolTileColors()) {
     Column(modifier = Modifier.fillMaxWidth()) {
       Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
         Text(

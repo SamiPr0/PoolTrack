@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.CardColors
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -104,6 +106,14 @@ fun deepWaterColors(scheme: ColorScheme): List<Color> =
 
 /** A diagonal deep-water gradient, for heroes, main buttons and the in-pool screen. */
 fun deepWaterBrush(scheme: ColorScheme): Brush = Brush.linearGradient(deepWaterColors(scheme))
+
+/** A plain white tile of the pool floor: the colors of a card that sits on [poolTiles]. */
+@Composable
+fun poolTileColors(): CardColors =
+    CardDefaults.cardColors(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    )
 
 /** Fills the element with [deepWaterBrush] in [shape], e.g. a button made transparent for it. */
 fun Modifier.deepWater(scheme: ColorScheme, shape: Shape): Modifier =

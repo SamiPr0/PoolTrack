@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -44,6 +43,7 @@ import com.github.se.pooltrack.ui.theme.LaneMarker
 import com.github.se.pooltrack.ui.theme.LaneRope
 import com.github.se.pooltrack.ui.theme.PoolPalette
 import com.github.se.pooltrack.ui.theme.loopingFraction
+import com.github.se.pooltrack.ui.theme.poolTileColors
 import com.github.se.pooltrack.ui.theme.rememberAnimationsEnabled
 import java.time.Duration
 import java.util.Locale
@@ -172,11 +172,7 @@ private fun LogContent(
   Card(
       modifier = Modifier.fillMaxWidth(),
       shape = MaterialTheme.shapes.large,
-      colors =
-          CardDefaults.cardColors(
-              containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-              contentColor = MaterialTheme.colorScheme.onSurface,
-          ),
+      colors = poolTileColors(),
   ) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(20.dp),
