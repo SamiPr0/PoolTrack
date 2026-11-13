@@ -50,18 +50,18 @@ object PoolPalette {
   /** A white float of a lane rope: its lit side, then its shaded side. */
   val FloatWhite = Color(0xFFFFFFFF) to Color(0xFFCFE3EB)
 
-  // Accents for the stat tiles, like the colored tiles of a pool's mosaic.
+  // Accents for Home's stat tiles, tinting the large icon in each tile's corner.
 
-  /** A teal mosaic tile. */
+  /** Teal. */
   val AccentTeal = Color(0xFF2BB3A3)
 
-  /** A sunny yellow mosaic tile, like the light on the water. */
+  /** Sunny yellow, like the light on the water. */
   val AccentSun = Color(0xFFF2B84B)
 
-  /** A tile of shallow water: the lightest of [DeepLight]. */
+  /** Shallow water: the lightest of [DeepLight]. */
   val AccentShallow = DeepLight.first()
 
-  /** A tile of deep water: the middle of [DeepLight]. */
+  /** Deep water: the middle of [DeepLight]. */
   val AccentDeep = DeepLight[1]
 
   /** The light spots that water casts on the floor. */
