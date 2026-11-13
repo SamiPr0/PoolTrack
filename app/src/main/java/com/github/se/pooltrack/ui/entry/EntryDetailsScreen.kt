@@ -20,7 +20,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,7 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -46,7 +44,7 @@ import com.github.se.pooltrack.model.swim.formatSwimDuration
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
-import com.github.se.pooltrack.ui.theme.poolTiles
+import com.github.se.pooltrack.ui.theme.PoolScaffold
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -147,9 +145,7 @@ fun EntryDetailsScreen(
     )
   }
 
-  Scaffold(
-      modifier = Modifier.poolTiles(MaterialTheme.colorScheme),
-      containerColor = Color.Transparent,
+  PoolScaffold(
       topBar = {
         TopNavigationMenu(
             Screen.EntryDetails,

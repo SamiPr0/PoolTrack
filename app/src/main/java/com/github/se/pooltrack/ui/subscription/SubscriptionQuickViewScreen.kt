@@ -26,7 +26,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -57,9 +56,9 @@ import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import com.github.se.pooltrack.ui.theme.PoolPalette
+import com.github.se.pooltrack.ui.theme.PoolScaffold
 import com.github.se.pooltrack.ui.theme.RippleRings
 import com.github.se.pooltrack.ui.theme.deepWater
-import com.github.se.pooltrack.ui.theme.poolTiles
 import java.time.Duration
 
 object SubscriptionQuickViewScreenTestTags {
@@ -88,9 +87,7 @@ fun SubscriptionQuickViewScreen(
     MaxBrightness()
   }
 
-  Scaffold(
-      modifier = Modifier.poolTiles(MaterialTheme.colorScheme),
-      containerColor = Color.Transparent,
+  PoolScaffold(
       topBar = {
         TopNavigationMenu(
             Screen.SubscriptionQuickView,

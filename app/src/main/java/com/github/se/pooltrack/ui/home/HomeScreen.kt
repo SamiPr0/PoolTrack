@@ -18,7 +18,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -47,9 +46,9 @@ import com.github.se.pooltrack.ui.subscription.rememberRemainingCooldown
 import com.github.se.pooltrack.ui.theme.DepthGauge
 import com.github.se.pooltrack.ui.theme.LaneRope
 import com.github.se.pooltrack.ui.theme.PoolPalette
+import com.github.se.pooltrack.ui.theme.PoolScaffold
 import com.github.se.pooltrack.ui.theme.deepWater
 import com.github.se.pooltrack.ui.theme.poolTileColors
-import com.github.se.pooltrack.ui.theme.poolTiles
 import java.time.format.TextStyle
 import kotlinx.coroutines.launch
 
@@ -92,9 +91,7 @@ fun HomeScreen(
   val snackbarHostState = remember { SnackbarHostState() }
   val coroutineScope = rememberCoroutineScope()
 
-  Scaffold(
-      modifier = Modifier.poolTiles(MaterialTheme.colorScheme),
-      containerColor = Color.Transparent,
+  PoolScaffold(
       topBar = {
         TopNavigationMenu(
             Screen.Home,

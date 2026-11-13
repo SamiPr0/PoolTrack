@@ -18,7 +18,6 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -48,8 +47,8 @@ import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.Tab
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
 import com.github.se.pooltrack.ui.theme.PoolPalette
+import com.github.se.pooltrack.ui.theme.PoolScaffold
 import com.github.se.pooltrack.ui.theme.deepWater
-import com.github.se.pooltrack.ui.theme.poolTiles
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -137,9 +136,7 @@ fun HistoryScreen(
     )
   }
 
-  Scaffold(
-      modifier = Modifier.poolTiles(MaterialTheme.colorScheme),
-      containerColor = Color.Transparent,
+  PoolScaffold(
       topBar = { TopNavigationMenu(Screen.History) },
       snackbarHost = { SnackbarHost(snackbarHostState) },
       floatingActionButton = {
