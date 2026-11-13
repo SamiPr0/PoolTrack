@@ -18,6 +18,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -38,6 +40,7 @@ import com.github.se.pooltrack.model.swim.MAX_SWIM_DISTANCE_METERS
 import com.github.se.pooltrack.ui.theme.Bubbles
 import com.github.se.pooltrack.ui.theme.DeepWater
 import com.github.se.pooltrack.ui.theme.LaneMarker
+import com.github.se.pooltrack.ui.theme.LaneRope
 import com.github.se.pooltrack.ui.theme.PoolPalette
 import com.github.se.pooltrack.ui.theme.loopingFraction
 import com.github.se.pooltrack.ui.theme.rememberAnimationsEnabled
@@ -164,36 +167,52 @@ private fun LogContent(
 ) {
   // The user has to log a distance to get back to the app, so there is no way out with Back.
   BackHandler(enabled = true) {}
-  Text(
-      text = "How far did you swim?",
-      style = MaterialTheme.typography.headlineMedium,
-      textAlign = TextAlign.Center,
-      modifier = Modifier.testTag(PoolStayScreenTestTags.LOG_TITLE),
-  )
-  OutlinedTextField(
-      value = distanceInput,
-      onValueChange = onDistanceChanged,
-      label = { Text("Distance") },
-      suffix = { Text("m") },
-      singleLine = true,
-      isError = distanceInput.isNotEmpty() && !isDistanceValid,
-      supportingText = {
-        if (distanceInput.isNotEmpty() && !isDistanceValid) {
-          Text("Enter a distance between 1 and $MAX_SWIM_DISTANCE_METERS metres")
-        }
-      },
-      keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-      modifier =
-          Modifier.fillMaxWidth()
-              .padding(top = 24.dp, bottom = 16.dp)
-              .testTag(PoolStayScreenTestTags.DISTANCE_INPUT),
-  )
-  Button(
-      onClick = onSaveDistance,
-      enabled = isDistanceValid,
-      modifier = Modifier.testTag(PoolStayScreenTestTags.SAVE_BUTTON),
+  LaneRope(modifier = Modifier.padding(bottom = 24.dp), animated = true)
+  Card(
+      modifier = Modifier.fillMaxWidth(),
+      shape = MaterialTheme.shapes.large,
+      colors =
+          CardDefaults.cardColors(
+              containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+              contentColor = MaterialTheme.colorScheme.onSurface,
+          ),
   ) {
-    Text("Save")
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+      Text(
+          text = "How far did you swim?",
+          style = MaterialTheme.typography.headlineSmall,
+          textAlign = TextAlign.Center,
+          modifier = Modifier.testTag(PoolStayScreenTestTags.LOG_TITLE),
+      )
+      OutlinedTextField(
+          value = distanceInput,
+          onValueChange = onDistanceChanged,
+          label = { Text("Distance") },
+          suffix = { Text("m") },
+          singleLine = true,
+          isError = distanceInput.isNotEmpty() && !isDistanceValid,
+          supportingText = {
+            if (distanceInput.isNotEmpty() && !isDistanceValid) {
+              Text("Enter a distance between 1 and $MAX_SWIM_DISTANCE_METERS metres")
+            }
+          },
+          keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+          modifier =
+              Modifier.fillMaxWidth()
+                  .padding(top = 16.dp, bottom = 8.dp)
+                  .testTag(PoolStayScreenTestTags.DISTANCE_INPUT),
+      )
+      Button(
+          onClick = onSaveDistance,
+          enabled = isDistanceValid,
+          modifier = Modifier.fillMaxWidth().testTag(PoolStayScreenTestTags.SAVE_BUTTON),
+      ) {
+        Text("Save")
+      }
+    }
   }
 }
 
