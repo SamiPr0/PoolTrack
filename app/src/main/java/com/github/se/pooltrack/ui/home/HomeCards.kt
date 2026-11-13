@@ -137,14 +137,6 @@ internal fun averagePerWeekLabel(averageEntriesPerWeek: Double?): String =
     if (averageEntriesPerWeek == null) "-"
     else String.format(Locale.getDefault(), "%.1f", averageEntriesPerWeek)
 
-/** "1 week", "3 weeks", or "-" without a streak. */
-internal fun streakLabel(weeks: Int): String =
-    when (weeks) {
-      0 -> "-"
-      1 -> "1 week"
-      else -> "$weeks weeks"
-    }
-
 /**
  * One number of Home on a tile, with [icon] large, faint and tilted in its corner, half off the
  * tile, in [accentColor] as the tile's motif.
