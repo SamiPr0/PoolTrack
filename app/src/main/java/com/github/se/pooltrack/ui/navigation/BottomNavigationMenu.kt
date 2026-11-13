@@ -59,7 +59,7 @@ fun BottomNavigationMenu(
     // A hairline instead of a shadow between the page and the bar.
     HorizontalDivider(thickness = 1.dp, color = scheme.outlineVariant.copy(alpha = 0.5f))
     NavigationBar(
-        containerColor = scheme.surfaceContainerLow,
+        containerColor = scheme.surfaceContainerLowest,
         tonalElevation = 0.dp,
         modifier = Modifier.fillMaxWidth().testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU),
     ) {
