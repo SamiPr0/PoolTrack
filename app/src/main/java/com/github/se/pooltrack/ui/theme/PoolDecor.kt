@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.ColorScheme
@@ -24,6 +25,8 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 // The pool look shared by every screen: a tiled floor, deep-water gradients, a lane rope of
 // floats, depth marks along the wall, and water that moves. Everything is drawn with Compose
@@ -117,3 +120,32 @@ fun Modifier.poolTiles(scheme: ColorScheme): Modifier = drawBehind {
 
 private val TILE_SIZE = 24.dp
 private const val TILE_LINE_ALPHA = 0.07f
+
+/** The light that ripples on the floor of a pool: two soft spots drifting slowly. */
+@Composable
+fun Caustics(modifier: Modifier) {
+  val phase = loopingFraction(9_000, rememberAnimationsEnabled(), "caustics")
+  Canvas(modifier) {
+    val angle = phase.value * TWO_PI
+    val radius = size.maxDimension * 0.55f
+    val spots =
+        listOf(
+            Offset(size.width * (0.2f + 0.08f * sin(angle)), size.height * (0.1f * cos(angle))),
+            Offset(
+                size.width * (0.85f - 0.08f * cos(angle)),
+                size.height * (0.9f + 0.1f * sin(angle)),
+            ),
+        )
+    spots.forEach { center ->
+      drawCircle(
+          Brush.radialGradient(
+              listOf(PoolPalette.Caustic, Color.Transparent),
+              center = center,
+              radius = radius,
+          ),
+          radius = radius,
+          center = center,
+      )
+    }
+  }
+}
