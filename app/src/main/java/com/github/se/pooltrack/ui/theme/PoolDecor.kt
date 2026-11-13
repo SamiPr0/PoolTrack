@@ -8,16 +8,21 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import kotlin.math.PI
 
 // The pool look shared by every screen: a tiled floor, deep-water gradients, a lane rope of
@@ -82,3 +87,33 @@ fun loopingFraction(durationMillis: Int, enabled: Boolean, label: String): State
 
 private const val STILL_FRACTION = 0.5f
 private const val TWO_PI = (2 * PI).toFloat()
+
+/**
+ * Paints the pool floor behind a screen: [scheme]'s page color, a grid of tiles, and a gradient
+ * that gets slightly deeper toward the bottom, like the water above the tiles.
+ */
+fun Modifier.poolTiles(scheme: ColorScheme): Modifier = drawBehind {
+  drawRect(scheme.background)
+  val tile = TILE_SIZE.toPx()
+  val line = scheme.primary.copy(alpha = TILE_LINE_ALPHA)
+  var x = 0f
+  while (x <= size.width) {
+    drawLine(line, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
+    x += tile
+  }
+  var y = 0f
+  while (y <= size.height) {
+    drawLine(line, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
+    y += tile
+  }
+  drawRect(
+      Brush.verticalGradient(
+          0f to Color.Transparent,
+          0.55f to scheme.primary.copy(alpha = 0.06f),
+          1f to scheme.primary.copy(alpha = 0.16f),
+      )
+  )
+}
+
+private val TILE_SIZE = 24.dp
+private const val TILE_LINE_ALPHA = 0.07f
