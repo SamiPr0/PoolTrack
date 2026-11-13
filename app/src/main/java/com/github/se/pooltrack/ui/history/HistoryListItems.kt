@@ -5,10 +5,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.github.se.pooltrack.ui.history.heatmap.visitsLabel
+import com.github.se.pooltrack.ui.theme.LaneRope
 import com.github.se.pooltrack.ui.theme.PoolPalette
 import com.github.se.pooltrack.ui.theme.deepWaterBrush
 import java.time.DayOfWeek
@@ -174,7 +175,11 @@ internal fun EntryRow(
           }
         }
       }
-      HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+      // A lane rope between two swims, faint and still so a long list stays calm.
+      LaneRope(
+          animated = false,
+          modifier = Modifier.padding(horizontal = 8.dp).height(8.dp).alpha(0.45f),
+      )
     }
   }
 }
