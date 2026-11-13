@@ -10,6 +10,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -201,12 +208,14 @@ private fun HomeContent(
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
       StatTile(
           label = "This week",
+          icon = Icons.Outlined.DateRange,
           value = "${stats.entriesThisWeek}",
           accentColor = PoolPalette.AccentDeep,
           modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.THIS_WEEK_STAT),
       )
       StatTile(
           label = "This month",
+          icon = Icons.Outlined.DateRange,
           value = "${stats.entriesThisMonth}",
           accentColor = PoolPalette.AccentTeal,
           modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.THIS_MONTH_STAT),
@@ -215,12 +224,14 @@ private fun HomeContent(
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
       StatTile(
           label = "Week streak",
+          icon = Icons.Outlined.Refresh,
           value = streakLabel(stats.currentStreakWeeks),
           accentColor = PoolPalette.AccentSun,
           modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.STREAK_STAT),
       )
       StatTile(
           label = "Total entries",
+          icon = Icons.Filled.CheckCircle,
           value = "${stats.totalEntries}",
           accentColor = PoolPalette.AccentShallow,
           modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.TOTAL_ENTRIES_STAT),
@@ -234,12 +245,14 @@ private fun HomeContent(
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
       StatTile(
           label = "Avg. per week",
+          icon = Icons.Filled.Star,
           value = averagePerWeekLabel(stats.averageEntriesPerWeek),
           accentColor = PoolPalette.AccentShallow,
           modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.AVERAGE_PER_WEEK_STAT),
       )
       StatTile(
           label = "Best week",
+          icon = Icons.Filled.Star,
           value = if (stats.bestWeekEntries == 0) "-" else "${stats.bestWeekEntries}",
           accentColor = PoolPalette.AccentSun,
           modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.BEST_WEEK_STAT),
@@ -248,12 +261,14 @@ private fun HomeContent(
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
       StatTile(
           label = "Total spent",
+          icon = Icons.Outlined.ShoppingCart,
           value = amountLabel(totalSpent),
           accentColor = PoolPalette.AccentTeal,
           modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.TOTAL_SPENT_STAT),
       )
       StatTile(
           label = "Cost / entry",
+          icon = Icons.Outlined.Info,
           value = amountLabel(costPerEntry(totalSpent, stats.totalEntries)),
           accentColor = PoolPalette.AccentDeep,
           modifier = Modifier.weight(1f).testTag(HomeScreenTestTags.COST_PER_ENTRY_STAT),
