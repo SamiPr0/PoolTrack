@@ -106,6 +106,42 @@ class PoolStayScreenTest {
     )
   }
 
+  private fun showContent(state: PoolStayState) {
+    composeTestRule.setContent {
+      PoolStayContent(
+          state = state,
+          distanceInput = "",
+          isDistanceValid = false,
+          onDistanceChanged = {},
+          onCancelEntry = {},
+          onSaveDistance = {},
+      )
+    }
+  }
+
+  @Test
+  fun poolStayContent_showsOnlyTheWater_whileLoading() {
+    showContent(PoolStayState.Loading)
+
+    composeTestRule.onNodeWithTag(PoolStayScreenTestTags.ENJOY_MESSAGE).assertDoesNotExist()
+    composeTestRule.onNodeWithTag(PoolStayScreenTestTags.LOG_TITLE).assertDoesNotExist()
+  }
+
+  @Test
+  fun poolStayContent_showsOnlyTheWater_withoutAStay() {
+    showContent(PoolStayState.None)
+
+    composeTestRule.onNodeWithTag(PoolStayScreenTestTags.ENJOY_MESSAGE).assertDoesNotExist()
+    composeTestRule.onNodeWithTag(PoolStayScreenTestTags.LOG_TITLE).assertDoesNotExist()
+  }
+
+  @Test
+  fun poolStayContent_asksForTheDistance_whenTheLogIsRequired() {
+    showContent(PoolStayState.LogRequired(waiting))
+
+    composeTestRule.onNodeWithTag(PoolStayScreenTestTags.LOG_TITLE).assertIsDisplayed()
+  }
+
   @Test
   fun formatCountdown_showsMinutesAndPaddedSeconds() {
     assertEquals("10:00", formatCountdown(Duration.ofMinutes(10)))

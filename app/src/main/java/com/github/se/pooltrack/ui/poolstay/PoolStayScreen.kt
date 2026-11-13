@@ -3,10 +3,12 @@ package com.github.se.pooltrack.ui.poolstay
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -18,15 +20,18 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.pooltrack.model.swim.MAX_SWIM_DISTANCE_METERS
+import com.github.se.pooltrack.ui.theme.Bubbles
+import com.github.se.pooltrack.ui.theme.DeepWater
+import com.github.se.pooltrack.ui.theme.LaneMarker
 import java.time.Duration
 import java.util.Locale
 
@@ -58,7 +63,7 @@ fun PoolStayScreen(viewModel: PoolStayViewModel = viewModel()) {
   )
 }
 
-/** The stateless part of [PoolStayScreen]: its content follows [state]. */
+/** The stateless part of [PoolStayScreen]: its content follows [state], in the water. */
 @Composable
 fun PoolStayContent(
     state: PoolStayState,
@@ -68,17 +73,29 @@ fun PoolStayContent(
     onCancelEntry: () -> Unit,
     onSaveDistance: () -> Unit,
 ) {
-  Column(
-      modifier = Modifier.fillMaxSize().padding(32.dp),
-      verticalArrangement = Arrangement.Center,
-      horizontalAlignment = Alignment.CenterHorizontally,
-  ) {
-    when (state) {
-      is PoolStayState.CancelWindow -> CancelWindowContent(state.remaining, onCancelEntry)
-      is PoolStayState.LogRequired ->
-          LogContent(distanceInput, isDistanceValid, onDistanceChanged, onSaveDistance)
-      PoolStayState.Loading,
-      PoolStayState.None -> Unit
+  DeepWater(modifier = Modifier.fillMaxSize()) {
+    Bubbles(modifier = Modifier.matchParentSize())
+    // The lane's line on the floor, seen from above, faint behind the content.
+    LaneMarker(
+        modifier =
+            Modifier.align(Alignment.Center)
+                .fillMaxHeight()
+                .width(44.dp)
+                .padding(vertical = 56.dp)
+                .alpha(0.35f)
+    )
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+      when (state) {
+        is PoolStayState.CancelWindow -> CancelWindowContent(state.remaining, onCancelEntry)
+        is PoolStayState.LogRequired ->
+            LogContent(distanceInput, isDistanceValid, onDistanceChanged, onSaveDistance)
+        PoolStayState.Loading,
+        PoolStayState.None -> Unit
+      }
     }
   }
 }
