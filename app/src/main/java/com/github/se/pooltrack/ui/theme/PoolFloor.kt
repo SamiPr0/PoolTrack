@@ -11,6 +11,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.TextStyle
@@ -108,14 +109,41 @@ fun DepthGauge(modifier: Modifier) {
  * element in [color], each ending in the "T" that warns swimmers the wall is coming.
  */
 fun Modifier.laneLines(color: Color): Modifier = drawBehind {
-  val stripe = 5.dp.toPx()
   val margin = 28.dp.toPx()
-  val bar = 22.dp.toPx()
   for (lane in 1..2) {
     val y = size.height * lane / 3
-    drawRect(color, Offset(margin, y - stripe / 2), Size(size.width - margin * 2, stripe))
-    drawRect(color, Offset(margin - stripe, y - bar / 2), Size(stripe, bar))
-    drawRect(color, Offset(size.width - margin, y - bar / 2), Size(stripe, bar))
+    drawLaneLine(
+        from = Offset(margin, y),
+        to = Offset(size.width - margin, y),
+        width = 5.dp.toPx(),
+        barLength = 22.dp.toPx(),
+        color = color,
+        barAtStart = true,
+    )
+  }
+}
+
+/**
+ * One lane line, horizontal or vertical, from [from] to [to]: a stripe [width] wide ending in a T
+ * bar [barLength] long at [to], and at [from] too when [barAtStart].
+ */
+private fun DrawScope.drawLaneLine(
+    from: Offset,
+    to: Offset,
+    width: Float,
+    barLength: Float,
+    color: Color,
+    barAtStart: Boolean,
+) {
+  val horizontal = from.y == to.y
+  val corner = CornerRadius(width / 2)
+  val stripe = if (horizontal) Size(to.x - from.x, width) else Size(width, to.y - from.y)
+  val halfWidth = if (horizontal) Offset(0f, width / 2) else Offset(width / 2, 0f)
+  drawRoundRect(color, from - halfWidth, stripe, corner)
+  val bar = if (horizontal) Size(width, barLength) else Size(barLength, width)
+  val ends = if (barAtStart) listOf(from, to) else listOf(to)
+  ends.forEach { end ->
+    drawRoundRect(color, end - Offset(bar.width / 2, bar.height / 2), bar, corner)
   }
 }
 
@@ -127,19 +155,13 @@ private val LANE_MARKER_COLOR = Color(0xFF04293A)
 fun LaneMarker(modifier: Modifier) {
   Canvas(modifier) {
     val width = 8.dp.toPx()
-    val x = size.width / 2 - width / 2
-    drawRoundRect(
-        LANE_MARKER_COLOR,
-        Offset(x, 0f),
-        Size(width, size.height),
-        CornerRadius(width / 2),
-    )
-    val barWidth = 44.dp.toPx()
-    drawRoundRect(
-        LANE_MARKER_COLOR,
-        Offset(size.width / 2 - barWidth / 2, size.height - width),
-        Size(barWidth, width),
-        CornerRadius(width / 2),
+    drawLaneLine(
+        from = Offset(size.width / 2, 0f),
+        to = Offset(size.width / 2, size.height - width / 2),
+        width = width,
+        barLength = 44.dp.toPx(),
+        color = LANE_MARKER_COLOR,
+        barAtStart = false,
     )
   }
 }
