@@ -423,7 +423,7 @@ private fun SubscriptionRow(
             )
           } else {
             CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                 contentColor = MaterialTheme.colorScheme.onSurface,
             )
           },
