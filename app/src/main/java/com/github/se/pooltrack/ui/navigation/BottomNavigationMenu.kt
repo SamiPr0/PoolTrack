@@ -70,10 +70,11 @@ fun BottomNavigationMenu(
             selected = tab == selectedTab,
             onClick = { onTabSelected(tab) },
             colors =
+                // A pale pill of shallow water behind the selected tab.
                 NavigationBarItemDefaults.colors(
-                    selectedIconColor = scheme.onPrimary,
+                    selectedIconColor = scheme.primary,
                     selectedTextColor = scheme.primary,
-                    indicatorColor = scheme.primary,
+                    indicatorColor = scheme.primaryContainer,
                 ),
             modifier = Modifier.testTag(tab.testTag),
         )
