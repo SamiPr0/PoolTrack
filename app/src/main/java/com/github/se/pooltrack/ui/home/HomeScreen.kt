@@ -306,6 +306,14 @@ fun HomeScreen(
   }
 }
 
+/** The plain white tile every card of Home sits on, like a tile of the pool's floor. */
+@Composable
+private fun tileColors() =
+    CardDefaults.cardColors(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    )
+
 @Composable
 private fun LastSwimHero(daysSinceLastSwim: Long?, modifier: Modifier = Modifier) {
   DeepWater(modifier = modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
@@ -498,7 +506,7 @@ private fun WeeklyChartCard(
 ) {
   var selected by rememberSaveable { mutableStateOf<Int?>(null) }
   val maxCount = (counts.maxOrNull() ?: 0).coerceAtLeast(1)
-  Card(modifier = modifier.fillMaxWidth()) {
+  Card(modifier = modifier.fillMaxWidth(), colors = tileColors()) {
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
       Text(
           text = "Last $RECENT_WEEKS weeks",
