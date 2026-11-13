@@ -1,6 +1,8 @@
 package com.github.se.pooltrack.ui.poolstay
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -22,7 +24,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -32,14 +33,18 @@ import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -59,9 +64,9 @@ import com.github.se.pooltrack.ui.theme.DeepWater
 import com.github.se.pooltrack.ui.theme.LaneMarker
 import com.github.se.pooltrack.ui.theme.LaneRope
 import com.github.se.pooltrack.ui.theme.PoolPalette
+import com.github.se.pooltrack.ui.theme.PoolTile
 import com.github.se.pooltrack.ui.theme.bobbing
 import com.github.se.pooltrack.ui.theme.loopingFraction
-import com.github.se.pooltrack.ui.theme.poolTileColors
 import com.github.se.pooltrack.ui.theme.rememberAnimationsEnabled
 import java.time.Duration
 import java.util.Locale
@@ -194,11 +199,7 @@ private fun LogContent(
 ) {
   // The user has to log a distance to get back to the app, so there is no way out with Back.
   BackHandler(enabled = true) {}
-  Card(
-      modifier = Modifier.fillMaxWidth(),
-      shape = MaterialTheme.shapes.large,
-      colors = poolTileColors(),
-  ) {
+  PoolTile(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -244,10 +245,10 @@ private fun LogContent(
 }
 
 /**
- * Counts the swim in lengths of a 25 m or 50 m pool, the way swimmers count it, between two lane
- * ropes, and writes the matching metres into the distance field. That field stays the one source of
- * truth, so the user can still type the metres instead; a distance that is not a whole number of
- * lengths shows a dash.
+ * Counts the swim in lengths of a 25 m or 50 m pool, the way swimmers count it, above a lane rope,
+ * and writes the matching metres into the distance field. That field stays the one source of truth,
+ * so the user can still type the metres instead; a distance that is not a whole number of lengths
+ * shows a dash.
  */
 @Composable
 private fun LengthCounter(
@@ -275,9 +276,8 @@ private fun LengthCounter(
         )
       }
     }
-    LaneRope(modifier = Modifier.padding(top = 16.dp), animated = false)
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -293,11 +293,13 @@ private fun LengthCounter(
         )
       }
       Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        val count = lengths?.toString() ?: if (meters == null) "0" else "–"
         Text(
-            text = lengths?.toString() ?: if (meters == null) "0" else "–",
+            text = count,
             style = MaterialTheme.typography.displayMedium,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.testTag(PoolStayScreenTestTags.LENGTHS_COUNT),
+            modifier =
+                Modifier.poppingOnChange(count).testTag(PoolStayScreenTestTags.LENGTHS_COUNT),
         )
         Text(
             text = "lengths",
@@ -312,7 +314,28 @@ private fun LengthCounter(
         Icon(Icons.Filled.Add, contentDescription = "One more length")
       }
     }
-    LaneRope(modifier = Modifier, animated = false)
+    LaneRope(modifier = Modifier, animated = true)
+  }
+}
+
+/**
+ * Makes the element jump a little each time [value] changes after it is first shown, so a tap on
+ * the counter visibly lands.
+ */
+@Composable
+private fun Modifier.poppingOnChange(value: Any): Modifier {
+  val scale = remember { Animatable(1f) }
+  var shownValue by remember { mutableStateOf(value) }
+  LaunchedEffect(value) {
+    if (value != shownValue) {
+      shownValue = value
+      scale.snapTo(1.25f)
+      scale.animateTo(1f, tween(durationMillis = 400))
+    }
+  }
+  return graphicsLayer {
+    scaleX = scale.value
+    scaleY = scale.value
   }
 }
 
