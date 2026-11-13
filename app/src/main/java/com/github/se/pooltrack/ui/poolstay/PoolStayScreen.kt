@@ -30,7 +30,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -42,13 +41,12 @@ import com.github.se.pooltrack.ui.theme.DeepWater
 import com.github.se.pooltrack.ui.theme.LaneMarker
 import com.github.se.pooltrack.ui.theme.LaneRope
 import com.github.se.pooltrack.ui.theme.PoolPalette
+import com.github.se.pooltrack.ui.theme.bobbing
 import com.github.se.pooltrack.ui.theme.loopingFraction
 import com.github.se.pooltrack.ui.theme.poolTileColors
 import com.github.se.pooltrack.ui.theme.rememberAnimationsEnabled
 import java.time.Duration
 import java.util.Locale
-import kotlin.math.PI
-import kotlin.math.sin
 
 object PoolStayScreenTestTags {
   const val ENJOY_MESSAGE = "PoolStayScreenEnjoyMessage"
@@ -121,7 +119,7 @@ private fun CancelWindowContent(remaining: Duration, onCancelEntry: () -> Unit) 
   val bob = loopingFraction(3_000, rememberAnimationsEnabled(), "checkBob")
   Box(
       modifier =
-          Modifier.graphicsLayer { translationY = -3.dp.toPx() * sin(bob.value * 2 * PI.toFloat()) }
+          Modifier.bobbing(bob, amplitude = 3.dp)
               .size(88.dp)
               .background(PoolPalette.OnDeep, CircleShape),
       contentAlignment = Alignment.Center,

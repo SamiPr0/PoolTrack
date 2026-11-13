@@ -38,12 +38,14 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
@@ -144,6 +146,11 @@ fun loopingFraction(durationMillis: Int, enabled: Boolean, label: String): State
           animationSpec = infiniteRepeatable(tween(durationMillis, easing = LinearEasing)),
           label = label,
       )
+}
+
+/** Moves the element up and down by [amplitude] as [phase] loops, like something afloat. */
+fun Modifier.bobbing(phase: State<Float>, amplitude: Dp): Modifier = graphicsLayer {
+  translationY = -amplitude.toPx() * sin(phase.value * TWO_PI)
 }
 
 private const val STILL_FRACTION = 0.5f
