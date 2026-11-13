@@ -1,6 +1,7 @@
 package com.github.se.pooltrack.ui.poolstay
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +17,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -137,7 +139,7 @@ private fun CancelWindowContent(remaining: Duration, onCancelEntry: () -> Unit) 
       text =
           "Scanned by mistake? You can still cancel this entry for ${formatCountdown(remaining)}.",
       style = MaterialTheme.typography.bodyMedium,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      color = PoolPalette.OnDeepVariant,
       textAlign = TextAlign.Center,
       modifier =
           Modifier.padding(top = 12.dp, bottom = 32.dp)
@@ -145,6 +147,8 @@ private fun CancelWindowContent(remaining: Duration, onCancelEntry: () -> Unit) 
   )
   OutlinedButton(
       onClick = onCancelEntry,
+      colors = ButtonDefaults.outlinedButtonColors(contentColor = PoolPalette.OnDeep),
+      border = BorderStroke(1.5.dp, PoolPalette.OnDeep),
       modifier = Modifier.testTag(PoolStayScreenTestTags.CANCEL_BUTTON),
   ) {
     Text("Cancel entry")
