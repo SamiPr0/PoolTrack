@@ -55,6 +55,14 @@ object PoolPalette {
   /** Secondary text on deep water. */
   val OnDeepVariant = Color(0xFFCBEFFC)
 
+  /** The rope the lane floats are threaded on. */
+  val Rope = Color(0xFF6E95A5)
+
+  /** A float's lit side and its shaded side. */
+  val FloatRed = Color(0xFFF26A5E) to Color(0xFFC9362C)
+  val FloatBlue = Color(0xFF3DB2DA) to Color(0xFF0E6C8F)
+  val FloatWhite = Color(0xFFFFFFFF) to Color(0xFFCFE3EB)
+
   /** The light spots that water casts on the floor. */
   val Caustic = Color(0x40B8ECFF)
 }
@@ -174,3 +182,30 @@ fun DeepWater(
     CompositionLocalProvider(LocalContentColor provides PoolPalette.OnDeep) { content() }
   }
 }
+
+/** The kind of a float on a lane rope. */
+enum class LaneFloat {
+  /** The red floats at both ends of a lane, warning that the wall is close. */
+  End,
+  Blue,
+  White,
+}
+
+/** The float at [index] of a rope of [count] floats: red ends, then blue and white alternating. */
+fun laneFloatAt(index: Int, count: Int, endFloats: Int = LANE_END_FLOATS): LaneFloat =
+    when {
+      index < endFloats || index >= count - endFloats -> LaneFloat.End
+      index % 2 == 0 -> LaneFloat.Blue
+      else -> LaneFloat.White
+    }
+
+/** The lit and shaded colors of a [LaneFloat]. */
+fun laneFloatColors(kind: LaneFloat): Pair<Color, Color> =
+    when (kind) {
+      LaneFloat.End -> PoolPalette.FloatRed
+      LaneFloat.Blue -> PoolPalette.FloatBlue
+      LaneFloat.White -> PoolPalette.FloatWhite
+    }
+
+private const val LANE_END_FLOATS = 3
+private const val LANE_FLOATS = 22
