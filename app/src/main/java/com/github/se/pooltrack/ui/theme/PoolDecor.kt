@@ -361,3 +361,30 @@ fun RippleRings(modifier: Modifier) {
   }
 }
 
+/** A few bubbles rising slowly through the water. */
+@Composable
+fun Bubbles(modifier: Modifier) {
+  val phase = loopingFraction(9_000, rememberAnimationsEnabled(), "bubbles")
+  Canvas(modifier) {
+    BUBBLES.forEach { (x, start, radius) ->
+      val progress = (phase.value + start) % 1f
+      val alpha = if (progress < 0.15f) progress / 0.15f else 1f - progress
+      drawCircle(
+          color = PoolPalette.OnDeepVariant.copy(alpha = 0.6f * alpha),
+          radius = radius.dp.toPx(),
+          center = Offset(size.width * x, size.height * (1f - progress)),
+          style = Stroke(width = 1.dp.toPx()),
+      )
+    }
+  }
+}
+
+/** Each bubble's horizontal position, where in the loop it starts, and its radius in dp. */
+private val BUBBLES =
+    listOf(
+        Triple(0.15f, 0f, 3f),
+        Triple(0.4f, 0.35f, 2f),
+        Triple(0.62f, 0.7f, 4f),
+        Triple(0.85f, 0.2f, 2.5f),
+    )
+
