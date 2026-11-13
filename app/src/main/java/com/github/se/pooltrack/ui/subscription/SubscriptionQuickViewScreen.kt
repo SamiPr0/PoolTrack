@@ -4,6 +4,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,11 +17,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +55,9 @@ import com.github.se.pooltrack.SecureWindow
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
+import com.github.se.pooltrack.ui.theme.PoolPalette
+import com.github.se.pooltrack.ui.theme.RippleRings
+import com.github.se.pooltrack.ui.theme.deepWaterBrush
 import com.github.se.pooltrack.ui.theme.poolTiles
 import java.time.Duration
 
@@ -251,14 +257,25 @@ private fun PassDisplayAndAccept(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
         horizontalArrangement = Arrangement.Center,
     ) {
-      Button(
-          onClick = onAccepted,
-          contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-          modifier = Modifier.testTag(SubscriptionQuickViewScreenTestTags.ACCEPT_BUTTON),
-      ) {
-        Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-        Spacer(modifier = Modifier.width(8.dp))
-        Text("Accepted")
+      // Ripples spread from the button, like a swimmer about to dive in.
+      Box(contentAlignment = Alignment.Center) {
+        RippleRings(modifier = Modifier.matchParentSize())
+        Button(
+            onClick = onAccepted,
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = Color.Transparent,
+                    contentColor = PoolPalette.OnDeep,
+                ),
+            contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp),
+            modifier =
+                Modifier.background(deepWaterBrush(MaterialTheme.colorScheme), CircleShape)
+                    .testTag(SubscriptionQuickViewScreenTestTags.ACCEPT_BUTTON),
+        ) {
+          Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Accepted")
+        }
       }
     }
   }
