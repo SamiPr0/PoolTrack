@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +46,7 @@ import com.github.se.pooltrack.model.swim.formatSwimDuration
 import com.github.se.pooltrack.ui.navigation.NavigationActions
 import com.github.se.pooltrack.ui.navigation.Screen
 import com.github.se.pooltrack.ui.navigation.TopNavigationMenu
+import com.github.se.pooltrack.ui.theme.poolTiles
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -146,6 +148,8 @@ fun EntryDetailsScreen(
   }
 
   Scaffold(
+      modifier = Modifier.poolTiles(MaterialTheme.colorScheme),
+      containerColor = Color.Transparent,
       topBar = {
         TopNavigationMenu(
             Screen.EntryDetails,
