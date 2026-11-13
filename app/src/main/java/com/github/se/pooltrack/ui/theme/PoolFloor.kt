@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
 
-// The floor and walls of the pool: tiles, depth marks and the lane line.
+// The floor and walls of the pool: tiles, depth marks and lane lines.
 
 /**
  * Paints the pool floor behind a screen: [scheme]'s page color, a grid of tiles, and a gradient
