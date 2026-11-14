@@ -1,0 +1,4 @@
+#!/bin/sh
+# Points git at the tracked hooks in .scripts. Run once per clone: ./.scripts/install-hooks
+chmod +x .scripts/pre-commit
+git config core.hooksPath .scripts
