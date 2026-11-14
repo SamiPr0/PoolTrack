@@ -39,4 +39,10 @@ To build it yourself, create a Firebase project, register the Android app `com.g
 ./gradlew ktfmtCheck        # formatting
 ```
 
+Install the pre-commit hook once per clone; it runs `ktfmtCheck` and aborts a badly formatted commit:
+
+```bash
+./.scripts/install-hooks
+```
+
 Contributions follow the rules in [AGENTS.md](AGENTS.md).

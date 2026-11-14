@@ -1,0 +1,11 @@
+#!/bin/sh
+
+echo "***** Checking formatting (ktfmt) *****"
+if ./gradlew ktfmtCheck --quiet --console=plain; then
+  echo "***** Formatting OK *****"
+  exit 0
+else
+  status=$?
+  echo "Formatting check failed. Commit aborted. Run ./gradlew ktfmtFormat." >&2
+  exit "$status"
+fi
