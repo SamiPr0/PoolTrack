@@ -23,7 +23,7 @@ export async function setupEnvironment(): Promise<RulesTestEnvironment> {
   return await initializeTestEnvironment({
     projectId: 'demo-unit-tests',
     firestore: {
-      rules: await readFile("../firestore.rules", "utf-8"),
+      rules: await readFile("../../../firestore.rules", "utf-8"),
       host: HOST,
       port: FIRESTORE_PORT,
     },
